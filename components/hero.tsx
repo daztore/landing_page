@@ -100,7 +100,7 @@ export function Hero() {
             style={{ transform: `translateY(-${offset * 0.15}px)` }}
           >
             <Image
-              src="/hero-mahar.jpg"
+              src="/hero-mahar.webp"
               alt="Mahar pernikahan premium dengan bunga mawar putih dan aksen emas"
               fill
               priority
