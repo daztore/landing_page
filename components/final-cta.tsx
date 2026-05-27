@@ -1,9 +1,14 @@
 import { ArrowRight, Clock } from "lucide-react"
 import { Reveal } from "@/components/reveal"
+import { FloatingFlower } from "./floating-flower"
 
 export function FinalCta() {
   return (
     <section id="contact" className="relative overflow-hidden bg-background py-24 md:py-32">
+      {/* Subtle falling petals */}
+      <FloatingFlower delay={0.5} duration={8} xStart={-50} className="left-[10%] top-0" />
+      <FloatingFlower delay={2.5} duration={8.5} xStart={60} className="right-[15%] top-0" />
+
       <div
         aria-hidden
         className="absolute inset-0"
@@ -43,7 +48,7 @@ export function FinalCta() {
 
               <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <a
-                  href="https://wa.me/6281234567890?text=Halo%20daztore.id%2C%20saya%20ingin%20memesan%20slot%20konsultasi."
+                  href="https://wa.me/628775687555?text=Halo%20daztore.id%2C%20saya%20ingin%20memesan%20slot%20konsultasi."
                   target="_blank"
                   rel="noreferrer"
                   className="group inline-flex items-center justify-center gap-2 rounded-full bg-primary px-8 py-4 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30"

@@ -5,22 +5,28 @@ import { cn } from "@/lib/utils"
 
 export function WhatsappButton() {
   const [visible, setVisible] = useState(false)
+  const [isKatalogPage, setIsKatalogPage] = useState(false)
 
   useEffect(() => {
     const onScroll = () => setVisible(window.scrollY > 400)
     onScroll()
     window.addEventListener("scroll", onScroll, { passive: true })
+    setIsKatalogPage(window.location.pathname.includes("/katalog"))
     return () => window.removeEventListener("scroll", onScroll)
   }, [])
 
   return (
     <a
-      href="https://wa.me/6281234567890?text=Halo%20daztore.id%2C%20saya%20tertarik%20dengan%20layanan%20Anda."
+      href="https://wa.me/628775687555?text=Halo%20daztore.id%2C%20saya%20tertarik%20dengan%20layanan%20Anda."
       target="_blank"
       rel="noreferrer"
       aria-label="Chat via WhatsApp"
       className={cn(
-        "group fixed bottom-5 right-5 z-40 flex items-center gap-3 rounded-full bg-[#25D366] pl-4 pr-5 py-3 text-sm font-medium text-white shadow-xl shadow-[#25D366]/30 transition-all duration-500 md:bottom-7 md:right-7",
+        "group fixed z-40 flex items-center gap-3 rounded-full bg-[#25D366] pl-4 pr-5 py-3 text-sm font-medium text-white shadow-xl shadow-[#25D366]/30 transition-all duration-500 active:translate-y-0.5",
+        // Mobile positioning: above bottom nav on home, lower on katalog
+        isKatalogPage
+          ? "bottom-6 right-4 md:bottom-7 md:right-7"
+          : "bottom-[88px] right-4 md:bottom-7 md:right-7",
         visible ? "translate-y-0 opacity-100" : "translate-y-24 opacity-0 pointer-events-none",
       )}
     >

@@ -100,11 +100,14 @@ export function Packages() {
 
                 <div
                   className={cn(
-                    "flex h-12 w-12 items-center justify-center rounded-full transition-colors duration-500",
+                    "flex h-12 w-12 items-center justify-center rounded-full transition-colors duration-500 animate-bloom",
                     tier.highlight
                       ? "bg-primary text-primary-foreground"
                       : "bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground",
                   )}
+                  style={{
+                    animationDelay: `${i * 200}ms`,
+                  }}
                 >
                   <tier.icon className="h-5 w-5" />
                 </div>
@@ -142,7 +145,7 @@ export function Packages() {
                 </ul>
 
                 <a
-                  href={`https://wa.me/6281234567890?text=Halo%20daztore.id%2C%20saya%20tertarik%20dengan%20paket%20${tier.name}.`}
+                  href={`https://wa.me/628775687555?text=Halo%20daztore.id%2C%20saya%20tertarik%20dengan%20paket%20${tier.name}.`}
                   target="_blank"
                   rel="noreferrer"
                   className={cn(
