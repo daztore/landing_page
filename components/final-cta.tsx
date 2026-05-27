@@ -48,7 +48,7 @@ export function FinalCta() {
 
               <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <a
-                  href="https://wa.me/628775687555?text=Halo%20daztore.id%2C%20saya%20ingin%20memesan%20slot%20konsultasi."
+                  href="https://wa.me/6287756877555?text=Halo%20daztore.id%2C%20saya%20ingin%20memesan%20slot%20konsultasi."
                   target="_blank"
                   rel="noreferrer"
                   className="group inline-flex items-center justify-center gap-2 rounded-full bg-primary px-8 py-4 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30"

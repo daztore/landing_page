@@ -145,7 +145,7 @@ export function Packages() {
                 </ul>
 
                 <a
-                  href={`https://wa.me/628775687555?text=Halo%20daztore.id%2C%20saya%20tertarik%20dengan%20paket%20${tier.name}.`}
+                  href={`https://wa.me/6287756877555?text=Halo%20daztore.id%2C%20saya%20tertarik%20dengan%20paket%20${tier.name}.`}
                   target="_blank"
                   rel="noreferrer"
                   className={cn(

@@ -29,7 +29,7 @@ Tanggal Pernikahan: ${formData.weddingDate}
 Budget: ${formData.budget}
 Pesan: ${formData.message}`
 
-    const whatsappUrl = `https://wa.me/628775687555?text=${encodeURIComponent(message)}`
+    const whatsappUrl = `https://wa.me/6287756877555?text=${encodeURIComponent(message)}`
     window.open(whatsappUrl, "_blank")
     
     setSubmitted(true)

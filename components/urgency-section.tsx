@@ -47,7 +47,7 @@ export function UrgencySection() {
             </div>
 
             <a
-              href="https://wa.me/628775687555?text=Halo%20daztore.id%2C%20saya%20tertarik%20dengan%20layanan%20Anda.%20Apakah%20masih%20ada%20slot%3F"
+              href="https://wa.me/6287756877555?text=Halo%20daztore.id%2C%20saya%20tertarik%20dengan%20layanan%20Anda.%20Apakah%20masih%20ada%20slot%3F"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/30 transition-all duration-300 hover:shadow-xl hover:shadow-primary/40 hover:-translate-y-0.5 w-full sm:w-auto"

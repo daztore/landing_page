@@ -87,7 +87,7 @@ export function ProductCard({ product }: ProductCardProps) {
           )}
         >
           <a
-            href={`https://wa.me/628775687555?text=Halo%20daztore.id%2C%20saya%20tertarik%20dengan%20${encodeURIComponent(product.title)}`}
+            href={`https://wa.me/6287756877555?text=Halo%20daztore.id%2C%20saya%20tertarik%20dengan%20${encodeURIComponent(product.title)}`}
             target="_blank"
             rel="noreferrer"
             className="block w-full rounded-lg bg-primary px-4 py-2.5 text-center text-sm font-medium text-primary-foreground transition-all hover:shadow-lg hover:shadow-primary/30"

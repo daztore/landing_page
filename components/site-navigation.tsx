@@ -164,7 +164,7 @@ export function SiteNavigation() {
             <span>Paket</span>
           </a>
           <a
-            href="https://wa.me/628775687555"
+            href="https://wa.me/6287756877555"
             target="_blank"
             rel="noreferrer"
             className="flex flex-col items-center gap-1 px-3 py-2.5 text-xs text-foreground/70 transition-colors hover:text-primary"

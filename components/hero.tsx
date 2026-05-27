@@ -101,7 +101,7 @@ export function Hero() {
 
           <div className="hero-ctas mt-6 sm:mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <a
-              href="https://wa.me/628775687555?text=Halo%20daztore.id%2C%20saya%20tertarik%20dengan%20layanan%20Anda."
+              href="https://wa.me/6287756877555?text=Halo%20daztore.id%2C%20saya%20tertarik%20dengan%20layanan%20Anda."
               target="_blank"
               rel="noreferrer"
               className="group inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 sm:px-7 py-3 sm:py-3.5 text-sm font-medium text-primary-foreground shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/25 active:translate-y-0"

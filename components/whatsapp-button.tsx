@@ -17,7 +17,7 @@ export function WhatsappButton() {
 
   return (
     <a
-      href="https://wa.me/628775687555?text=Halo%20daztore.id%2C%20saya%20tertarik%20dengan%20layanan%20Anda."
+      href="https://wa.me/6287756877555?text=Halo%20daztore.id%2C%20saya%20tertarik%20dengan%20layanan%20Anda."
       target="_blank"
       rel="noreferrer"
       aria-label="Chat via WhatsApp"
