@@ -4,55 +4,29 @@ import { useEffect, useState } from "react"
 import { Quote, Star, ChevronLeft, ChevronRight } from "lucide-react"
 import { Reveal } from "@/components/reveal"
 import { cn } from "@/lib/utils"
+import { fallbackCarouselTestimonials } from "@/lib/data/fallback"
+import type { TestimonialItem } from "@/lib/data/types"
 
-type Testimonial = {
-  name: string
-  role: string
-  rating: number
-  body: string
+interface TestimonialsProps {
+  items?: TestimonialItem[]
 }
 
-const testimonials: Testimonial[] = [
-  {
-    name: "Anindya & Rizki",
-    role: "Menikah, Mei 2024",
-    rating: 5,
-    body: "daztore.id memahami visi kami bahkan sebelum kami menjelaskan semuanya. Setiap detail mahar terasa seperti cerminan cinta kami. Tamu-tamu tidak berhenti memuji!",
-  },
-  {
-    name: "Kirana & Aldo",
-    role: "Menikah, Agustus 2024",
-    rating: 5,
-    body: "Seserahan yang dibuat benar-benar breathtaking. Tim mereka sangat sabar, detail, dan menghadirkan hasil yang melampaui ekspektasi. Worth every penny.",
-  },
-  {
-    name: "Nadira & Fariz",
-    role: "Menikah, November 2023",
-    rating: 5,
-    body: "Bouquet dari daztore.id masih saya simpan sampai sekarang — indahnya tidak lekang oleh waktu. Pelayanan personal yang sulit ditemukan di tempat lain.",
-  },
-  {
-    name: "Salma & Bima",
-    role: "Menikah, Februari 2025",
-    rating: 5,
-    body: "Proses dari konsultasi hingga hari H sangat mulus. Mereka benar-benar mengangkat cerita kami menjadi sesuatu yang visual dan emosional.",
-  },
-]
-
-export function Testimonials() {
+export function Testimonials({
+  items = fallbackCarouselTestimonials,
+}: TestimonialsProps) {
   const [index, setIndex] = useState(0)
   const [paused, setPaused] = useState(false)
 
   useEffect(() => {
     if (paused) return
     const id = setInterval(() => {
-      setIndex((v) => (v + 1) % testimonials.length)
+      setIndex((v) => (v + 1) % items.length)
     }, 6000)
     return () => clearInterval(id)
-  }, [paused])
+  }, [items.length, paused])
 
-  const prev = () => setIndex((v) => (v - 1 + testimonials.length) % testimonials.length)
-  const next = () => setIndex((v) => (v + 1) % testimonials.length)
+  const prev = () => setIndex((v) => (v - 1 + items.length) % items.length)
+  const next = () => setIndex((v) => (v + 1) % items.length)
 
   return (
     <section id="testimonials" className="relative overflow-hidden bg-secondary/40 py-24 md:py-32">
@@ -85,9 +59,9 @@ export function Testimonials() {
             <Quote className="absolute left-6 top-6 h-10 w-10 text-primary/20 md:left-10 md:top-10" />
 
             <div className="relative min-h-[240px] md:min-h-[200px]">
-              {testimonials.map((t, i) => (
+              {items.map((t, i) => (
                 <article
-                  key={t.name}
+                  key={t.slug}
                   aria-hidden={i !== index}
                   className={cn(
                     "absolute inset-0 flex flex-col items-center justify-center text-center transition-all duration-700",
@@ -103,13 +77,13 @@ export function Testimonials() {
                   </div>
 
                   <p className="mt-6 max-w-2xl font-serif text-xl leading-relaxed text-foreground text-pretty md:text-2xl">
-                    &ldquo;{t.body}&rdquo;
+                    &ldquo;{t.content}&rdquo;
                   </p>
 
                   <div className="mt-8">
                     <div className="font-serif text-base text-foreground">{t.name}</div>
                     <div className="mt-1 text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                      {t.role}
+                      {t.subtitle}
                     </div>
                   </div>
                 </article>
@@ -127,9 +101,9 @@ export function Testimonials() {
               </button>
 
               <div className="flex items-center gap-2">
-                {testimonials.map((_, i) => (
+                {items.map((item, i) => (
                   <button
-                    key={i}
+                    key={item.slug}
                     type="button"
                     aria-label={`Ke testimoni ${i + 1}`}
                     onClick={() => setIndex(i)}

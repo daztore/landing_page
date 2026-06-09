@@ -5,54 +5,15 @@ import { useEffect, useState } from "react"
 import { X, ChevronLeft, ChevronRight } from "lucide-react"
 import { Reveal } from "@/components/reveal"
 import { cn } from "@/lib/utils"
+import { fallbackGallery } from "@/lib/data/fallback"
+import type { GallerySection } from "@/lib/data/types"
 
-type Item = {
-  src: string
-  alt: string
-  span: string
-  label: string
+interface GalleryProps {
+  data?: GallerySection
 }
 
-const items: Item[] = [
-  {
-    src: "/gallery-1.jpg",
-    alt: "Mahar premium dengan koin emas dan mawar putih",
-    span: "md:row-span-2",
-    label: "Mahar Classic",
-  },
-  {
-    src: "/gallery-2.jpg",
-    alt: "Bouquet pengantin dengan mawar dan peony",
-    span: "",
-    label: "Bridal Bouquet",
-  },
-  {
-    src: "/gallery-3.jpg",
-    alt: "Kotak seserahan mewah dengan bunga dan pita emas",
-    span: "",
-    label: "Seserahan Set",
-  },
-  {
-    src: "/gallery-4.jpg",
-    alt: "Cincin pernikahan emas pada bantalan beludru krem",
-    span: "md:row-span-2",
-    label: "Ring Pillow",
-  },
-  {
-    src: "/gallery-5.jpg",
-    alt: "Rangkaian bunga segar dalam vas kaca bening",
-    span: "",
-    label: "Flower Stand",
-  },
-  {
-    src: "/gallery-6.jpg",
-    alt: "Money bouquet mahar dalam bingkai emas berhias mutiara",
-    span: "",
-    label: "Money Bouquet",
-  },
-]
-
-export function Gallery() {
+export function Gallery({ data = fallbackGallery }: GalleryProps) {
+  const items = data.items
   const [loaded, setLoaded] = useState<boolean[]>(Array(items.length).fill(false))
   const [active, setActive] = useState<number | null>(null)
 
@@ -77,21 +38,20 @@ export function Gallery() {
       <div className="mx-auto max-w-7xl px-6 md:px-10">
         <Reveal className="mx-auto max-w-2xl text-center">
           <div className="flex items-center justify-center gap-3 divider-ornament">
-            <span className="text-xs uppercase tracking-[0.25em] text-primary">Portfolio</span>
+            <span className="text-xs uppercase tracking-[0.25em] text-primary">{data.eyebrow}</span>
           </div>
           <h2 className="mt-5 font-serif text-4xl leading-tight text-foreground text-balance md:text-5xl">
-            Galeri momen
-            <span className="block italic text-gold-gradient">yang kami rayakan.</span>
+            {data.title}
+            <span className="block italic text-gold-gradient">{data.highlightedTitle}</span>
           </h2>
           <p className="mt-5 text-lg leading-relaxed text-muted-foreground text-pretty">
-            Kumpulan karya terpilih dari perjalanan cinta pasangan yang telah mempercayakan
-            momen mereka kepada daztore.id.
+            {data.description}
           </p>
         </Reveal>
 
         <div className="mt-14 grid auto-rows-[220px] grid-cols-2 gap-3 md:grid-cols-3 md:gap-4 lg:auto-rows-[260px]">
           {items.map((item, i) => (
-            <Reveal key={item.src} delay={i * 80} className={cn("group relative", item.span)}>
+            <Reveal key={item.slug} delay={i * 80} className={cn("group relative", item.span)}>
               <button
                 type="button"
                 onClick={() => setActive(i)}
@@ -101,8 +61,8 @@ export function Gallery() {
                   <div aria-hidden className="absolute inset-0 shimmer" />
                 )}
                 <Image
-                  src={item.src}
-                  alt={item.alt}
+                  src={item.imageUrl}
+                  alt={item.imageAlt}
                   fill
                   loading="lazy"
                   sizes="(min-width: 1024px) 33vw, (min-width: 768px) 33vw, 50vw"
@@ -184,8 +144,8 @@ export function Gallery() {
             onClick={(e) => e.stopPropagation()}
           >
             <Image
-              src={items[active].src}
-              alt={items[active].alt}
+              src={items[active].imageUrl}
+              alt={items[active].imageAlt}
               fill
               sizes="80vw"
               className="object-cover"

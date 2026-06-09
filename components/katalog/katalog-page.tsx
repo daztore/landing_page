@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo } from "react"
 import { Search, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { categories, products, sortOptions, type Category } from "@/lib/katalog-data"
+import { sortOptions, type Category } from "@/lib/katalog-data"
+import { fallbackCatalog } from "@/lib/data/fallback"
+import type { CatalogData } from "@/lib/data/types"
 import { ProductCard } from "./product-card"
 
 // Hide bottom navigation on katalog page
@@ -13,7 +15,12 @@ declare global {
   }
 }
 
-export function KatalogPage() {
+interface KatalogPageProps {
+  data?: CatalogData
+}
+
+export function KatalogPage({ data = fallbackCatalog }: KatalogPageProps) {
+  const { categories, products, section, contact } = data
   const [selectedCategory, setSelectedCategory] = useState<Category | "all">("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [sortBy, setSortBy] = useState("newest")
@@ -69,10 +76,10 @@ export function KatalogPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-10">
           <div className="text-center mb-8">
             <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl tracking-tight text-foreground text-balance">
-              Katalog Premium
+              {section.title}
             </h1>
             <p className="mt-3 sm:mt-4 text-sm sm:text-base text-muted-foreground max-w-2xl mx-auto">
-              Jelajahi koleksi eksklusif mahar, seserahan, bouquet, hampers, dan wedding gift boxes yang dirancang khusus untuk hari istimewa Anda.
+              {section.description}
             </p>
           </div>
 
@@ -81,7 +88,7 @@ export function KatalogPage() {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
             <input
               type="text"
-              placeholder="Cari produk... (mahar, seserahan, bouquet, dll)"
+              placeholder={section.searchPlaceholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-3 rounded-xl border border-border/60 bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
@@ -204,7 +211,11 @@ export function KatalogPage() {
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   {filteredProducts.map((product) => (
-                    <ProductCard key={product.id} product={product} />
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      whatsappNumber={contact.whatsappNumber}
+                    />
                   ))}
                 </div>
                 <p className="mt-8 text-center text-sm text-muted-foreground">

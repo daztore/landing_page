@@ -1,3 +1,4 @@
+// This module is retained as the verified local fallback for Supabase-backed catalog data.
 export type Category = "mahar" | "seserahan" | "bouquet" | "hampers" | "gift-box" | "custom"
 
 export interface Product {

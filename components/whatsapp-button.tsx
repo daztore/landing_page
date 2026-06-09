@@ -2,8 +2,16 @@
 
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
+import { fallbackContact } from "@/lib/data/fallback"
+import { buildWhatsAppUrl } from "@/lib/whatsapp"
 
-export function WhatsappButton() {
+interface WhatsappButtonProps {
+  whatsappNumber?: string
+}
+
+export function WhatsappButton({
+  whatsappNumber = fallbackContact.whatsappNumber,
+}: WhatsappButtonProps) {
   const [visible, setVisible] = useState(false)
   const [isKatalogPage, setIsKatalogPage] = useState(false)
 
@@ -17,7 +25,10 @@ export function WhatsappButton() {
 
   return (
     <a
-      href="https://wa.me/6287756877555?text=Halo%20daztore.id%2C%20saya%20tertarik%20dengan%20layanan%20Anda."
+      href={buildWhatsAppUrl(
+        whatsappNumber,
+        "Halo daztore.id, saya tertarik dengan layanan Anda.",
+      )}
       target="_blank"
       rel="noreferrer"
       aria-label="Chat via WhatsApp"

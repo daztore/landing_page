@@ -3,27 +3,28 @@
 import { useEffect, useState } from "react"
 import { Menu, X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { fallbackContact, fallbackNavigation } from "@/lib/data/fallback"
+import type { NavigationItem, SiteContact } from "@/lib/data/types"
+import { buildWhatsAppUrl } from "@/lib/whatsapp"
 
-const links = [
-  { href: "#story", label: "Cerita", disabled: false },
-  // { href: "/katalog", label: "Katalog", disabled: false },
-  { href: "#packages", label: "Paket", disabled: true, badge: "Coming Soon" },
-  { href: "#gallery", label: "Galeri", disabled: false },
-  { href: "#testimonials", label: "Testimoni", disabled: false },
-  { href: "#contact", label: "Kontak", disabled: false },
-]
+interface SiteNavigationProps {
+  items?: NavigationItem[]
+  contact?: SiteContact
+}
 
-const mobileBottomLinks = [
-  { href: "#top", label: "Beranda", icon: "home" },
-  // { href: "/katalog", label: "Katalog", icon: "layout" },
-  { href: "#packages", label: "Paket", icon: "package" },
-  { href: "#contact", label: "Kontak", icon: "phone" },
-]
-
-export function SiteNavigation() {
+export function SiteNavigation({
+  items = fallbackNavigation,
+  contact = fallbackContact,
+}: SiteNavigationProps) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const [isKatalogPage, setIsKatalogPage] = useState(false)
+  const links = items.filter((item) => item.placement === "header")
+  const headerCta = items.find((item) => item.placement === "header_cta")
+  const mobileLinks = items.filter((item) => item.placement === "mobile")
+
+  const resolveHref = (item: NavigationItem) =>
+    item.href === "whatsapp" ? buildWhatsAppUrl(contact.whatsappNumber) : item.href
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24)
@@ -48,15 +49,19 @@ export function SiteNavigation() {
       >
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 sm:py-4 md:px-10 md:py-5">
           <a href="#top" className="group flex items-baseline gap-1">
-            <span className="font-serif text-xl sm:text-2xl tracking-tight text-foreground">daztore</span>
-            <span className="font-serif text-xl sm:text-2xl tracking-tight text-primary">.id</span>
+            <span className="font-serif text-xl sm:text-2xl tracking-tight text-foreground">
+              {contact.brandName}
+            </span>
+            <span className="font-serif text-xl sm:text-2xl tracking-tight text-primary">
+              {contact.brandSuffix}
+            </span>
           </a>
 
           <nav className="hidden md:flex items-center gap-9">
             {links.map((l) => (
               <div key={l.href} className="relative">
                 <a
-                  href={l.disabled ? "#" : l.href}
+                  href={l.disabled ? "#" : resolveHref(l)}
                   onClick={(e) => l.disabled && e.preventDefault()}
                   className={cn(
                     "relative text-sm tracking-wide transition-colors duration-300 inline-flex items-center gap-2",
@@ -80,14 +85,14 @@ export function SiteNavigation() {
             ))}
           </nav>
 
-          <a
-            href="/katalog"
-              // target="_blank"
-              // rel="noreferrer"
-            className="hidden md:inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5"
-          >
-            Katalog
-          </a>
+          {headerCta && (
+            <a
+              href={resolveHref(headerCta)}
+              className="hidden md:inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5"
+            >
+              {headerCta.label}
+            </a>
+          )}
 
           <button
             aria-label="Toggle menu"
@@ -108,7 +113,7 @@ export function SiteNavigation() {
             {links.map((l) => (
               <a
                 key={l.href}
-                href={l.disabled ? "#" : l.href}
+                href={l.disabled ? "#" : resolveHref(l)}
                 onClick={(e) => {
                   if (l.disabled) e.preventDefault()
                   else setOpen(false)
@@ -128,12 +133,14 @@ export function SiteNavigation() {
                 )}
               </a>
             ))}
-            <a
-              href="/katalog"
-              className="mt-2 inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground"
-            >
-              Katalog
-            </a>
+            {headerCta && (
+              <a
+                href={resolveHref(headerCta)}
+                className="mt-2 inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground"
+              >
+                {headerCta.label}
+              </a>
+            )}
           </nav>
         </div>
       </header>
@@ -142,37 +149,22 @@ export function SiteNavigation() {
       {!isKatalogPage && (
         <div className="fixed inset-x-0 bottom-0 z-40 md:hidden border-t border-border/60 bg-background/95 backdrop-blur">
           <nav className="flex items-center justify-around px-2 py-2">
-          <a
-            href="#top"
-            className="flex flex-col items-center gap-1 px-3 py-2.5 text-xs text-foreground/70 transition-colors hover:text-primary"
-          >
-            <span className="text-lg">🏠</span>
-            <span>Beranda</span>
-          </a>
-          <a
-            href="/katalog"
-            className="flex flex-col items-center gap-1 px-3 py-2.5 text-xs text-foreground/70 transition-colors hover:text-primary"
-          >
-            <span className="text-lg">📦</span>
-            <span>Katalog</span>
-          </a>
-          <a
-            href="#packages"
-            className="flex flex-col items-center gap-1 px-3 py-2.5 text-xs text-foreground/70 transition-colors hover:text-primary"
-          >
-            <span className="text-lg">💎</span>
-            <span>Paket</span>
-          </a>
-          <a
-            href="https://wa.me/6287756877555"
-            target="_blank"
-            rel="noreferrer"
-            className="flex flex-col items-center gap-1 px-3 py-2.5 text-xs text-foreground/70 transition-colors hover:text-primary"
-          >
-            <span className="text-lg">💬</span>
-            <span>Chat</span>
-          </a>
-        </nav>
+            {mobileLinks.map((item) => {
+              const external = item.href === "whatsapp"
+              return (
+                <a
+                  key={item.slug}
+                  href={resolveHref(item)}
+                  target={external ? "_blank" : undefined}
+                  rel={external ? "noreferrer" : undefined}
+                  className="flex flex-col items-center gap-1 px-3 py-2.5 text-xs text-foreground/70 transition-colors hover:text-primary"
+                >
+                  <span className="text-lg">{item.icon}</span>
+                  <span>{item.label}</span>
+                </a>
+              )
+            })}
+          </nav>
         </div>
       )}
 

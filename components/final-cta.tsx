@@ -1,8 +1,19 @@
 import { ArrowRight, Clock } from "lucide-react"
 import { Reveal } from "@/components/reveal"
 import { FloatingFlower } from "./floating-flower"
+import { fallbackContact, fallbackFinalCta } from "@/lib/data/fallback"
+import type { FinalCtaSection, SiteContact } from "@/lib/data/types"
+import { buildWhatsAppUrl } from "@/lib/whatsapp"
 
-export function FinalCta() {
+interface FinalCtaProps {
+  data?: FinalCtaSection
+  contact?: SiteContact
+}
+
+export function FinalCta({
+  data = fallbackFinalCta,
+  contact = fallbackContact,
+}: FinalCtaProps) {
   return (
     <section id="contact" className="relative overflow-hidden bg-background py-24 md:py-32">
       {/* Subtle falling petals */}
@@ -33,43 +44,43 @@ export function FinalCta() {
             <div className="relative">
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-background px-4 py-1.5 text-xs uppercase tracking-[0.2em] text-primary">
                 <Clock className="h-3.5 w-3.5" />
-                Hanya 8 slot tersedia bulan ini
+                {data.badge}
               </div>
 
               <h2 className="mt-7 font-serif text-4xl leading-tight text-foreground text-balance md:text-6xl">
-                Mari rangkai
-                <span className="block italic text-gold-gradient">kisah Anda bersama.</span>
+                {data.title}
+                <span className="block italic text-gold-gradient">{data.highlightedTitle}</span>
               </h2>
 
               <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground text-pretty">
-                Kami hanya menerima jumlah pesanan terbatas setiap bulannya untuk menjaga
-                kualitas dan sentuhan personal. Jadwalkan konsultasi Anda hari ini.
+                {data.description}
               </p>
 
               <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <a
-                  href="https://wa.me/6287756877555?text=Halo%20daztore.id%2C%20saya%20ingin%20memesan%20slot%20konsultasi."
+                  href={buildWhatsAppUrl(contact.whatsappNumber, data.primaryCtaMessage)}
                   target="_blank"
                   rel="noreferrer"
                   className="group inline-flex items-center justify-center gap-2 rounded-full bg-primary px-8 py-4 text-sm font-medium text-primary-foreground shadow-lg shadow-primary/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/30"
                 >
-                  Chat via WhatsApp
+                  {data.primaryCtaLabel}
                   <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                 </a>
                 <a
-                  href="mailto:hello@daztore.id"
+                  href={`mailto:${contact.email}`}
                   className="inline-flex items-center justify-center gap-2 rounded-full border border-foreground/20 px-8 py-4 text-sm font-medium text-foreground transition-all duration-300 hover:bg-foreground hover:text-background"
                 >
-                  hello@daztore.id
+                  {data.secondaryCtaLabel}
                 </a>
               </div>
 
               <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-xs uppercase tracking-[0.2em] text-muted-foreground">
-                <span>Respon &lt; 1 jam</span>
-                <span className="h-1 w-1 rounded-full bg-border" />
-                <span>Konsultasi gratis</span>
-                <span className="h-1 w-1 rounded-full bg-border" />
-                <span>Pengiriman nasional</span>
+                {data.trustPoints.map((point, index) => (
+                  <span key={point} className="contents">
+                    {index > 0 && <span className="h-1 w-1 rounded-full bg-border" />}
+                    <span>{point}</span>
+                  </span>
+                ))}
               </div>
             </div>
           </div>

@@ -4,8 +4,19 @@ import Image from "next/image"
 import { useEffect, useState } from "react"
 import { ArrowRight, Sparkles } from "lucide-react"
 import { FloatingFlower } from "./floating-flower"
+import { fallbackContact, fallbackHero } from "@/lib/data/fallback"
+import type { HeroSection } from "@/lib/data/types"
+import { buildWhatsAppUrl } from "@/lib/whatsapp"
 
-export function Hero() {
+interface HeroProps {
+  data?: HeroSection
+  whatsappNumber?: string
+}
+
+export function Hero({
+  data = fallbackHero,
+  whatsappNumber = fallbackContact.whatsappNumber,
+}: HeroProps) {
   const [offset, setOffset] = useState(0)
 
   useEffect(() => {
@@ -25,7 +36,7 @@ export function Hero() {
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: "url('/bouquet-bg.jpg')",
+            backgroundImage: `url('${data.mobileBackgroundUrl}')`,
             opacity: 0.25,
           }}
         />
@@ -85,52 +96,48 @@ export function Hero() {
         <div className="md:col-span-6">
           <div className="hero-badge inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card/60 px-3 sm:px-4 py-1.5 text-[11px] sm:text-xs tracking-[0.18em] uppercase text-primary backdrop-blur">
             <Sparkles className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
-            Premium Wedding Atelier
+            {data.badge}
           </div>
 
           <h1 className="hero-headline mt-4 sm:mt-6 font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-[1.1] tracking-tight text-foreground text-balance">
-            Setiap cinta layak
-            <span className="block italic text-gold-gradient">dirayakan dengan indah.</span>
+            {data.title}
+            <span className="block italic text-gold-gradient">{data.highlightedTitle}</span>
           </h1>
 
           <p className="hero-description mt-4 sm:mt-6 max-w-xl text-base sm:text-lg leading-relaxed text-muted-foreground text-pretty">
-            daztore.id menghadirkan mahar, seserahan, dan flower bouquet yang dirancang
-            dengan ketelitian, keanggunan, dan sentuhan personal — untuk hari paling
-            berharga dalam hidup Anda.
+            {data.description}
           </p>
 
           <div className="hero-ctas mt-6 sm:mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <a
-              href="https://wa.me/6287756877555?text=Halo%20daztore.id%2C%20saya%20tertarik%20dengan%20layanan%20Anda."
+              href={buildWhatsAppUrl(whatsappNumber, data.primaryCtaMessage)}
               target="_blank"
               rel="noreferrer"
               className="group inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 sm:px-7 py-3 sm:py-3.5 text-sm font-medium text-primary-foreground shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/25 active:translate-y-0"
             >
-              Mulai Konsultasi
+              {data.primaryCtaLabel}
               <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
             </a>
             <a
-              href="#packages"
+              href={data.secondaryCtaHref}
               className="inline-flex items-center justify-center gap-2 rounded-full border border-foreground/20 bg-transparent px-6 sm:px-7 py-3 sm:py-3.5 text-sm font-medium text-foreground transition-all duration-300 hover:bg-foreground hover:text-background"
             >
-              Lihat Paket
+              {data.secondaryCtaLabel}
             </a>
           </div>
 
           {/* Trust stats */}
           <dl className="hero-stats mt-8 sm:mt-12 grid max-w-md grid-cols-3 gap-4 sm:gap-6 border-t border-border/60 pt-6 sm:pt-8">
-            <div>
-              <dt className="text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground">Couples</dt>
-              <dd className="mt-1 font-serif text-xl sm:text-2xl text-foreground">500+</dd>
-            </div>
-            <div>
-              <dt className="text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground">Rating</dt>
-              <dd className="mt-1 font-serif text-xl sm:text-2xl text-foreground">4.9 / 5</dd>
-            </div>
-            <div>
-              <dt className="text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground">Tahun</dt>
-              <dd className="mt-1 font-serif text-xl sm:text-2xl text-foreground">7+</dd>
-            </div>
+            {data.metrics.map((metric) => (
+              <div key={metric.slug}>
+                <dt className="text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground">
+                  {metric.label}
+                </dt>
+                <dd className="mt-1 font-serif text-xl sm:text-2xl text-foreground">
+                  {metric.value}
+                </dd>
+              </div>
+            ))}
           </dl>
         </div>
 
@@ -141,8 +148,8 @@ export function Hero() {
             style={{ transform: `translateY(-${offset * 0.15}px)` }}
           >
             <Image
-              src="/hero-mahar.webp"
-              alt="Mahar pernikahan premium dengan bunga mawar putih dan aksen emas"
+              src={data.imageUrl}
+              alt={data.imageAlt}
               fill
               priority
               sizes="(min-width: 768px) 50vw, 100vw"
@@ -158,8 +165,8 @@ export function Hero() {
             />
             <div className="absolute inset-x-3 sm:inset-x-6 bottom-3 sm:bottom-6 flex items-center justify-between rounded-xl sm:rounded-2xl bg-background/85 px-3 sm:px-5 py-3 sm:py-4 backdrop-blur">
               <div>
-                <div className="font-serif text-xs sm:text-sm text-foreground">Signature Collection</div>
-                <div className="text-[10px] sm:text-xs text-muted-foreground">Handcrafted with love</div>
+                <div className="font-serif text-xs sm:text-sm text-foreground">{data.collectionTitle}</div>
+                <div className="text-[10px] sm:text-xs text-muted-foreground">{data.collectionSubtitle}</div>
               </div>
               <div className="h-9 sm:h-10 w-9 sm:w-10 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
                 <Sparkles className="h-3.5 sm:h-4 w-3.5 sm:w-4 text-primary" />
@@ -172,9 +179,9 @@ export function Hero() {
             className="absolute -left-4 top-10 hidden rounded-2xl border border-border bg-card/95 px-5 py-4 shadow-xl backdrop-blur md:block"
             style={{ transform: `translateY(${offset * 0.08}px)` }}
           >
-            <div className="text-[10px] uppercase tracking-[0.22em] text-primary">Limited</div>
+            <div className="text-[10px] uppercase tracking-[0.22em] text-primary">{data.accentLabel}</div>
             <div className="mt-1 font-serif text-base text-foreground">
-              Hanya 8 slot / bulan
+              {data.accentValue}
             </div>
           </div>
         </div>

@@ -1,0 +1,267 @@
+# Troubleshooting
+
+## Diagnosis Awal
+
+Mulai dengan mencatat:
+
+- command yang gagal;
+- environment lokal, CI, atau container;
+- commit SHA;
+- versi Node.js dan npm;
+- log error lengkap tanpa secret;
+- perubahan terakhir pada config atau dependency.
+
+Command dasar:
+
+```bash
+node --version
+npm --version
+npm list --depth=0
+```
+
+## Development
+
+### Node.js tidak tersedia
+
+Expected version mengikuti Dockerfile:
+
+```text
+Node.js 20
+```
+
+Pastikan executable tersedia di `PATH`. Pada PowerShell yang memblokir `npm.ps1`, gunakan:
+
+```powershell
+npm.cmd --version
+npm.cmd run dev
+```
+
+### Dependency install gagal
+
+Gunakan lockfile npm:
+
+```bash
+npm ci
+```
+
+Jika muncul mismatch:
+
+```bash
+npm install
+npm ci
+```
+
+Lakukan langkah pembaruan lockfile hanya di development branch dan review diff.
+
+### Dua lockfile menghasilkan dependency berbeda
+
+Repository memiliki `package-lock.json` dan `pnpm-lock.yaml`. Docker memakai npm. Jangan menjalankan pnpm untuk deployment kecuali tim resmi mengganti package manager dan Dockerfile.
+
+### Lint gagal: ESLint tidak ditemukan
+
+`package.json` memiliki script `eslint .`, tetapi ESLint tidak tercantum sebagai dependency saat dokumentasi dibuat.
+
+Diagnosis:
+
+```bash
+npm run lint
+npm list eslint
+```
+
+Perbaikan memerlukan penambahan ESLint dan config yang kompatibel pada pekerjaan code change terpisah.
+
+### TypeScript error tidak terlihat pada build
+
+Build Next.js saat ini mengabaikan type errors.
+
+Jalankan:
+
+```bash
+npx tsc --noEmit
+```
+
+Jangan menganggap `npm run build` yang sukses berarti type check sukses.
+
+### Development server memakai port lain
+
+```bash
+npm run dev -- -p 3001
+```
+
+Periksa proses yang memakai port sebelum menghentikannya.
+
+## Build
+
+### Build gagal saat memuat Google Fonts
+
+Root layout memakai `next/font/google`. Pastikan CI memiliki akses jaringan keluar dan DNS berfungsi.
+
+Diagnosis umum:
+
+```bash
+npm run build
+```
+
+Jika organisasi memblokir Google Fonts saat build, evaluasi self-hosted font sebagai perubahan terpisah.
+
+### Build sukses tetapi ada bug type
+
+Periksa `next.config.mjs`:
+
+```text
+typescript.ignoreBuildErrors = true
+```
+
+Jalankan type check eksplisit di CI.
+
+### Static asset tidak ditemukan
+
+Path image harus cocok dengan file dalam `public/`.
+
+```bash
+curl -I http://localhost:3000/hero-mahar.webp
+curl -I http://localhost:3000/gallery-1.jpg
+```
+
+Perhatikan case sensitivity pada Linux.
+
+## Docker
+
+### `next start` tidak menemukan `.next`
+
+Periksa log:
+
+```bash
+docker compose logs --tail=200 app
+```
+
+Compose saat ini memasang `.:/app`, yang dapat menutupi `.next` dari image.
+
+Periksa mount:
+
+```bash
+docker inspect daztore-app
+```
+
+Production fix yang direkomendasikan adalah Compose tanpa bind mount source.
+
+### Docker build lambat atau context sangat besar
+
+Penyebab utama yang mungkin:
+
+- belum ada `.dockerignore`;
+- `node_modules` lokal ikut dikirim;
+- `.git` dan artifact build ikut dikirim.
+
+Diagnosis:
+
+```bash
+docker build --progress=plain -t daztore:test .
+```
+
+Tambahkan `.dockerignore` pada perubahan deployment berikutnya.
+
+### Container restart loop
+
+```bash
+docker compose ps
+docker compose logs --tail=200 app
+docker compose logs --tail=200 web
+```
+
+Periksa:
+
+- `.next` tersedia;
+- dependency runtime tersedia;
+- app listen pada port `3000`;
+- Nginx dapat resolve hostname `app`.
+
+### Nginx memberi `502 Bad Gateway`
+
+```bash
+docker compose ps
+docker compose exec web wget -qO- http://app:3000/
+docker compose logs --tail=200 app web
+```
+
+Jika app belum ready, Nginx akan gagal proxy. Compose saat ini belum memiliki health check.
+
+### Port `8002` sudah dipakai
+
+Periksa listener host dan ubah mapping hanya melalui override yang sesuai environment.
+
+```bash
+docker compose config
+```
+
+### `docker compose pull` tidak memperbarui app
+
+Service `app` saat ini menggunakan `build`, bukan `image`. `pull` hanya relevan setelah production Compose menunjuk registry image.
+
+## Connectivity dan Integrasi
+
+### WhatsApp tidak terbuka
+
+Periksa:
+
+- browser tidak memblokir popup;
+- device memiliki handler WhatsApp/web;
+- URL `wa.me` dapat diakses;
+- nomor dan encoding pesan benar.
+
+Tidak ada API server yang dapat diperiksa karena integrasi memakai link langsung.
+
+### Email tidak membuka client
+
+Link `mailto:` memerlukan email client yang terkonfigurasi pada device pengguna.
+
+### Analytics tidak muncul
+
+`Analytics` hanya dirender saat:
+
+```text
+NODE_ENV=production
+```
+
+Periksa ad blocker, browser privacy settings, dan apakah deployment mendukung Vercel Analytics.
+
+## Cache dan Static Asset
+
+### Perubahan gambar tidak terlihat
+
+- pastikan image baru benar-benar masuk ke image Docker;
+- hindari penggunaan ulang tag immutable untuk content berbeda;
+- cek browser cache;
+- cek cache reverse proxy/CDN jika ada;
+- gunakan commit SHA baru untuk deploy.
+
+Hard refresh browser hanya alat diagnosis, bukan strategi invalidasi production.
+
+### Image lambat
+
+`images.unoptimized: true` membuat Next.js tidak melakukan optimasi image runtime. Periksa ukuran file, format WebP/AVIF, cache header, dan CDN.
+
+## Navigasi
+
+### Link Paket tidak berpindah
+
+`#packages` tidak memiliki target aktif karena komponen `Packages` dikomentari.
+
+### Link Testimoni tidak berpindah
+
+`TestimonialsEnhanced` tidak memiliki `id="testimonials"`.
+
+### Link legal kembali ke atas
+
+Kebijakan Privasi dan Syarat & Ketentuan masih memakai `href="#"`.
+
+## Command Production Yang Aman
+
+```bash
+docker compose -f docker-compose.production.yml config
+docker compose -f docker-compose.production.yml ps
+docker compose -f docker-compose.production.yml logs --tail=200 app web
+curl -fsS https://example.com/
+```
+
+Hindari menghapus volume, image, atau container secara massal saat diagnosis. Pastikan rollback tag diketahui sebelum restart production.

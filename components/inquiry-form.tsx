@@ -2,8 +2,16 @@
 
 import { useState } from "react"
 import { Send } from "lucide-react"
+import { fallbackContact } from "@/lib/data/fallback"
+import { buildWhatsAppUrl } from "@/lib/whatsapp"
 
-export function InquiryForm() {
+interface InquiryFormProps {
+  whatsappNumber?: string
+}
+
+export function InquiryForm({
+  whatsappNumber = fallbackContact.whatsappNumber,
+}: InquiryFormProps) {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -29,7 +37,7 @@ Tanggal Pernikahan: ${formData.weddingDate}
 Budget: ${formData.budget}
 Pesan: ${formData.message}`
 
-    const whatsappUrl = `https://wa.me/6287756877555?text=${encodeURIComponent(message)}`
+    const whatsappUrl = buildWhatsAppUrl(whatsappNumber, message)
     window.open(whatsappUrl, "_blank")
     
     setSubmitted(true)
