@@ -61,6 +61,9 @@ Resolver Storage juga mengembalikan path gambar fallback lokal dalam kondisi ter
 Tidak ada environment variable atau secret tambahan untuk membaca bucket publik
 `landing_page` dan `catalogs`. Service-role key tidak diperlukan dan tidak boleh ditambahkan.
 
+Route admin menggunakan variable publik yang sama untuk Supabase Auth, database, dan Storage.
+Hak tulis berasal dari JWT user yang login dan policy RLS, bukan dari secret server.
+
 ## Build-Time dan Runtime
 
 Variable `NEXT_PUBLIC_*` dapat ditanam ke bundle saat `next build`. CI harus menyediakan nilai yang benar saat membangun image production.
@@ -118,10 +121,13 @@ Project belum menggunakan:
 
 - database connection string langsung;
 - service-role key;
-- authentication secret;
+- authentication secret custom;
 - SMTP credential;
 - storage secret atau service-role key;
 - payment credential.
+
+Supabase Auth email/password aktif melalui publishable key. Session admin disimpan sebagai
+cookie oleh `@supabase/ssr`.
 
 ## Needs Confirmation
 

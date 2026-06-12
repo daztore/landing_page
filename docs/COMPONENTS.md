@@ -94,6 +94,22 @@ Props:
 
 Header mobile menyediakan tombol kembali dan tombol search visual. Tombol search belum memiliki handler.
 
+## Komponen Admin
+
+Komponen admin terisolasi di `components/admin-daz/`.
+
+| Komponen | Tanggung jawab |
+| --- | --- |
+| `AdminShell` | Header, sidebar desktop, bottom navigation mobile, dan padding aman. |
+| `AdminResourceManager` | List, search, filter, create, edit, toggle aktif, dan delete. |
+| `AdminImageUploader` | Validasi file, preview, upload, replace, dan delete Storage. |
+| `AdminImagePreview` | Resolve object path menjadi public preview URL. |
+| `AdminConfirmDialog` | Konfirmasi operasi destruktif. |
+| `AdminLinkGrid` | Shortcut dashboard dan hub resource. |
+
+Form admin menggunakan layout satu kolom dan sticky action pada layar kecil. Data admin
+tidak diimpor oleh komponen landing page atau katalog publik.
+
 ## Komponen Pendukung
 
 ### `Reveal`

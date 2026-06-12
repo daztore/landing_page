@@ -20,6 +20,7 @@ Package:
 
 ```text
 @supabase/supabase-js 2.108.0
+@supabase/ssr 0.12.0
 ```
 
 Client dibuat oleh `lib/supabase/client.ts` menggunakan:
@@ -37,7 +38,8 @@ Query dilakukan oleh data access layer, bukan langsung dari komponen UI. Query:
 - menggunakan RLS public read-only;
 - kembali ke fallback lokal saat gagal atau kosong.
 
-Tidak ada service-role key, public write policy, authentication, atau upload dari aplikasi.
+Tidak ada service-role key atau public write policy. Modul `/admin-daz` menggunakan Supabase
+Auth email/password dan RLS admin untuk CRUD serta upload.
 
 ### Supabase Storage
 
@@ -48,8 +50,8 @@ Gambar publik dibaca dari bucket:
 
 Kolom database menyimpan object path, lalu `lib/supabase/storage.ts` membentuk public URL
 melalui Supabase client. URL `http(s)` dan fallback lokal yang diawali `/` tetap didukung.
-Bucket hanya memiliki akses baca publik; upload dilakukan manual oleh owner project melalui
-Dashboard, CLI, atau proses deployment terpisah dengan credential yang tidak masuk aplikasi.
+Bucket tetap dapat dibaca publik. Insert/update/delete object hanya diizinkan untuk user
+authenticated yang terdaftar sebagai admin aktif. Admin uploader menyimpan object path saja.
 
 ## WhatsApp
 
@@ -162,18 +164,23 @@ Tidak ada sinkronisasi dengan inventory, CMS lain, spreadsheet, atau checkout ba
 
 ## Authentication, Cookie, dan Token
 
-Tidak ada authentication, authorization, atau session pada route aktif. Publishable key Supabase adalah credential publik yang tetap dibatasi RLS.
+Route publik tidak memerlukan session. Route `/admin-daz/**` memakai Supabase Auth:
+
+```text
+login email/password
+-> session cookie @supabase/ssr
+-> proxy refresh token
+-> server layout memvalidasi claims
+-> admin_users memvalidasi izin
+-> RLS membatasi CRUD database/Storage
+```
+
+Publishable key tetap merupakan credential publik. Akses admin berasal dari JWT user dan
+allowlist, bukan dari kerahasiaan key.
 
 `components/ui/sidebar.tsx` memiliki kode cookie untuk menyimpan state sidebar, tetapi komponen tersebut tidak dipakai oleh halaman aktif. Cookie itu bukan cookie autentikasi.
 
-Tidak ditemukan penggunaan:
-
-- `cookies()` Next.js;
-- `headers()` Next.js;
-- bearer token aplikasi custom;
-- `Authorization` header;
-- local storage;
-- session storage.
+Tidak ada bearer token custom, local storage session custom, atau service-role key.
 
 ## Keamanan dan Privasi
 

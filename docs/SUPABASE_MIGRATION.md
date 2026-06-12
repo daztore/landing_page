@@ -18,6 +18,7 @@ Tidak ada service-role key di aplikasi. Query publik memakai publishable key dan
 | --- | --- |
 | `supabase/migrations/001_create_landing_page_tables.sql` | Membuat tabel, index, trigger `updated_at`, grant, dan RLS policy. |
 | `supabase/migrations/002_create_storage_buckets.sql` | Membuat bucket gambar publik dan policy read-only. |
+| `supabase/migrations/003_create_admin_access.sql` | Membuat allowlist admin serta policy CRUD database dan Storage. |
 | `supabase/seed.sql` | Mengisi data lokal saat ini secara idempotent. |
 | `lib/supabase/client.ts` | Membuat Supabase client dari environment variable. |
 | `lib/supabase/storage.ts` | Mengubah object path Storage menjadi public URL dengan fallback aman. |
@@ -61,7 +62,20 @@ Storage memakai dua bucket publik:
 | `catalogs` | Seluruh gambar produk pada `/katalog`. |
 
 Migration Storage hanya membuat policy `SELECT` untuk `anon` dan `authenticated`.
-Tidak ada public policy untuk insert, update, atau delete.
+Migration admin menambahkan policy `INSERT`, `UPDATE`, dan `DELETE` khusus user
+`authenticated` yang lolos `public.is_active_admin()`. Anonymous tetap tidak dapat menulis.
+
+## Model Admin
+
+Admin harus memenuhi dua syarat:
+
+1. memiliki user email/password aktif di Supabase Auth;
+2. UUID user terdaftar pada `public.admin_users` dengan `is_active = true`.
+
+Route admin memakai session cookie Supabase SSR. Pemeriksaan route dilakukan di server,
+sedangkan RLS tetap menjadi batas izin final untuk CRUD database dan Storage.
+
+Tidak ada public registration dan aplikasi tidak menggunakan service-role key.
 
 ## Setup Manual
 
@@ -79,30 +93,66 @@ supabase/migrations/001_create_landing_page_tables.sql
 supabase/migrations/002_create_storage_buckets.sql
 ```
 
-5. Upload file gambar sesuai daftar object path di bawah.
+5. Jalankan migration admin:
 
-6. Setelah migration dan upload berhasil, jalankan:
+```text
+supabase/migrations/003_create_admin_access.sql
+```
+
+6. Upload file gambar sesuai daftar object path di bawah.
+
+7. Setelah migration dan upload berhasil, jalankan:
 
 ```text
 supabase/seed.sql
 ```
 
-7. Buat `.env.local`:
+8. Buat `.env.local`:
 
 ```dotenv
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
 ```
 
-8. Restart development server:
+9. Restart development server:
 
 ```bash
 npm run dev
 ```
 
-9. Verifikasi `/` dan `/katalog`.
+10. Buat admin pertama menggunakan langkah berikut.
+11. Verifikasi `/`, `/katalog`, dan `/admin-daz/login`.
 
 Migration dan seed tidak dijalankan otomatis oleh aplikasi.
+
+## Membuat Admin Pertama
+
+1. Buka **Authentication > Users** pada Supabase Dashboard.
+2. Buat user email/password. Jangan membuka public registration pada aplikasi.
+3. Salin UUID user atau jalankan SQL berikut dengan email yang benar:
+
+```sql
+insert into public.admin_users (id, email)
+select id, email
+from auth.users
+where email = 'admin@example.com'
+on conflict (id) do update set
+  email = excluded.email,
+  is_active = true;
+```
+
+4. Login melalui `/admin-daz/login`.
+
+Menonaktifkan akses tanpa menghapus user:
+
+```sql
+update public.admin_users
+set is_active = false
+where email = 'admin@example.com';
+```
+
+SQL tersebut dijalankan melalui SQL Editor oleh owner project. Jangan menambahkan secret
+atau service-role key ke Client Component.
 
 ## Upload Gambar Storage
 
@@ -140,6 +190,10 @@ Bucket `catalogs`:
 
 Database menyimpan object path pada kolom `image_url`. Jangan menyimpan URL seperti
 `https://project.supabase.co/storage/v1/object/public/...` di seed atau tabel.
+
+Uploader admin menerima JPEG, PNG, dan WebP dengan ukuran maksimal 5 MB. Upload menghasilkan
+nama unik dan menyimpan object path saja. Melepas referensi database tidak otomatis menghapus
+file Storage; penghapusan permanen memerlukan konfirmasi terpisah.
 
 ## Perilaku Fetch
 
@@ -194,6 +248,7 @@ select count(*) from public.faqs where is_active;
 select count(*) from public.product_categories where is_active;
 select count(*) from public.products where is_active;
 select id, name, public from storage.buckets where id in ('landing_page', 'catalogs');
+select id, email, is_active from public.admin_users;
 ```
 
 Expected seed:
@@ -255,7 +310,7 @@ Jangan menjalankan `drop table`, truncate, atau delete massal untuk rollback apl
 ## Needs Confirmation
 
 - Apakah project Supabase target adalah environment development, staging, atau production.
-- Siapa owner yang memiliki hak tulis untuk mengelola konten.
-- Siapa owner yang bertanggung jawab meng-upload dan mengganti object Storage.
+- Siapa user pertama yang akan dimasukkan ke allowlist admin.
+- Apakah penghapusan permanen data dan file Storage memerlukan approval tambahan.
 - Apakah perubahan konten membutuhkan preview/draft workflow.
 - Apakah revalidasi lima menit sesuai kebutuhan operasional.

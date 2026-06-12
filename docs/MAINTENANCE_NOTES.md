@@ -16,6 +16,7 @@
 | Sedang | Image performance | Optimasi Next Image dinonaktifkan; asset aktif dilayani dari Supabase Storage. |
 | Sedang | Legacy files | File PHP/Supervisor tidak terhubung ke aplikasi saat ini. |
 | Sedang | Quality assurance | Tidak ada unit, integration, atau end-to-end test. |
+| Sedang | Admin operations | CRUD dan upload masih memerlukan uji manual terhadap project Supabase target. |
 
 ## Docker dan Deployment
 
@@ -135,6 +136,20 @@ Catatan:
 Perbaikan harus dilakukan bertahap dengan regression check visual.
 
 ## Security
+
+### Admin
+
+Route admin memakai Supabase Auth cookie session, allowlist `admin_users`, dan RLS.
+Pertahankan aturan berikut:
+
+- jangan menambahkan service-role key ke variable `NEXT_PUBLIC_*`;
+- audit user `admin_users` secara berkala;
+- nonaktifkan admin yang tidak lagi berwenang;
+- backup database dan Storage sebelum operasi massal;
+- verifikasi policy migration di staging sebelum production.
+
+UI menyediakan hard delete setelah konfirmasi. Foreign key dapat menolak penghapusan kategori
+yang masih dipakai produk; gunakan nonaktifkan sebagai pilihan operasional yang lebih aman.
 
 ### Security policy
 

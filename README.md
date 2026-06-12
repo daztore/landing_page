@@ -27,6 +27,7 @@ Buka:
 ```text
 http://localhost:3000
 http://localhost:3000/katalog
+http://localhost:3000/admin-daz/login
 ```
 
 Script project:
@@ -59,6 +60,7 @@ Route aktif:
 | --- | --- |
 | `/` | Landing page utama dan CTA kontak. |
 | `/katalog` | Katalog Supabase dengan pencarian, filter, dan sorting client-side. |
+| `/admin-daz` | Panel admin terproteksi untuk konten, katalog, dan gambar. |
 
 ## Supabase
 
@@ -66,10 +68,12 @@ Setup ringkas:
 
 1. Jalankan `supabase/migrations/001_create_landing_page_tables.sql` di Supabase SQL Editor.
 2. Jalankan `supabase/migrations/002_create_storage_buckets.sql`.
-3. Upload asset landing page ke bucket `landing_page` dan asset produk ke bucket `catalogs`.
-4. Jalankan `supabase/seed.sql`.
-5. Isi `.env.local`.
-6. Restart development server.
+3. Jalankan `supabase/migrations/003_create_admin_access.sql`.
+4. Upload asset landing page ke bucket `landing_page` dan asset produk ke bucket `catalogs`.
+5. Jalankan `supabase/seed.sql`.
+6. Buat user email/password melalui Supabase Auth, lalu tambahkan user tersebut ke `public.admin_users`.
+7. Isi `.env.local`.
+8. Restart development server.
 
 Nilai gambar pada database disimpan sebagai object path portabel, bukan full public URL.
 File di `public/` tetap dipertahankan sebagai fallback lokal. Daftar object path yang perlu
@@ -127,4 +131,6 @@ Server production tidak perlu menjalankan `npm install` atau `npm run build`. Se
 - `lib/katalog-data.ts` dan `lib/data/fallback.ts` dipertahankan sebagai fallback.
 - CTA utama membuka WhatsApp, email, atau Instagram.
 - Supabase memakai publishable key; service-role key tidak digunakan.
+- Admin memakai Supabase Auth cookie session dan allowlist `admin_users`.
+- Write database/Storage hanya diizinkan RLS untuk admin aktif.
 - Beberapa area production masih memerlukan hardening; lihat maintenance notes sebelum go-live.

@@ -10,6 +10,12 @@ Project menggunakan Next.js App Router karena route didefinisikan melalui folder
 | --- | --- | --- | --- |
 | `/` | `app/page.tsx` | Halaman utama | Landing page pemasaran dan kontak. |
 | `/katalog` | `app/katalog/page.tsx` | Halaman katalog | Pencarian, filter, sorting, dan CTA produk. |
+| `/admin-daz/login` | `app/admin-daz/login/page.tsx` | Publik | Login email/password admin. |
+| `/admin-daz/dashboard` | `app/admin-daz/(protected)/dashboard/page.tsx` | Protected | Ringkasan dan shortcut admin. |
+| `/admin-daz/landing/**` | `app/admin-daz/(protected)/landing/` | Protected | CRUD konten landing page. |
+| `/admin-daz/catalog/**` | `app/admin-daz/(protected)/catalog/` | Protected | CRUD kategori dan produk. |
+| `/admin-daz/media` | `app/admin-daz/(protected)/media/page.tsx` | Protected | Shortcut pengelolaan media. |
+| `/admin-daz/settings` | `app/admin-daz/(protected)/settings/page.tsx` | Protected | CRUD site settings. |
 
 Tidak ada dynamic route seperti `[id]`, catch-all route, route group, parallel route, atau intercepting route.
 
@@ -111,7 +117,9 @@ Tidak ditemukan:
 
 ## Middleware
 
-Tidak ditemukan `middleware.ts` atau `middleware.js`. Tidak ada redirect, rewrite, autentikasi, locale routing, atau header security yang diterapkan melalui middleware.
+`proxy.ts` berjalan hanya untuk `/admin-daz/:path*` dan menyegarkan cookie Supabase Auth.
+Protected route group memeriksa JWT melalui `getClaims()` dan allowlist `admin_users`.
+User anonymous diarahkan ke login; user non-admin diarahkan ke halaman akses ditolak.
 
 ## Loading, Error, dan Not Found
 
