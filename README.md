@@ -65,9 +65,15 @@ Route aktif:
 Setup ringkas:
 
 1. Jalankan `supabase/migrations/001_create_landing_page_tables.sql` di Supabase SQL Editor.
-2. Jalankan `supabase/seed.sql`.
-3. Isi `.env.local`.
-4. Restart development server.
+2. Jalankan `supabase/migrations/002_create_storage_buckets.sql`.
+3. Upload asset landing page ke bucket `landing_page` dan asset produk ke bucket `catalogs`.
+4. Jalankan `supabase/seed.sql`.
+5. Isi `.env.local`.
+6. Restart development server.
+
+Nilai gambar pada database disimpan sebagai object path portabel, bukan full public URL.
+File di `public/` tetap dipertahankan sebagai fallback lokal. Daftar object path yang perlu
+di-upload tersedia di [Supabase Migration](./docs/SUPABASE_MIGRATION.md).
 
 Panduan lengkap: [Supabase Migration](./docs/SUPABASE_MIGRATION.md).
 
@@ -117,6 +123,7 @@ Server production tidak perlu menjalankan `npm install` atau `npm run build`. Se
 ## Kondisi Yang Perlu Diketahui
 
 - Konten publik dibaca dari Supabase dengan RLS read-only.
+- Gambar aktif dibaca dari bucket publik `landing_page` dan `catalogs`.
 - `lib/katalog-data.ts` dan `lib/data/fallback.ts` dipertahankan sebagai fallback.
 - CTA utama membuka WhatsApp, email, atau Instagram.
 - Supabase memakai publishable key; service-role key tidak digunakan.

@@ -37,6 +37,10 @@ import type {
   TestimonialVariant,
 } from "@/lib/data/types"
 import { getSupabaseClient } from "@/lib/supabase/client"
+import {
+  resolveStorageImageUrl,
+  type StorageBucket,
+} from "@/lib/supabase/storage"
 
 type JsonObject = Record<string, unknown>
 
@@ -144,6 +148,7 @@ function resolveSection<T extends SectionHeading>(
   slug: string,
   fallback: T,
   rows: SectionRow[],
+  imageBucket?: StorageBucket,
 ): T {
   const row = rows.find((section) => section.slug === slug)
 
@@ -151,7 +156,7 @@ function resolveSection<T extends SectionHeading>(
     return { ...fallback }
   }
 
-  return {
+  const resolved = {
     ...fallback,
     ...(row.content ?? {}),
     slug: row.slug,
@@ -162,6 +167,16 @@ function resolveSection<T extends SectionHeading>(
     ...("imageUrl" in fallback && row.image_url ? { imageUrl: row.image_url } : {}),
     ...("imageAlt" in fallback && row.image_alt ? { imageAlt: row.image_alt } : {}),
   } as T
+
+  if (imageBucket && "imageUrl" in fallback) {
+    const imageFallback = (fallback as T & { imageUrl: string }).imageUrl
+    return {
+      ...resolved,
+      imageUrl: resolveStorageImageUrl(imageBucket, row.image_url, imageFallback),
+    }
+  }
+
+  return resolved
 }
 
 function rowsForSection(rows: LandingItemRow[], sectionSlug: string) {
@@ -346,7 +361,11 @@ async function queryGallery(): Promise<GalleryItem[]> {
   return (data as GalleryRow[]).map((item) => ({
     slug: item.slug,
     label: item.label,
-    imageUrl: item.image_url,
+    imageUrl: resolveStorageImageUrl(
+      "landing_page",
+      item.image_url,
+      fallbackGallery.items.find((fallbackItem) => fallbackItem.slug === item.slug)?.imageUrl,
+    ),
     imageAlt: item.image_alt,
     span: item.grid_span,
     sortOrder: item.sort_order,
@@ -439,10 +458,15 @@ export async function getLandingPageData(): Promise<LandingPageData> {
       queryFaqs(),
     ])
 
-  const hero = resolveSection("hero", fallbackHero, sections)
+  const hero = resolveSection("hero", fallbackHero, sections, "landing_page")
+  hero.mobileBackgroundUrl = resolveStorageImageUrl(
+    "landing_page",
+    hero.mobileBackgroundUrl,
+    fallbackHero.mobileBackgroundUrl,
+  )
   hero.metrics = resolveMetrics(items, "hero", fallbackHero.metrics)
 
-  const story = resolveSection("story", fallbackStory, sections)
+  const story = resolveSection("story", fallbackStory, sections, "landing_page")
   story.values = resolveFeatures(items, "story", fallbackStory.values)
 
   const process = resolveSection("process", fallbackProcess, sections)
@@ -526,6 +550,9 @@ export async function getCatalogData(): Promise<CatalogData> {
         )
 
   const activeCategories = new Set(categories.map((category) => category.id))
+  const fallbackProductsById = new Map(
+    fallbackCatalog.products.map((product) => [product.id, product]),
+  )
   const products =
     productsResult.error || !productsResult.data || productsResult.data.length === 0
       ? fallbackCatalog.products
@@ -539,7 +566,11 @@ export async function getCatalogData(): Promise<CatalogData> {
               description: product.description,
               startPrice: product.start_price,
               endPrice: product.end_price ?? undefined,
-              image: product.image_url,
+              image: resolveStorageImageUrl(
+                "catalogs",
+                product.image_url,
+                fallbackProductsById.get(product.slug)?.image,
+              ),
               badge: product.badge ?? undefined,
               processingTime: product.processing_time,
               customizable: product.is_customizable,

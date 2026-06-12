@@ -17,8 +17,10 @@ Tidak ada service-role key di aplikasi. Query publik memakai publishable key dan
 | File | Fungsi |
 | --- | --- |
 | `supabase/migrations/001_create_landing_page_tables.sql` | Membuat tabel, index, trigger `updated_at`, grant, dan RLS policy. |
+| `supabase/migrations/002_create_storage_buckets.sql` | Membuat bucket gambar publik dan policy read-only. |
 | `supabase/seed.sql` | Mengisi data lokal saat ini secara idempotent. |
 | `lib/supabase/client.ts` | Membuat Supabase client dari environment variable. |
+| `lib/supabase/storage.ts` | Mengubah object path Storage menjadi public URL dengan fallback aman. |
 | `lib/data/landing-page.ts` | Data access layer dan fallback handling. |
 | `lib/data/fallback.ts` | Salinan lokal yang dipakai bila env/query/data belum tersedia. |
 | `lib/data/types.ts` | Kontrak data antara server dan komponen. |
@@ -51,6 +53,16 @@ Migration:
 
 Publishable key aman berada di frontend, tetapi tetap tidak memberi hak tulis karena tidak ada write policy.
 
+Storage memakai dua bucket publik:
+
+| Bucket | Konten |
+| --- | --- |
+| `landing_page` | Hero, background hero mobile, story, dan galeri landing page. |
+| `catalogs` | Seluruh gambar produk pada `/katalog`. |
+
+Migration Storage hanya membuat policy `SELECT` untuk `anon` dan `authenticated`.
+Tidak ada public policy untuk insert, update, atau delete.
+
 ## Setup Manual
 
 1. Buka dashboard project Supabase.
@@ -61,28 +73,73 @@ Publishable key aman berada di frontend, tetapi tetap tidak memberi hak tulis ka
 supabase/migrations/001_create_landing_page_tables.sql
 ```
 
-4. Setelah migration berhasil, jalankan:
+4. Jalankan migration Storage:
+
+```text
+supabase/migrations/002_create_storage_buckets.sql
+```
+
+5. Upload file gambar sesuai daftar object path di bawah.
+
+6. Setelah migration dan upload berhasil, jalankan:
 
 ```text
 supabase/seed.sql
 ```
 
-5. Buat `.env.local`:
+7. Buat `.env.local`:
 
 ```dotenv
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
 ```
 
-6. Restart development server:
+8. Restart development server:
 
 ```bash
 npm run dev
 ```
 
-7. Verifikasi `/` dan `/katalog`.
+9. Verifikasi `/` dan `/katalog`.
 
 Migration dan seed tidak dijalankan otomatis oleh aplikasi.
+
+## Upload Gambar Storage
+
+Migration tidak meng-upload file. Upload manual berikut diperlukan agar seluruh object path
+pada seed tersedia.
+
+Bucket `landing_page`:
+
+| Object path | Sumber lokal |
+| --- | --- |
+| `hero-mahar.webp` | `public/hero-mahar.webp` |
+| `bouquet-bg.jpg` | `public/bouquet-bg.jpg` |
+| `story-hands.jpg` | `public/story-hands.jpg` |
+| `gallery/gallery-1.jpg` | `public/gallery-1.jpg` |
+| `gallery/gallery-2.jpg` | `public/gallery-2.jpg` |
+| `gallery/gallery-3.jpg` | `public/gallery-3.jpg` |
+| `gallery/gallery-4.jpg` | `public/gallery-4.jpg` |
+| `gallery/gallery-5.jpg` | `public/gallery-5.jpg` |
+| `gallery/gallery-6.jpg` | `public/gallery-6.jpg` |
+
+Bucket `catalogs`:
+
+| Object path | Sumber lokal |
+| --- | --- |
+| `mahar/gallery-1.jpg` | `public/gallery-1.jpg` |
+| `mahar/gallery-4.jpg` | `public/gallery-4.jpg` |
+| `seserahan/gallery-3.jpg` | `public/gallery-3.jpg` |
+| `seserahan/gallery-2.jpg` | `public/gallery-2.jpg` |
+| `bouquet/gallery-2.jpg` | `public/gallery-2.jpg` |
+| `bouquet/gallery-5.jpg` | `public/gallery-5.jpg` |
+| `hampers/gallery-1.jpg` | `public/gallery-1.jpg` |
+| `hampers/gallery-6.jpg` | `public/gallery-6.jpg` |
+| `gift-box/hero-mahar.jpg` | `public/hero-mahar.jpg` |
+| `custom/story-hands.jpg` | `public/story-hands.jpg` |
+
+Database menyimpan object path pada kolom `image_url`. Jangan menyimpan URL seperti
+`https://project.supabase.co/storage/v1/object/public/...` di seed atau tabel.
 
 ## Perilaku Fetch
 
@@ -91,6 +148,7 @@ Route App Router mengambil data pada server:
 ```text
 page/layout server component
 -> lib/data/landing-page.ts
+-> lib/supabase/storage.ts
 -> Supabase public read query
 -> props serializable
 -> komponen UI
@@ -104,6 +162,9 @@ export const revalidate = 300
 
 Konten dapat diperbarui paling lambat setelah interval revalidasi berikutnya. Tidak ada query Supabase langsung dari komponen presentasional.
 
+Resolver gambar mempertahankan URL `http(s)` dan path lokal yang diawali `/`. Object path
+lain di-resolve terhadap bucket terkait melalui Supabase client.
+
 ## Fallback
 
 Fallback lokal dipakai ketika:
@@ -116,6 +177,7 @@ Fallback lokal dipakai ketika:
 - hasil dataset kosong.
 
 Fallback dilakukan per dataset. Contoh: jika FAQ kosong tetapi produk tersedia, FAQ memakai data lokal sementara katalog tetap memakai data Supabase.
+Jika env Storage tidak tersedia atau tidak valid, resolver mengembalikan path fallback lokal.
 
 Jangan hapus `lib/katalog-data.ts` atau `lib/data/fallback.ts` sebelum verifikasi manual production selesai.
 
@@ -131,6 +193,7 @@ select count(*) from public.testimonials where is_active;
 select count(*) from public.faqs where is_active;
 select count(*) from public.product_categories where is_active;
 select count(*) from public.products where is_active;
+select id, name, public from storage.buckets where id in ('landing_page', 'catalogs');
 ```
 
 Expected seed:
@@ -152,7 +215,8 @@ Expected seed:
 2. Kosongkan sementara variable Supabase dari environment lokal.
 3. Jalankan ulang `npm run dev`.
 4. Pastikan halaman dan katalog tetap tampil.
-5. Kembalikan variable dan restart server.
+5. Pastikan gambar berasal dari path lokal `/...`.
+6. Kembalikan variable dan restart server.
 
 Jangan commit perubahan `.env.local`.
 
@@ -192,6 +256,6 @@ Jangan menjalankan `drop table`, truncate, atau delete massal untuk rollback apl
 
 - Apakah project Supabase target adalah environment development, staging, atau production.
 - Siapa owner yang memiliki hak tulis untuk mengelola konten.
-- Apakah gambar akan tetap di `public/` atau dipindahkan ke Supabase Storage.
+- Siapa owner yang bertanggung jawab meng-upload dan mengganti object Storage.
 - Apakah perubahan konten membutuhkan preview/draft workflow.
 - Apakah revalidasi lima menit sesuai kebutuhan operasional.

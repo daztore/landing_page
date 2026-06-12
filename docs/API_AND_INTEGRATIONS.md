@@ -37,7 +37,19 @@ Query dilakukan oleh data access layer, bukan langsung dari komponen UI. Query:
 - menggunakan RLS public read-only;
 - kembali ke fallback lokal saat gagal atau kosong.
 
-Tidak ada service-role key, public write policy, authentication, atau upload Storage.
+Tidak ada service-role key, public write policy, authentication, atau upload dari aplikasi.
+
+### Supabase Storage
+
+Gambar publik dibaca dari bucket:
+
+- `landing_page` untuk hero, background hero mobile, story, dan galeri;
+- `catalogs` untuk gambar produk katalog.
+
+Kolom database menyimpan object path, lalu `lib/supabase/storage.ts` membentuk public URL
+melalui Supabase client. URL `http(s)` dan fallback lokal yang diawali `/` tetap didukung.
+Bucket hanya memiliki akses baca publik; upload dilakukan manual oleh owner project melalui
+Dashboard, CLI, atau proses deployment terpisah dengan credential yang tidak masuk aplikasi.
 
 ## WhatsApp
 
@@ -140,7 +152,7 @@ Model `Product`:
 | `description` | `string` | Deskripsi kartu. |
 | `startPrice` | `number` | Harga awal dalam Rupiah. |
 | `endPrice` | `number?` | Harga akhir opsional. |
-| `image` | `string` | Path gambar pada `public/`. |
+| `image` | `string` | Public Storage URL atau path fallback lokal setelah resolusi data layer. |
 | `badge` | enum opsional | Best seller, limited, atau loved. |
 | `processingTime` | `string` | Estimasi pengerjaan. |
 | `customizable` | `boolean` | Menampilkan label custom. |
@@ -177,5 +189,5 @@ Tidak ditemukan penggunaan:
 - Apakah Vercel Analytics digunakan saat aplikasi dijalankan di luar Vercel.
 - Apakah ada backend atau CRM eksternal yang digunakan secara operasional tetapi belum terhubung ke repository.
 - Apakah Supabase akan menjadi CMS permanen atau hanya sumber data sementara.
-- Apakah gambar akan dipindahkan ke Supabase Storage.
+- Siapa owner dan proses operasional upload gambar Supabase Storage.
 - Apakah bisnis memerlukan consent management atau privacy policy khusus analytics.

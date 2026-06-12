@@ -56,6 +56,10 @@ lib/katalog-data.ts
 ```
 
 Build dan halaman tidak sengaja dibuat crash hanya karena Supabase belum dikonfigurasi.
+Resolver Storage juga mengembalikan path gambar fallback lokal dalam kondisi tersebut.
+
+Tidak ada environment variable atau secret tambahan untuk membaca bucket publik
+`landing_page` dan `catalogs`. Service-role key tidak diperlukan dan tidak boleh ditambahkan.
 
 ## Build-Time dan Runtime
 
@@ -116,7 +120,7 @@ Project belum menggunakan:
 - service-role key;
 - authentication secret;
 - SMTP credential;
-- storage secret;
+- storage secret atau service-role key;
 - payment credential.
 
 ## Needs Confirmation

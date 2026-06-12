@@ -13,7 +13,7 @@
 | Sedang | Dependency advisory | Audit masih melaporkan PostCSS internal Next.js; npm belum menawarkan patch kompatibel selain downgrade yang tidak layak. |
 | Sedang | Navigasi | Anchor `#packages` dan `#testimonials` tidak memiliki target aktif. |
 | Sedang | Konfigurasi kontak | Kontak memiliki fallback lokal yang harus dijaga tetap sinkron dengan Supabase. |
-| Sedang | Image performance | Optimasi Next Image dinonaktifkan. |
+| Sedang | Image performance | Optimasi Next Image dinonaktifkan; asset aktif dilayani dari Supabase Storage. |
 | Sedang | Legacy files | File PHP/Supervisor tidak terhubung ke aplikasi saat ini. |
 | Sedang | Quality assurance | Tidak ada unit, integration, atau end-to-end test. |
 
@@ -77,6 +77,8 @@ Tree shaking dapat mengurangi bundle client, tetapi maintenance dependency tetap
 ### Image
 
 `images.unoptimized: true` menonaktifkan optimasi Next Image.
+Konfigurasi tersebut dipertahankan saat migrasi Storage. `next.config.mjs` mengizinkan host
+Supabase dari `NEXT_PUBLIC_SUPABASE_URL` tanpa hardcode project hostname.
 
 Area evaluasi:
 
@@ -85,6 +87,9 @@ Area evaluasi:
 - cache header/CDN;
 - responsive source;
 - format WebP atau AVIF.
+
+Object path seed harus tetap sinkron dengan file pada bucket `landing_page` dan `catalogs`.
+Migration hanya membuat bucket/policy dan tidak meng-upload asset.
 
 ### Client Components
 

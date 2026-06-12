@@ -45,7 +45,7 @@ values
     'Setiap cinta layak',
     'dirayakan dengan indah.',
     'daztore.id menghadirkan mahar, seserahan, dan flower bouquet yang dirancang dengan ketelitian, keanggunan, dan sentuhan personal — untuk hari paling berharga dalam hidup Anda.',
-    '/hero-mahar.webp',
+    'hero-mahar.webp',
     'Mahar pernikahan premium dengan bunga mawar putih dan aksen emas',
     $json$
     {
@@ -54,7 +54,7 @@ values
       "primaryCtaMessage": "Halo daztore.id, saya tertarik dengan layanan Anda.",
       "secondaryCtaLabel": "Lihat Paket",
       "secondaryCtaHref": "#packages",
-      "mobileBackgroundUrl": "/bouquet-bg.jpg",
+      "mobileBackgroundUrl": "bouquet-bg.jpg",
       "collectionTitle": "Signature Collection",
       "collectionSubtitle": "Handcrafted with love",
       "accentLabel": "Limited",
@@ -70,7 +70,7 @@ values
     'Mahar & seserahan,',
     'lebih dari sekadar tradisi.',
     'Di balik setiap mahar, ada janji. Di balik setiap seserahan, ada harapan. daztore.id percaya bahwa tradisi yang indah layak dirayakan dengan presentasi yang sepadan — penuh ketelitian, keanggunan, dan kehangatan.',
-    '/story-hands.jpg',
+    'story-hands.jpg',
     'Tangan sedang merangkai seserahan pernikahan mewah',
     $json$
     {
@@ -314,12 +314,12 @@ insert into public.gallery_items (
   is_active
 )
 values
-  ('mahar-classic', 'Mahar Classic', '/gallery-1.jpg', 'Mahar premium dengan koin emas dan mawar putih', 'md:row-span-2', 10, true),
-  ('bridal-bouquet', 'Bridal Bouquet', '/gallery-2.jpg', 'Bouquet pengantin dengan mawar dan peony', '', 20, true),
-  ('seserahan-set', 'Seserahan Set', '/gallery-3.jpg', 'Kotak seserahan mewah dengan bunga dan pita emas', '', 30, true),
-  ('ring-pillow', 'Ring Pillow', '/gallery-4.jpg', 'Cincin pernikahan emas pada bantalan beludru krem', 'md:row-span-2', 40, true),
-  ('flower-stand', 'Flower Stand', '/gallery-5.jpg', 'Rangkaian bunga segar dalam vas kaca bening', '', 50, true),
-  ('money-bouquet', 'Money Bouquet', '/gallery-6.jpg', 'Money bouquet mahar dalam bingkai emas berhias mutiara', '', 60, true)
+  ('mahar-classic', 'Mahar Classic', 'gallery/gallery-1.jpg', 'Mahar premium dengan koin emas dan mawar putih', 'md:row-span-2', 10, true),
+  ('bridal-bouquet', 'Bridal Bouquet', 'gallery/gallery-2.jpg', 'Bouquet pengantin dengan mawar dan peony', '', 20, true),
+  ('seserahan-set', 'Seserahan Set', 'gallery/gallery-3.jpg', 'Kotak seserahan mewah dengan bunga dan pita emas', '', 30, true),
+  ('ring-pillow', 'Ring Pillow', 'gallery/gallery-4.jpg', 'Cincin pernikahan emas pada bantalan beludru krem', 'md:row-span-2', 40, true),
+  ('flower-stand', 'Flower Stand', 'gallery/gallery-5.jpg', 'Rangkaian bunga segar dalam vas kaca bening', '', 50, true),
+  ('money-bouquet', 'Money Bouquet', 'gallery/gallery-6.jpg', 'Money bouquet mahar dalam bingkai emas berhias mutiara', '', 60, true)
 on conflict (slug) do update set
   label = excluded.label,
   image_url = excluded.image_url,
@@ -400,16 +400,16 @@ insert into public.products (
   is_active
 )
 values
-  ('mahar-1', 'mahar', 'Mahar Signature Gold', 'Mahar premium dengan rangkaian koin emas dan aksesoris kristal dalam presentasi luxury frame.', 3500000, 5000000, '/gallery-1.jpg', 'bestseller', '7-10 hari', true, true, 10, true),
-  ('mahar-2', 'mahar', 'Mahar Elegan Minimalis', 'Desain minimalis modern dengan perhiasan emas putih dan bunga segar yang elegan.', 2500000, 3800000, '/gallery-4.jpg', 'loved', '5-7 hari', true, true, 20, true),
-  ('seserahan-1', 'seserahan', 'Seserahan Deluxe Premium', 'Paket seserahan lengkap dengan sarung, perhiasan, kain premium, dan aksesoris mewah dalam box eksklusif.', 8000000, 15000000, '/gallery-3.jpg', 'bestseller', '14-21 hari', true, true, 30, true),
-  ('seserahan-2', 'seserahan', 'Seserahan Elegant Box', 'Seserahan medium dengan 5 item pilihan: kain batik premium, selendang sutra, dan perhiasan elegan.', 5000000, 8000000, '/gallery-2.jpg', null, '10-14 hari', true, true, 40, true),
-  ('bouquet-1', 'bouquet', 'Bridal Bouquet Romantis', 'Rangkaian bunga fresh dengan mawar putih, hydrangea, dan eucalyptus dalam sentuhan emas.', 2000000, 3500000, '/gallery-2.jpg', 'loved', '2-3 hari sebelum acara', true, true, 50, true),
-  ('bouquet-2', 'bouquet', 'Bouquet Minimalis Chic', 'Desain minimalis dengan bunga pilihan berkualitas tinggi, cocok untuk pelengkap dekorasi modern.', 1500000, 2500000, '/gallery-5.jpg', null, '2-3 hari sebelum acara', true, true, 60, true),
-  ('hampers-1', 'hampers', 'Hampers Luxury Wedding', 'Hampers premium berisi produk kecantikan dan perawatan premium, coklat artisan, dan aksesoris eksklusif.', 4000000, 7000000, '/gallery-1.jpg', 'limited', '7-10 hari', true, true, 70, true),
-  ('hampers-2', 'hampers', 'Hampers Gift Elegant', 'Pilihan hampers dengan isi kosmestik premium, parfum branded, dan perlengkapan pernikahan.', 3000000, 5000000, '/gallery-6.jpg', null, '7-10 hari', true, true, 80, true),
-  ('gift-1', 'gift-box', 'Wedding Gift Box Premium', 'Box hadiah pernikahan eksklusif dengan packaging premium dan pilihan item luxury di dalamnya.', 3500000, 6000000, '/hero-mahar.jpg', null, '7-10 hari', true, true, 90, true),
-  ('custom-1', 'custom', 'Paket Custom Unlimited', 'Desain sesuai visi Anda: kombinasi mahar, seserahan, bouquet, dan dekorasi dengan kustomisasi penuh.', 15000000, null, '/story-hands.jpg', 'loved', 'Konsultasi mendalam', true, true, 100, true)
+  ('mahar-1', 'mahar', 'Mahar Signature Gold', 'Mahar premium dengan rangkaian koin emas dan aksesoris kristal dalam presentasi luxury frame.', 3500000, 5000000, 'mahar/gallery-1.jpg', 'bestseller', '7-10 hari', true, true, 10, true),
+  ('mahar-2', 'mahar', 'Mahar Elegan Minimalis', 'Desain minimalis modern dengan perhiasan emas putih dan bunga segar yang elegan.', 2500000, 3800000, 'mahar/gallery-4.jpg', 'loved', '5-7 hari', true, true, 20, true),
+  ('seserahan-1', 'seserahan', 'Seserahan Deluxe Premium', 'Paket seserahan lengkap dengan sarung, perhiasan, kain premium, dan aksesoris mewah dalam box eksklusif.', 8000000, 15000000, 'seserahan/gallery-3.jpg', 'bestseller', '14-21 hari', true, true, 30, true),
+  ('seserahan-2', 'seserahan', 'Seserahan Elegant Box', 'Seserahan medium dengan 5 item pilihan: kain batik premium, selendang sutra, dan perhiasan elegan.', 5000000, 8000000, 'seserahan/gallery-2.jpg', null, '10-14 hari', true, true, 40, true),
+  ('bouquet-1', 'bouquet', 'Bridal Bouquet Romantis', 'Rangkaian bunga fresh dengan mawar putih, hydrangea, dan eucalyptus dalam sentuhan emas.', 2000000, 3500000, 'bouquet/gallery-2.jpg', 'loved', '2-3 hari sebelum acara', true, true, 50, true),
+  ('bouquet-2', 'bouquet', 'Bouquet Minimalis Chic', 'Desain minimalis dengan bunga pilihan berkualitas tinggi, cocok untuk pelengkap dekorasi modern.', 1500000, 2500000, 'bouquet/gallery-5.jpg', null, '2-3 hari sebelum acara', true, true, 60, true),
+  ('hampers-1', 'hampers', 'Hampers Luxury Wedding', 'Hampers premium berisi produk kecantikan dan perawatan premium, coklat artisan, dan aksesoris eksklusif.', 4000000, 7000000, 'hampers/gallery-1.jpg', 'limited', '7-10 hari', true, true, 70, true),
+  ('hampers-2', 'hampers', 'Hampers Gift Elegant', 'Pilihan hampers dengan isi kosmestik premium, parfum branded, dan perlengkapan pernikahan.', 3000000, 5000000, 'hampers/gallery-6.jpg', null, '7-10 hari', true, true, 80, true),
+  ('gift-1', 'gift-box', 'Wedding Gift Box Premium', 'Box hadiah pernikahan eksklusif dengan packaging premium dan pilihan item luxury di dalamnya.', 3500000, 6000000, 'gift-box/hero-mahar.jpg', null, '7-10 hari', true, true, 90, true),
+  ('custom-1', 'custom', 'Paket Custom Unlimited', 'Desain sesuai visi Anda: kombinasi mahar, seserahan, bouquet, dan dekorasi dengan kustomisasi penuh.', 15000000, null, 'custom/story-hands.jpg', 'loved', 'Konsultasi mendalam', true, true, 100, true)
 on conflict (slug) do update set
   category_slug = excluded.category_slug,
   title = excluded.title,
