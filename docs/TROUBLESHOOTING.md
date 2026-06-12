@@ -57,9 +57,9 @@ Lakukan langkah pembaruan lockfile hanya di development branch dan review diff.
 
 Repository memiliki `package-lock.json` dan `pnpm-lock.yaml`. Docker memakai npm. Jangan menjalankan pnpm untuk deployment kecuali tim resmi mengganti package manager dan Dockerfile.
 
-### Lint gagal: ESLint tidak ditemukan
+### Lint gagal
 
-`package.json` memiliki script `eslint .`, tetapi ESLint tidak tercantum sebagai dependency saat dokumentasi dibuat.
+ESLint dan flat config Next.js tersedia sebagai development dependency.
 
 Diagnosis:
 
@@ -68,7 +68,7 @@ npm run lint
 npm list eslint
 ```
 
-Perbaikan memerlukan penambahan ESLint dan config yang kompatibel pada pekerjaan code change terpisah.
+Warning existing tidak membuat command gagal. Error baru harus diperbaiki sebelum merge.
 
 ### TypeScript error tidak terlihat pada build
 
@@ -184,7 +184,8 @@ docker compose exec web wget -qO- http://app:3000/
 docker compose logs --tail=200 app web
 ```
 
-Jika app belum ready, Nginx akan gagal proxy. Compose saat ini belum memiliki health check.
+Jika app belum ready, Nginx lokal dapat gagal proxy. Production Compose menunggu healthcheck
+service app sebelum menjalankan Nginx.
 
 ### Port `8002` sudah dipakai
 
@@ -196,7 +197,8 @@ docker compose config
 
 ### `docker compose pull` tidak memperbarui app
 
-Service `app` saat ini menggunakan `build`, bukan `image`. `pull` hanya relevan setelah production Compose menunjuk registry image.
+Pastikan command memakai `docker-compose.production.yml`. Compose lokal menggunakan `build`,
+sedangkan production Compose menggunakan `${APP_IMAGE}:${APP_TAG}`.
 
 ## Connectivity dan Integrasi
 

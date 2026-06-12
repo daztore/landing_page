@@ -31,20 +31,18 @@ export function AdminImageUploader({
   const [error, setError] = useState("")
 
   useEffect(() => {
-    if (!file) {
-      setPreviewUrl("")
-      return
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
     }
-
-    const objectUrl = URL.createObjectURL(file)
-    setPreviewUrl(objectUrl)
-    return () => URL.revokeObjectURL(objectUrl)
-  }, [file])
+  }, [previewUrl])
 
   function selectFile(nextFile?: File) {
     setError("")
     if (!nextFile) {
       setFile(null)
+      setPreviewUrl("")
       return
     }
     if (nextFile.size > ADMIN_IMAGE_MAX_BYTES) {
@@ -52,6 +50,7 @@ export function AdminImageUploader({
       return
     }
     setFile(nextFile)
+    setPreviewUrl(URL.createObjectURL(nextFile))
   }
 
   async function upload() {
@@ -66,6 +65,7 @@ export function AdminImageUploader({
       const path = await uploadAdminImage(bucket, folder, file)
       onChange(path)
       setFile(null)
+      setPreviewUrl("")
 
       if (
         deleteOldAfterReplace &&

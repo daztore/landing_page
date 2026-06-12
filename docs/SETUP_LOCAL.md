@@ -78,14 +78,13 @@ Script yang benar-benar terdaftar di `package.json`:
 | `npm run dev` | Menjalankan `next dev`. | Untuk development lokal. |
 | `npm run build` | Menjalankan `next build`. | Build production; error TypeScript saat ini diabaikan oleh config. |
 | `npm run start` | Menjalankan `next start`. | Memerlukan hasil build `.next`. |
-| `npm run lint` | Menjalankan `eslint .`. | Script tersedia, tetapi dependency ESLint tidak terdaftar saat dokumentasi dibuat. |
+| `npm run lint` | Menjalankan ESLint flat config Next.js/TypeScript. | Warning baseline tidak memblokir command. |
+| `npm run typecheck` | Menjalankan `tsc --noEmit`. | Quality gate type terpisah dari build Next.js. |
 
-> **Peringatan:** `npm run lint` belum dapat dianggap sebagai quality gate sampai package ESLint dan konfigurasi yang sesuai ditambahkan.
-
-Pemeriksaan TypeScript manual yang direkomendasikan:
+Pemeriksaan TypeScript:
 
 ```bash
-npx tsc --noEmit
+npm run typecheck
 ```
 
 Command tersebut bukan script resmi project. Jalankan dari dependency lokal dan jangan mengandalkan download package dinamis di CI.

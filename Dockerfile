@@ -16,6 +16,7 @@ COPY next.config.mjs tsconfig.json ./
 COPY . .
 
 RUN npm run build
+RUN npm prune --omit=dev && npm cache clean --force
 
 FROM node:20-alpine AS runner
 WORKDIR /app

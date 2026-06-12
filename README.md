@@ -35,11 +35,14 @@ Script project:
 ```bash
 npm run dev
 npm run lint
+npm run typecheck
 npm run build
 npm run start
 ```
 
-> **Catatan:** Script lint tersedia, tetapi dependency ESLint belum terdaftar pada repository saat dokumentasi dibuat. Lihat [Setup Local](./docs/SETUP_LOCAL.md).
+Lint menggunakan ESLint flat config dengan aturan Next.js Core Web Vitals dan TypeScript.
+Baseline existing masih menghasilkan warning non-blocking yang didokumentasikan pada
+[Maintenance Notes](./docs/MAINTENANCE_NOTES.md).
 
 ## Struktur Singkat
 
@@ -50,7 +53,7 @@ lib/                Data katalog dan utility
 supabase/           SQL migration dan seed
 public/             Asset gambar
 docker/             Konfigurasi Nginx serta file legacy PHP/Supervisor
-.github/workflows/  Workflow security CodeQL
+.github/workflows/  Workflow CI/CD dan security CodeQL
 docs/               Dokumentasi teknis dan operasional
 ```
 
@@ -91,7 +94,8 @@ docker compose ps
 
 Aplikasi tersedia di `http://localhost:8002`.
 
-> **Peringatan production:** Compose saat ini memakai bind mount source dan service app belum menunjuk registry image. Jangan gunakan konfigurasi tersebut sebagai deployment immutable sebelum mengikuti [Docker and Deployment](./docs/DOCKER_AND_DEPLOYMENT.md).
+`docker-compose.yml` tetap ditujukan untuk penggunaan lokal. Deployment server wajib memakai
+`docker-compose.production.yml`, yang menarik image GHCR tanpa bind mount source.
 
 ## Deployment Production
 
@@ -110,6 +114,9 @@ push ke main
 
 Server production tidak perlu menjalankan `npm install` atau `npm run build`. Server hanya menarik image yang sudah divalidasi CI dan me-restart container.
 
+Panduan secrets, persiapan server, deploy manual, dan rollback:
+[CI/CD Deployment](./docs/CI_CD_DEPLOYMENT.md).
+
 ## Dokumentasi
 
 - [Project Overview](./docs/PROJECT_OVERVIEW.md)
@@ -120,6 +127,7 @@ Server production tidak perlu menjalankan `npm install` atau `npm run build`. Se
 - [API and Integrations](./docs/API_AND_INTEGRATIONS.md)
 - [Docker and Deployment](./docs/DOCKER_AND_DEPLOYMENT.md)
 - [CI/CD Recommendation](./docs/CI_CD_RECOMMENDATION.md)
+- [CI/CD Deployment](./docs/CI_CD_DEPLOYMENT.md)
 - [Troubleshooting](./docs/TROUBLESHOOTING.md)
 - [Maintenance Notes](./docs/MAINTENANCE_NOTES.md)
 - [Supabase Migration](./docs/SUPABASE_MIGRATION.md)

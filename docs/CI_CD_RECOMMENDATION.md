@@ -1,251 +1,91 @@
-# CI/CD Recommendation
+# CI/CD Implementation
 
-## Workflow Yang Sudah Ada
+## Workflow Aktif
 
-Repository memiliki `.github/workflows/codeql.yml`.
+Repository memiliki dua workflow yang berjalan berdampingan:
 
-Behavior saat ini:
+| Workflow | File | Fungsi |
+| --- | --- | --- |
+| `CI/CD` | `.github/workflows/ci-cd.yml` | Verify, build image, push GHCR, deploy, dan smoke test. |
+| `CodeQL Security Scan` | `.github/workflows/codeql.yml` | Analisis keamanan JavaScript/TypeScript. |
 
-- berjalan pada push ke `main`;
-- berjalan pada pull request ke `main`;
-- berjalan setiap Senin pukul `02:20` UTC;
-- menganalisis JavaScript/TypeScript;
-- memakai query `security-extended`;
-- memiliki concurrency cancellation;
-- timeout 20 menit.
+Workflow CodeQL tidak dihapus atau digabungkan dengan deployment.
 
-Workflow tersebut hanya melakukan security scanning. Belum ada CI lint/build, Docker build/push, deployment, smoke test, atau rollback automation.
+## Stage
 
-## Prasyarat Sebelum Deployment Otomatis
+Pull request ke `main`:
 
-1. Tambahkan dependency dan konfigurasi ESLint agar `npm run lint` benar-benar berjalan.
-2. Hapus atau evaluasi `typescript.ignoreBuildErrors`.
-3. Tambahkan `.dockerignore`.
-4. Buat production Compose yang memakai `image: ${APP_IMAGE}:${APP_TAG}` tanpa bind mount source.
-5. Tambahkan health check.
-6. Pastikan server dapat login ke registry secara aman.
-
-## Stage Yang Direkomendasikan
-
-1. Checkout.
-2. Install dependencies dengan `npm ci`.
-3. Lint.
-4. Build Next.js.
-5. Docker build.
-6. Docker push dengan tag commit SHA.
-7. SSH ke production.
-8. `docker compose pull`.
-9. `docker compose up -d`.
-10. Health check dan smoke test.
-
-## Pemisahan Event
-
-Pull request:
-
-- install;
-- lint;
-- type check;
-- build;
-- optional Docker build tanpa push;
-- CodeQL.
+1. `npm ci`;
+2. `npm run lint`;
+3. `npm run typecheck`;
+4. `npm run build`.
 
 Push ke `main`:
 
-- seluruh quality gate;
-- build dan push image;
-- deployment production setelah image tersedia;
-- smoke test.
+1. seluruh verify gate;
+2. Docker Buildx build;
+3. push image ke `ghcr.io/<owner>/<repo>`;
+4. tag full commit SHA dan `production`;
+5. SSH ke server;
+6. `docker compose pull`;
+7. `docker compose up -d`;
+8. smoke test `/` dan `/katalog`.
 
-## Contoh GitHub Actions
+`workflow_dispatch` dapat digunakan untuk menjalankan verify secara manual. Publish dan deploy
+tetap dibatasi pada push branch `main`.
 
-Contoh ini menggunakan GitHub Container Registry. Sesuaikan nama Compose production, environment protection, dan command health check.
+## Status Prasyarat
 
-> **Peringatan:** Untuk supply-chain hardening, pin setiap action ke full commit SHA. Major tag dipakai di contoh agar mudah dibaca.
+- ESLint flat config Next.js/TypeScript tersedia.
+- Typecheck berjalan terpisah walaupun Next.js masih memiliki `ignoreBuildErrors`.
+- `.dockerignore` mengecualikan dependency, build output, Git, env, docs, dan Compose.
+- `docker-compose.production.yml` memakai image registry dan healthcheck.
+- Dockerfile memakai Node.js 20, `npm ci`, build multi-stage, dan production dependency prune.
+- Job deploy memakai GitHub Environment `production`.
+- Server tidak menjalankan install atau build aplikasi.
 
-```yaml
-name: CI and Deploy
+## Image Tag
 
-on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main]
+Setiap push ke `main` menghasilkan:
 
-permissions:
-  contents: read
-
-concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: false
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-
-jobs:
-  verify:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Type check
-        run: npx tsc --noEmit
-
-      - name: Build application
-        run: npm run build
-
-  image:
-    if: github.event_name == 'push'
-    needs: verify
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-      packages: write
-    outputs:
-      image: ${{ steps.image.outputs.image }}
-      tag: ${{ steps.image.outputs.tag }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Set image coordinates
-        id: image
-        shell: bash
-        run: |
-          echo "image=${REGISTRY}/${IMAGE_NAME,,}" >> "$GITHUB_OUTPUT"
-          echo "tag=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
-
-      - name: Login to GHCR
-        uses: docker/login-action@v4
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Docker metadata
-        id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ${{ steps.image.outputs.image }}
-          tags: |
-            type=sha,format=long,prefix=
-            type=raw,value=production
-
-      - name: Build and push image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  deploy:
-    if: github.event_name == 'push'
-    needs: image
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    environment: production
-    steps:
-      - name: Configure SSH
-        shell: bash
-        env:
-          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
-          KNOWN_HOSTS: ${{ secrets.PROD_KNOWN_HOSTS }}
-        run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
-
-      - name: Pull and restart production
-        shell: bash
-        env:
-          PROD_HOST: ${{ secrets.PROD_HOST }}
-          PROD_USER: ${{ secrets.PROD_USER }}
-          PROD_PORT: ${{ secrets.PROD_PORT }}
-          PROD_APP_DIR: ${{ secrets.PROD_APP_DIR }}
-          APP_IMAGE: ${{ needs.image.outputs.image }}
-          APP_TAG: ${{ needs.image.outputs.tag }}
-        run: |
-          ssh -p "$PROD_PORT" "$PROD_USER@$PROD_HOST" \
-            "cd '$PROD_APP_DIR' && \
-             APP_IMAGE='$APP_IMAGE' APP_TAG='$APP_TAG' \
-             docker compose -f docker-compose.production.yml pull && \
-             APP_IMAGE='$APP_IMAGE' APP_TAG='$APP_TAG' \
-             docker compose -f docker-compose.production.yml up -d"
-
-      - name: Smoke test
-        env:
-          PROD_URL: ${{ secrets.PROD_URL }}
-        run: curl --fail --show-error --silent --retry 10 --retry-delay 5 "$PROD_URL/"
+```text
+ghcr.io/<owner>/<repo>:<full-commit-sha>
+ghcr.io/<owner>/<repo>:production
 ```
 
-## Secret dan Variable Yang Diperlukan
+Tag SHA digunakan oleh workflow deploy dan rollback. Tag `production` hanya alias convenience.
 
-| Nama | Jenis | Fungsi |
-| --- | --- | --- |
-| `PROD_HOST` | Secret | Hostname atau IP server. |
-| `PROD_USER` | Secret | User SSH deployment dengan privilege terbatas. |
-| `PROD_PORT` | Secret | Port SSH, biasanya `22`. |
-| `PROD_SSH_KEY` | Secret | Private key khusus deployment. |
-| `PROD_KNOWN_HOSTS` | Secret | Host key server yang sudah diverifikasi. |
-| `PROD_APP_DIR` | Secret | Path direktori Compose production. |
-| `PROD_URL` | Secret/Variable | URL untuk smoke test. |
-| `GITHUB_TOKEN` | Built-in | Push package ke GHCR dengan permission `packages: write`. |
+## Keamanan
 
-Server perlu credential read-only untuk menarik private image GHCR. Simpan credential itu pada Docker credential store atau mekanisme registry login server, bukan di repository.
+- Permission default workflow hanya `contents: read`.
+- `packages: write` hanya diberikan pada job image.
+- Host key SSH diverifikasi melalui `PROD_KNOWN_HOSTS`.
+- Private key deployment disimpan sebagai GitHub Secret.
+- Nilai yang diteruskan ke remote shell di-base64 agar tidak dirangkai sebagai shell input mentah.
+- Service-role key tidak digunakan.
+- Server private GHCR harus memakai credential read-only `read:packages`.
 
-## Kenapa Server Tidak Menjalankan `npm run build`
+Untuk supply-chain hardening berikutnya, pin GitHub Actions ke full commit SHA, bukan hanya
+major version tag.
+
+## Kenapa Build Tidak Dilakukan di Server
 
 Build langsung di production server:
 
 - membuat artifact sulit direproduksi;
 - memakai CPU/RAM production;
-- memerlukan source code dan dev dependency di server;
+- memerlukan source code dan dev dependency;
 - memperbesar downtime;
-- memungkinkan hasil deploy berbeda dari hasil CI;
 - menyulitkan rollback;
-- meningkatkan exposure secret dan toolchain.
+- dapat menghasilkan artifact berbeda dari CI.
 
-Server production idealnya hanya:
+Server hanya menarik image yang telah lolos verify dan menjalankan ulang Compose.
 
-```text
-pull image tervalidasi
--> restart container
--> health check
-```
+## Dokumentasi Operasional
 
-## Rollback CI/CD
+Daftar secrets, persiapan server satu kali, akses GHCR, deploy manual, log, dan rollback:
 
-Simpan tag commit SHA setiap release. Rollback dapat berupa workflow manual yang menerima `APP_TAG` known-good dan menjalankan:
-
-```bash
-docker compose -f docker-compose.production.yml pull
-docker compose -f docker-compose.production.yml up -d
-```
-
-Jangan membangun ulang commit lama saat rollback jika image immutable-nya masih tersedia.
+[CI/CD Deployment](./CI_CD_DEPLOYMENT.md)
 
 ## Referensi Resmi
 

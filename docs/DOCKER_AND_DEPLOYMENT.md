@@ -9,7 +9,8 @@ Repository memiliki:
 - reverse proxy Nginx;
 - beberapa file PHP/Supervisor yang tidak digunakan oleh Dockerfile atau Compose aktif.
 
-Konfigurasi dapat digunakan sebagai dasar, tetapi belum aman untuk flow production immutable tanpa perubahan.
+Compose lokal tetap tersedia untuk development. Compose production terpisah sekarang
+menyediakan flow immutable berbasis image GHCR.
 
 ## Dockerfile
 
@@ -50,9 +51,10 @@ Runtime:
 - expose port `3000`;
 - menjalankan `npm start`.
 
-Image belum menggunakan Next.js standalone output. Karena itu runtime masih membawa seluruh `node_modules`, termasuk dependency development yang terinstal oleh `npm ci`.
+Image belum menggunakan Next.js standalone output. Setelah build, Dockerfile menjalankan
+`npm prune --omit=dev`, sehingga runtime hanya membawa production dependencies.
 
-## Docker Compose Saat Ini
+## Docker Compose Lokal
 
 ### Service `app`
 
@@ -72,7 +74,7 @@ Image belum menggunakan Next.js standalone output. Karena itu runtime masih memb
 - Memasang `docker/nginx/default.conf` read-only.
 - Meneruskan request ke `http://app:3000`.
 
-## Risiko Production Penting
+## Risiko Jika Compose Lokal Dipakai Di Production
 
 ### 1. Bind mount menutupi hasil build image
 
@@ -88,7 +90,7 @@ Bind mount juga membuat container tidak immutable karena perilakunya bergantung 
 
 ### 2. Service `app` tidak memiliki `image`
 
-Compose saat ini memakai `build`, bukan image registry. Karena itu flow:
+Compose lokal memakai `build`, bukan image registry. Karena itu flow:
 
 ```bash
 docker compose pull
@@ -107,19 +109,24 @@ node_modules
 .github
 .env*
 npm-debug.log*
+Dockerfile*
+docker-compose*.yml
+README.md
+docs
 ```
 
 `.env.local` tidak masuk build context. Nilai Supabase diteruskan melalui build arguments dan environment.
 
-### 4. Tidak ada health check
+### 4. Compose lokal tidak memiliki health check
 
-Compose tidak memeriksa apakah Next.js atau Nginx benar-benar siap menerima traffic.
+Compose lokal tidak memeriksa apakah Next.js atau Nginx benar-benar siap menerima traffic.
+Production Compose memiliki healthcheck service app.
 
 ### 5. TypeScript build errors diabaikan
 
 `next.config.mjs` menetapkan `typescript.ignoreBuildErrors: true`, sehingga image dapat berhasil dibangun walaupun type check gagal.
 
-## Menjalankan Compose Saat Ini Untuk Verifikasi Lokal
+## Menjalankan Compose Lokal
 
 ```bash
 docker compose config
@@ -142,9 +149,9 @@ Hentikan:
 docker compose down
 ```
 
-## Target Compose Production
+## Compose Production
 
-Production harus menggunakan image yang sudah dibangun dan didorong oleh CI. Contoh struktur yang direkomendasikan:
+File `docker-compose.production.yml` menggunakan image yang sudah dibangun dan didorong CI:
 
 ```yaml
 services:
@@ -182,7 +189,7 @@ Karakteristik wajib:
 - health check aktif.
 - environment Supabase tersedia pada build dan runtime.
 
-Contoh di atas belum dibuat sebagai file karena tugas dokumentasi tidak mengubah deployment behavior.
+File tersebut tidak memiliki `build`, bind mount source, atau mount `node_modules`.
 
 ## Flow Deployment Production
 
@@ -208,7 +215,7 @@ docker compose -f docker-compose.production.yml up -d
 docker compose -f docker-compose.production.yml ps
 ```
 
-`docker-compose.production.yml` adalah nama rekomendasi dan belum ada di repository.
+Panduan setup server lengkap tersedia di `docs/CI_CD_DEPLOYMENT.md`.
 
 ## Rollback
 

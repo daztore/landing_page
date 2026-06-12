@@ -4,11 +4,8 @@
 
 | Prioritas | Area | Risiko |
 | --- | --- | --- |
-| Kritis | Compose production | Bind mount `.:/app` dapat menutupi `.next` dari image dan menghilangkan sifat immutable. |
 | Tinggi | Type safety | `typescript.ignoreBuildErrors: true` memungkinkan build lolos dengan type error. |
-| Tinggi | Lint | Script lint ada, tetapi dependency ESLint tidak terdaftar. |
-| Tinggi | Deployment | Service app tidak memiliki registry image sehingga `docker compose pull` tidak dapat menjadi flow deploy app. |
-| Tinggi | Health | Tidak ada health check atau readiness check. |
+| Sedang | Lint baseline | ESLint berjalan, tetapi masih melaporkan warning existing non-blocking. |
 | Sedang | Dependency management | `package-lock.json` dan `pnpm-lock.yaml` dipelihara bersamaan. |
 | Sedang | Dependency advisory | Audit masih melaporkan PostCSS internal Next.js; npm belum menawarkan patch kompatibel selain downgrade yang tidak layak. |
 | Sedang | Navigasi | Anchor `#packages` dan `#testimonials` tidak memiliki target aktif. |
@@ -20,14 +17,16 @@
 
 ## Docker dan Deployment
 
-Prioritas maintenance production:
+`docker-compose.production.yml` sekarang berbasis registry image, tidak memiliki bind mount,
+dan memiliki healthcheck. Compose lokal tetap memakai bind mount dan tidak boleh digunakan
+untuk production.
 
-1. Buat Compose production berbasis registry image dan commit SHA.
-2. Hapus bind mount source dari production.
-3. Tambahkan health check.
-4. Pertimbangkan `output: "standalone"` untuk runtime image lebih kecil.
-5. Jalankan container sebagai non-root user jika kompatibel.
-6. Pin base image dengan strategi update dan scanning yang jelas.
+Prioritas lanjutan:
+
+1. Pertimbangkan `output: "standalone"` untuk runtime image lebih kecil.
+2. Jalankan container sebagai non-root user jika kompatibel.
+3. Pin base image dan GitHub Actions ke digest/full commit SHA.
+4. Tambahkan monitoring deployment dan alert healthcheck.
 
 `.dockerignore` sudah mengecualikan `.env*`. Secret harus tersedia melalui environment runtime.
 
@@ -35,11 +34,16 @@ Prioritas maintenance production:
 
 `strict: true` sudah aktif, tetapi manfaatnya berkurang karena build mengabaikan error.
 
-Target perbaikan:
+ESLint flat config Next.js/TypeScript dan job CI sudah tersedia. Tiga aturan React baru
+diturunkan menjadi warning agar aktivasi lint tidak memaksa refactor perilaku existing:
 
-- tambahkan ESLint dan config Next.js/TypeScript yang sesuai;
-- aktifkan lint sebagai required CI check;
-- jalankan `tsc --noEmit`;
+- `react-hooks/set-state-in-effect`;
+- `react-hooks/purity`;
+- `react/no-unescaped-entities`.
+
+Target perbaikan lanjutan:
+
+- selesaikan warning secara bertahap lalu naikkan kembali severity;
 - hapus `ignoreBuildErrors` setelah error yang ada diselesaikan;
 - pertimbangkan `noUnusedLocals` setelah baseline bersih.
 
@@ -116,7 +120,7 @@ Risiko:
 - fallback dapat tertinggal dari data production;
 - perubahan schema memerlukan migration terkontrol;
 - klaim pemasaran dapat kedaluwarsa;
-- akses tulis konten belum memiliki UI admin.
+- operasi admin masih memerlukan verifikasi berkala terhadap project Supabase production.
 
 Tetapkan owner konten dan proses sinkronisasi fallback sebelum menghapus data lokal.
 

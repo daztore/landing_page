@@ -86,6 +86,16 @@ docker compose build
 docker compose up -d
 ```
 
+Production Compose juga memerlukan:
+
+```dotenv
+APP_IMAGE=ghcr.io/OWNER/REPO
+APP_TAG=<full-commit-sha>
+```
+
+Workflow GitHub Actions mengisi `APP_IMAGE`, `APP_TAG`, dan kedua variable Supabase saat
+menjalankan Compose di server. `.env` server menyediakan fallback untuk deploy manual.
+
 Pada PowerShell:
 
 ```powershell
@@ -104,6 +114,16 @@ docker compose up -d
 ```
 
 Dengan demikian `.env.local` tidak disalin oleh `COPY . .` dan tidak masuk build context.
+
+GitHub Actions memerlukan repository secrets:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+```
+
+Keduanya public client configuration, tetapi tetap disimpan sebagai Actions secrets untuk
+pengelolaan environment yang konsisten.
 
 ## Rotation
 
