@@ -7,6 +7,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# UPDATED:
+# Default permission dibuat minimal.
+# Job image akan override permissions menjadi packages: write untuk push ke GHCR.
 permissions:
   contents: read
 
@@ -16,9 +19,14 @@ concurrency:
 
 jobs:
   verify:
-    name: Verify Application
+    name: Lint, Type Check, and Build
     runs-on: ubuntu-latest
     timeout-minutes: 20
+
+    # UPDATED:
+    # Saat ini hanya memakai 2 env Supabase.
+    # Pastikan sudah dibuat di GitHub:
+    # Settings > Secrets and variables > Actions > Repository secrets
     env:
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
@@ -46,17 +54,26 @@ jobs:
         run: npm run build
 
   image:
-    name: Build and Push Image
+    name: Build Docker Image and Push to GHCR
+
+    # UPDATED:
+    # Image hanya dibuat dan dipush saat push ke branch main.
+    # Pull request hanya menjalankan job verify.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
     needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 30
+
+    # UPDATED:
+    # packages: write dibutuhkan untuk push image ke GitHub Container Registry.
     permissions:
       contents: read
       packages: write
-    outputs:
-      image: ${{ steps.coordinates.outputs.image }}
-      tag: ${{ steps.coordinates.outputs.tag }}
+
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
 
     steps:
       - name: Checkout repository
@@ -67,7 +84,6 @@ jobs:
         shell: bash
         run: |
           echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-          echo "tag=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v4
@@ -86,104 +102,35 @@ jobs:
           images: ${{ steps.coordinates.outputs.image }}
           tags: |
             type=raw,value=${{ github.sha }}
+            type=raw,value=main
             type=raw,value=production
 
-      - name: Build and push image
+      - name: Build Docker image and push to GHCR
         uses: docker/build-push-action@v7
         with:
           context: .
           push: true
+
+          # UPDATED:
+          # Image akan dipush sebagai:
+          # ghcr.io/owner/repository:<commit-sha>
+          # ghcr.io/owner/repository:main
+          # ghcr.io/owner/repository:production
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+          # UPDATED:
+          # NEXT_PUBLIC_* milik Next.js harus tersedia saat docker build,
+          # karena akan masuk ke hasil build frontend.
           build-args: |
-            NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-            NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+            NEXT_PUBLIC_SUPABASE_URL=${{ env.NEXT_PUBLIC_SUPABASE_URL }}
+            NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${{ env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
+
+          # UPDATED:
+          # Cache Docker layer agar build berikutnya lebih cepat.
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy:
-    name: Deploy Production
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: image
-    runs-on: ubuntu-latest
-    # timeout-minutes: 20
-    # environment: production
-
-    steps:
-      - name: Configure SSH
-        shell: bash
-        env:
-          PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
-          PROD_KNOWN_HOSTS: ${{ secrets.PROD_KNOWN_HOSTS }}
-        run: |
-          set -euo pipefail
-          install -m 700 -d "$HOME/.ssh"
-          printf '%s\n' "$PROD_SSH_KEY" | tr -d '\r' > "$HOME/.ssh/id_ed25519"
-          chmod 600 "$HOME/.ssh/id_ed25519"
-          printf '%s\n' "$PROD_KNOWN_HOSTS" | tr -d '\r' > "$HOME/.ssh/known_hosts"
-          chmod 600 "$HOME/.ssh/known_hosts"
-
-      - name: Pull and restart production
-        shell: bash
-        env:
-          PROD_HOST: ${{ secrets.PROD_HOST }}
-          PROD_USER: ${{ secrets.PROD_USER }}
-          PROD_PORT: ${{ secrets.PROD_PORT }}
-          PROD_APP_DIR: ${{ secrets.PROD_APP_DIR }}
-          APP_IMAGE: ${{ needs.image.outputs.image }}
-          APP_TAG: ${{ needs.image.outputs.tag }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-        run: |
-          set -euo pipefail
-          : "${PROD_HOST:?PROD_HOST is required}"
-          : "${PROD_USER:?PROD_USER is required}"
-          : "${PROD_PORT:?PROD_PORT is required}"
-          : "${PROD_APP_DIR:?PROD_APP_DIR is required}"
-
-          encode() {
-            printf '%s' "$1" | base64 -w 0
-          }
-
-          PROD_APP_DIR_B64="$(encode "$PROD_APP_DIR")"
-          APP_IMAGE_B64="$(encode "$APP_IMAGE")"
-          APP_TAG_B64="$(encode "$APP_TAG")"
-          SUPABASE_URL_B64="$(encode "$NEXT_PUBLIC_SUPABASE_URL")"
-          SUPABASE_KEY_B64="$(encode "$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY")"
-
-          ssh \
-            -i "$HOME/.ssh/id_ed25519" \
-            -o BatchMode=yes \
-            -o IdentitiesOnly=yes \
-            -p "$PROD_PORT" \
-            "$PROD_USER@$PROD_HOST" \
-            "PROD_APP_DIR_B64='$PROD_APP_DIR_B64' APP_IMAGE_B64='$APP_IMAGE_B64' APP_TAG_B64='$APP_TAG_B64' SUPABASE_URL_B64='$SUPABASE_URL_B64' SUPABASE_KEY_B64='$SUPABASE_KEY_B64' bash -s" <<'REMOTE_SCRIPT'
-          set -euo pipefail
-
-          decode() {
-            printf '%s' "$1" | base64 -d
-          }
-
-          PROD_APP_DIR="$(decode "$PROD_APP_DIR_B64")"
-          export APP_IMAGE="$(decode "$APP_IMAGE_B64")"
-          export APP_TAG="$(decode "$APP_TAG_B64")"
-          export NEXT_PUBLIC_SUPABASE_URL="$(decode "$SUPABASE_URL_B64")"
-          export NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$(decode "$SUPABASE_KEY_B64")"
-
-          cd "$PROD_APP_DIR"
-          docker compose -f docker-compose.production.yml config --quiet
-          docker compose -f docker-compose.production.yml pull
-          docker compose -f docker-compose.production.yml up -d --remove-orphans
-          docker compose -f docker-compose.production.yml ps
-          REMOTE_SCRIPT
-
-      - name: Smoke test production
-        shell: bash
-        env:
-          PROD_URL: ${{ secrets.PROD_URL }}
-        run: |
-          set -euo pipefail
-          : "${PROD_URL:?PROD_URL is required}"
-          PROD_URL="${PROD_URL%/}"
-          curl --fail --show-error --silent --retry 10 --retry-delay 5 "$PROD_URL/"
-          curl --fail --show-error --silent --retry 10 --retry-delay 5 "$PROD_URL/katalog"
+  # REMOVED:
+  # Job deploy via SSH dihapus karena skenario saat ini berhenti sampai:
+  # Build Docker Image -> Push ke GHCR.
