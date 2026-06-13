@@ -1,6 +1,7 @@
 services:
   app:
-    image: ${APP_IMAGE:?APP_IMAGE is required}:${APP_TAG:?APP_TAG is required}
+    image: ghcr.io/daztore/landing_page:production
+    #image: ${APP_IMAGE:?APP_IMAGE is required}:${APP_TAG:?APP_TAG is required}
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?NEXT_PUBLIC_SUPABASE_URL is required}
@@ -21,7 +22,7 @@ services:
       app:
         condition: service_healthy
     ports:
-      - "8002:80"
+      - "8003:80"
     volumes:
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
