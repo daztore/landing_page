@@ -106,8 +106,8 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: image
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    environment: production
+    # timeout-minutes: 20
+    # environment: production
 
     steps:
       - name: Configure SSH
