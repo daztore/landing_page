@@ -7,8 +7,8 @@ import { AdminConfirmDialog } from "@/components/admin-daz/admin-confirm-dialog"
 import { AdminImagePreview } from "@/components/admin-daz/admin-image-preview"
 import { Button } from "@/components/ui/button"
 import {
-  ADMIN_IMAGE_MAX_BYTES,
   deleteAdminImage,
+  getAdminImageValidationError,
   uploadAdminImage,
 } from "@/lib/admin-daz/storage-service"
 import type { StorageBucket } from "@/lib/supabase/storage"
@@ -45,10 +45,15 @@ export function AdminImageUploader({
       setPreviewUrl("")
       return
     }
-    if (nextFile.size > ADMIN_IMAGE_MAX_BYTES) {
-      setError("Ukuran gambar maksimal 5 MB.")
+
+    const validationError = getAdminImageValidationError(nextFile)
+    if (validationError) {
+      setFile(null)
+      setPreviewUrl("")
+      setError(validationError)
       return
     }
+
     setFile(nextFile)
     setPreviewUrl(URL.createObjectURL(nextFile))
   }
@@ -76,9 +81,8 @@ export function AdminImageUploader({
         await deleteAdminImage(bucket, previousPath)
       }
     } catch (uploadError) {
-      setError(
-        uploadError instanceof Error ? uploadError.message : "Upload gambar gagal.",
-      )
+      console.error("Admin image upload failed:", uploadError)
+      setError("Gagal upload gambar. Coba gunakan gambar lain atau refresh halaman.")
     } finally {
       setUploading(false)
     }
@@ -93,6 +97,7 @@ export function AdminImageUploader({
       await deleteAdminImage(bucket, value)
       onChange("")
     } catch (deleteError) {
+      console.error("Admin image deletion failed:", deleteError)
       setError(
         deleteError instanceof Error
           ? deleteError.message

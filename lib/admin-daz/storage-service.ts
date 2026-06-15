@@ -1,4 +1,5 @@
 import type { StorageBucket } from "@/lib/supabase/storage"
+import { createBrowserSafeId } from "@/lib/admin-daz/id"
 import { getAdminBrowserClient } from "@/lib/admin-daz/supabase-browser"
 
 const allowedImageTypes = new Map([
@@ -8,6 +9,20 @@ const allowedImageTypes = new Map([
 ])
 
 export const ADMIN_IMAGE_MAX_BYTES = 5 * 1024 * 1024
+
+export function getAdminImageValidationError(file: File): string | null {
+  if (!allowedImageTypes.has(file.type)) {
+    return "Format gambar harus JPEG, PNG, atau WebP."
+  }
+  if (file.size === 0) {
+    return "File gambar kosong atau tidak dapat dibaca."
+  }
+  if (file.size > ADMIN_IMAGE_MAX_BYTES) {
+    return "Ukuran gambar maksimal 5 MB."
+  }
+
+  return null
+}
 
 export function normalizeStoragePath(path: string) {
   return path
@@ -28,18 +43,24 @@ function normalizeFilename(filename: string) {
     .slice(0, 60)
 }
 
+export function createSafeStorageFileName(file: File) {
+  const extension = allowedImageTypes.get(file.type)
+  if (!extension) {
+    throw new Error("Format gambar harus JPEG, PNG, atau WebP.")
+  }
+
+  const baseName = normalizeFilename(file.name) || "image"
+  return `${baseName}-${createBrowserSafeId()}.${extension}`
+}
+
 export async function uploadAdminImage(
   bucket: StorageBucket,
   folder: string,
   file: File,
 ) {
-  const extension = allowedImageTypes.get(file.type)
-
-  if (!extension) {
-    throw new Error("Format gambar harus JPEG, PNG, atau WebP.")
-  }
-  if (file.size > ADMIN_IMAGE_MAX_BYTES) {
-    throw new Error("Ukuran gambar maksimal 5 MB.")
+  const validationError = getAdminImageValidationError(file)
+  if (validationError) {
+    throw new Error(validationError)
   }
 
   const supabase = getAdminBrowserClient()
@@ -48,8 +69,7 @@ export async function uploadAdminImage(
   }
 
   const safeFolder = normalizeStoragePath(folder)
-  const baseName = normalizeFilename(file.name) || "image"
-  const uniqueName = `${Date.now()}-${crypto.randomUUID()}-${baseName}.${extension}`
+  const uniqueName = createSafeStorageFileName(file)
   const objectPath = normalizeStoragePath(
     safeFolder ? `${safeFolder}/${uniqueName}` : uniqueName,
   )
