@@ -1,5 +1,6 @@
 import {
   CircleHelp,
+  ClipboardList,
   Images,
   LayoutTemplate,
   MessageSquareQuote,
@@ -36,6 +37,12 @@ const links = [
     title: "Catalog Products",
     description: "Produk, harga, dan gambar",
     icon: PackageSearch,
+  },
+  {
+    href: "/admin-daz/feedback",
+    title: "Feedback Pelanggan",
+    description: "Request feedback dan hasil pelanggan",
+    icon: ClipboardList,
   },
   {
     href: "/admin-daz/landing/faqs",

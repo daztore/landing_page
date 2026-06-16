@@ -1,6 +1,6 @@
 import { getSupabaseClient } from "@/lib/supabase/client"
 
-export type StorageBucket = "landing_page" | "catalogs"
+export type StorageBucket = "landing_page" | "catalogs" | "feedback_customer_photos"
 
 function normalizeObjectPath(path: string) {
   return path
