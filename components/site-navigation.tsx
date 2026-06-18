@@ -1,6 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, type MouseEventHandler, type ReactNode } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Menu, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { fallbackContact, fallbackNavigation } from "@/lib/data/fallback"
@@ -12,13 +14,43 @@ interface SiteNavigationProps {
   contact?: SiteContact
 }
 
+interface NavigationAnchorProps {
+  href: string
+  className?: string
+  onClick?: MouseEventHandler<HTMLAnchorElement>
+  target?: string
+  rel?: string
+  children: ReactNode
+}
+
+function isInternalPageHref(href: string) {
+  return href.startsWith("/") && !href.startsWith("//")
+}
+
+function NavigationAnchor({ href, children, ...props }: NavigationAnchorProps) {
+  if (isInternalPageHref(href)) {
+    return (
+      <Link href={href} {...props}>
+        {children}
+      </Link>
+    )
+  }
+
+  return (
+    <a href={href} {...props}>
+      {children}
+    </a>
+  )
+}
+
 export function SiteNavigation({
   items = fallbackNavigation,
   contact = fallbackContact,
 }: SiteNavigationProps) {
+  const pathname = usePathname()
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
-  const [isKatalogPage, setIsKatalogPage] = useState(false)
+  const isKatalogPage = pathname.startsWith("/katalog")
   const links = items.filter((item) => item.placement === "header")
   const headerCta = items.find((item) => item.placement === "header_cta")
   const mobileLinks = items.filter((item) => item.placement === "mobile")
@@ -30,10 +62,7 @@ export function SiteNavigation({
     const onScroll = () => setScrolled(window.scrollY > 24)
     onScroll()
     window.addEventListener("scroll", onScroll, { passive: true })
-    
-    // Check if on katalog page
-    setIsKatalogPage(window.location.pathname.includes("/katalog"))
-    
+
     return () => window.removeEventListener("scroll", onScroll)
   }, [])
 
@@ -60,7 +89,7 @@ export function SiteNavigation({
           <nav className="hidden md:flex items-center gap-9">
             {links.map((l) => (
               <div key={l.href} className="relative">
-                <a
+                <NavigationAnchor
                   href={l.disabled ? "#" : resolveHref(l)}
                   onClick={(e) => l.disabled && e.preventDefault()}
                   className={cn(
@@ -80,18 +109,18 @@ export function SiteNavigation({
                     "absolute -bottom-1 left-0 h-px bg-primary transition-all duration-300",
                     l.disabled ? "w-0" : "w-0 group-hover:w-full",
                   )} />
-                </a>
+                </NavigationAnchor>
               </div>
             ))}
           </nav>
 
           {headerCta && (
-            <a
+            <NavigationAnchor
               href={resolveHref(headerCta)}
               className="hidden md:inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-all duration-300 hover:shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5"
             >
               {headerCta.label}
-            </a>
+            </NavigationAnchor>
           )}
 
           <button
@@ -111,7 +140,7 @@ export function SiteNavigation({
         >
           <nav className="flex flex-col gap-1 px-4 py-3 sm:px-6 sm:py-4">
             {links.map((l) => (
-              <a
+              <NavigationAnchor
                 key={l.href}
                 href={l.disabled ? "#" : resolveHref(l)}
                 onClick={(e) => {
@@ -131,15 +160,15 @@ export function SiteNavigation({
                     {l.badge}
                   </span>
                 )}
-              </a>
+              </NavigationAnchor>
             ))}
             {headerCta && (
-              <a
+              <NavigationAnchor
                 href={resolveHref(headerCta)}
                 className="mt-2 inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-medium text-primary-foreground"
               >
                 {headerCta.label}
-              </a>
+              </NavigationAnchor>
             )}
           </nav>
         </div>
@@ -152,7 +181,7 @@ export function SiteNavigation({
             {mobileLinks.map((item) => {
               const external = item.href === "whatsapp"
               return (
-                <a
+                <NavigationAnchor
                   key={item.slug}
                   href={resolveHref(item)}
                   target={external ? "_blank" : undefined}
@@ -161,7 +190,7 @@ export function SiteNavigation({
                 >
                   <span className="text-lg">{item.icon}</span>
                   <span>{item.label}</span>
-                </a>
+                </NavigationAnchor>
               )
             })}
           </nav>

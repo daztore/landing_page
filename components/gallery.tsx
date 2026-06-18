@@ -31,7 +31,7 @@ export function Gallery({ data = fallbackGallery }: GalleryProps) {
       document.removeEventListener("keydown", onKey)
       document.body.style.overflow = ""
     }
-  }, [active])
+  }, [active, items.length])
 
   return (
     <section id="gallery" className="relative bg-background py-24 md:py-32">

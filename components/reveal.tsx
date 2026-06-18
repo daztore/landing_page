@@ -17,18 +17,25 @@ export function Reveal({ children, className, delay = 0 }: RevealProps) {
     const node = ref.current
     if (!node) return
 
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+
+    let timeoutId: number | undefined
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          const t = window.setTimeout(() => setVisible(true), delay)
+          timeoutId = window.setTimeout(() => setVisible(true), delay)
           io.disconnect()
-          return () => window.clearTimeout(t)
         }
       },
       { threshold: 0.15, rootMargin: "0px 0px -60px 0px" },
     )
     io.observe(node)
-    return () => io.disconnect()
+    return () => {
+      if (timeoutId) {
+        window.clearTimeout(timeoutId)
+      }
+      io.disconnect()
+    }
   }, [delay])
 
   return (

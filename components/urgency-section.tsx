@@ -1,5 +1,3 @@
-"use client"
-
 import { Reveal } from "./reveal"
 import { Calendar, AlertCircle, ArrowRight } from "lucide-react"
 import { fallbackContact, fallbackUrgency } from "@/lib/data/fallback"

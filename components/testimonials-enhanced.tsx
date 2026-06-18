@@ -1,5 +1,3 @@
-"use client"
-
 import { Reveal } from "./reveal"
 import { fallbackTestimonials } from "@/lib/data/fallback"
 import type { TestimonialsSection } from "@/lib/data/types"
@@ -38,7 +36,7 @@ export function TestimonialsEnhanced({
 
                 {/* Content */}
                 <p className="text-sm sm:text-base text-muted-foreground italic leading-relaxed mb-6">
-                  "{testimonial.content}"
+                  &ldquo;{testimonial.content}&rdquo;
                 </p>
 
                 {/* Author */}

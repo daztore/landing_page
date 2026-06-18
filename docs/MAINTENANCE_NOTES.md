@@ -98,7 +98,11 @@ Migration hanya membuat bucket/policy dan tidak meng-upload asset.
 
 ### Client Components
 
-Beberapa section menjadi Client Component untuk interaksi atau animasi. `app/katalog/layout.tsx` menjadi client hanya untuk viewport detection.
+Beberapa section tetap menjadi Client Component untuk interaksi yang memang dibutuhkan,
+seperti navigation, gallery lightbox, FAQ accordion, filter katalog, dan tombol WhatsApp.
+Section statis seperti `Hero`, `OurProcess`, `WhyChooseUs`, `TestimonialsEnhanced`,
+`UrgencySection`, dan dekorasi `FloatingFlower` dirender sebagai Server Component atau
+komponen non-hydrated bila memungkinkan.
 
 Evaluasi masa depan:
 
@@ -109,7 +113,35 @@ Evaluasi masa depan:
 
 ### Scroll dan Resize Listener
 
-`Hero`, `SiteNavigation`, `WhatsappButton`, dan layout katalog memasang listener browser. Sebagian sudah passive dan cleanup tersedia. Tetap ukur dampaknya pada device low-end sebelum menambah animasi baru.
+`Hero` tidak lagi memasang scroll listener untuk parallax. `SiteNavigation` dan
+`WhatsappButton` masih memakai listener scroll passive untuk perubahan visual setelah scroll.
+Layout katalog memakai `matchMedia` breakpoint change, bukan listener `resize` pada setiap
+perubahan ukuran window.
+
+Tetap ukur dampaknya pada device low-end sebelum menambah animasi baru.
+
+### Loading Screen dan Route Transition
+
+Loading brand global berada di:
+
+- `components/loading/daztore-loader.tsx`;
+- `components/loading/route-loading-provider.tsx`;
+- `app/loading.tsx`.
+
+Perilaku:
+
+- loader menampilkan bentuk huruf D dengan palet daztore.id;
+- muncul untuk klik link internal dengan delay singkat agar tidak flashing;
+- tidak muncul untuk `mailto:`, `tel:`, external URL, target tab baru, download, atau hash-only link;
+- berhenti saat pathname berubah dan memiliki safety timeout sekitar 6,5 detik;
+- memakai CSS/Tailwind saja tanpa library animasi eksternal;
+- mengikuti `prefers-reduced-motion` melalui class Tailwind dan aturan global CSS.
+
+Catatan manual test:
+
+- klik dari `/` ke `/katalog`, pastikan loader muncul bila transisi tidak instan dan hilang setelah halaman katalog siap;
+- klik anchor seperti `#gallery` atau CTA WhatsApp, pastikan loader tidak muncul;
+- uji mobile viewport untuk memastikan overlay memenuhi layar dan tidak menyebabkan layout shift.
 
 ## Konten dan Data
 

@@ -1,3 +1,4 @@
+import { cache } from "react"
 import {
   fallbackCarouselTestimonials,
   fallbackCatalog,
@@ -254,7 +255,7 @@ function resolveContact(value: unknown): SiteContact {
   }
 }
 
-async function querySiteContact(): Promise<SiteContact> {
+const querySiteContact = cache(async function querySiteContact(): Promise<SiteContact> {
   const supabase = getSupabaseClient()
 
   if (!supabase) {
@@ -271,9 +272,9 @@ async function querySiteContact(): Promise<SiteContact> {
 
   reportQueryError("site settings", error)
   return error || !data ? fallbackContact : resolveContact(data.value)
-}
+})
 
-async function queryNavigation(): Promise<NavigationItem[]> {
+const queryNavigation = cache(async function queryNavigation(): Promise<NavigationItem[]> {
   const supabase = getSupabaseClient()
 
   if (!supabase) {
@@ -302,7 +303,7 @@ async function queryNavigation(): Promise<NavigationItem[]> {
     disabled: item.is_disabled,
     sortOrder: item.sort_order,
   }))
-}
+})
 
 async function querySections(slugs: string[]): Promise<SectionRow[]> {
   const supabase = getSupabaseClient()

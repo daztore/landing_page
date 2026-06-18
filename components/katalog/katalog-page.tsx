@@ -36,8 +36,8 @@ export function KatalogPage({ data = fallbackCatalog }: KatalogPageProps) {
     }
 
     // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
+    const query = searchQuery.trim().toLowerCase()
+    if (query) {
       filtered = filtered.filter(
         (p) =>
           p.title.toLowerCase().includes(query) ||
@@ -51,8 +51,8 @@ export function KatalogPage({ data = fallbackCatalog }: KatalogPageProps) {
       case "popular":
         sorted.sort((a, b) => {
           const badgeOrder = { bestseller: 0, loved: 1, limited: 2, undefined: 3 }
-          return (badgeOrder[a.badge as keyof typeof badgeOrder] || 3) -
-                 (badgeOrder[b.badge as keyof typeof badgeOrder] || 3)
+          return (badgeOrder[a.badge as keyof typeof badgeOrder] ?? 3) -
+                 (badgeOrder[b.badge as keyof typeof badgeOrder] ?? 3)
         })
         break
       case "price-asc":
@@ -67,7 +67,7 @@ export function KatalogPage({ data = fallbackCatalog }: KatalogPageProps) {
     }
 
     return sorted
-  }, [selectedCategory, searchQuery, sortBy])
+  }, [products, selectedCategory, searchQuery, sortBy])
 
   return (
     <div className="relative bg-background">

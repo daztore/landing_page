@@ -28,6 +28,7 @@ File `app/layout.tsx` berlaku untuk seluruh route dan bertanggung jawab atas:
 - metadata default;
 - viewport dan theme color;
 - import `app/globals.css`;
+- provider global untuk route transition loading;
 - Vercel Analytics saat `NODE_ENV=production`.
 
 Metadata default:
@@ -104,7 +105,7 @@ Pilihan `newest` tidak melakukan sorting tambahan karena data tidak memiliki tan
 - mobile menampilkan `KatalogHeader`;
 - sebelum mount, layout sementara menampilkan navigasi dan footer standar.
 
-`KatalogHeader` menerima `searchQuery` dan `onSearchChange`, tetapi layout mengirim nilai kosong/no-op dan komponen belum menghubungkan tombol search ke input katalog. Tombol back menggunakan `router.back()`.
+`KatalogLayoutShell` memakai `matchMedia("(max-width: 767px)")` agar update hanya terjadi saat melewati breakpoint. Tombol back pada `KatalogHeader` memakai `router.back()`.
 
 ## API Routes
 
@@ -123,14 +124,26 @@ User anonymous diarahkan ke login; user non-admin diarahkan ke halaman akses dit
 
 ## Loading, Error, dan Not Found
 
-Tidak ditemukan file:
+File loading yang tersedia:
 
-- `loading.tsx`;
+- `app/loading.tsx`;
+- `components/loading/daztore-loader.tsx`;
+- `components/loading/route-loading-provider.tsx`.
+
+Root layout memasang `RouteLoadingProvider` untuk klik navigasi internal. Loader:
+
+- menunggu sekitar 180ms sebelum tampil agar transisi cepat tidak terasa lebih lambat;
+- berhenti saat pathname berubah;
+- memiliki minimum display pendek dan safety timeout;
+- mengabaikan link external, WhatsApp, email, telepon, tab baru, download, dan hash-only anchor.
+
+Belum ditemukan file:
+
 - `error.tsx`;
 - `global-error.tsx`;
 - `not-found.tsx`.
 
-Next.js akan memakai perilaku default framework. Tidak ada UI loading atau error khusus project.
+Next.js tetap memakai perilaku default framework untuk error dan not found.
 
 ## Rendering dan Caching
 

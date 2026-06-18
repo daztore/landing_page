@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import { Heart, Clock, Palette } from "lucide-react"
-import { useState } from "react"
+import { memo, useState } from "react"
 import { cn } from "@/lib/utils"
 import { type Product } from "@/lib/katalog-data"
 import { fallbackContact } from "@/lib/data/fallback"
@@ -13,25 +13,21 @@ interface ProductCardProps {
   whatsappNumber?: string
 }
 
-export function ProductCard({
+const currencyFormatter = new Intl.NumberFormat("id-ID", {
+  style: "currency",
+  currency: "IDR",
+  maximumFractionDigits: 0,
+})
+
+function ProductCardComponent({
   product,
   whatsappNumber = fallbackContact.whatsappNumber,
 }: ProductCardProps) {
   const [isFavorite, setIsFavorite] = useState(false)
-  const [isHovered, setIsHovered] = useState(false)
-
-  const formattedPrice = new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(product.startPrice)
+  const formattedPrice = currencyFormatter.format(product.startPrice)
 
   const endPriceText = product.endPrice
-    ? ` - ${new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
-        maximumFractionDigits: 0,
-      }).format(product.endPrice)}`
+    ? ` - ${currencyFormatter.format(product.endPrice)}`
     : ""
 
   const badgeLabel = {
@@ -41,11 +37,7 @@ export function ProductCard({
   }
 
   return (
-    <div
-      className="group rounded-2xl overflow-hidden border border-border/60 bg-card transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
+    <div className="group rounded-2xl overflow-hidden border border-border/60 bg-card transition-all duration-300 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1">
       {/* Image Container */}
       <div className="relative aspect-[3/4] overflow-hidden bg-secondary">
         <Image
@@ -79,19 +71,11 @@ export function ProductCard({
 
         {/* Hover Overlay */}
         <div
-          className={cn(
-            "absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent transition-opacity duration-300",
-            isHovered ? "opacity-100" : "opacity-0"
-          )}
+          className="absolute inset-0 bg-gradient-to-t from-background/90 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
         />
 
         {/* Hover CTA */}
-        <div
-          className={cn(
-            "absolute inset-x-3 bottom-3 transition-all duration-300 translate-y-4 opacity-0",
-            isHovered && "translate-y-0 opacity-100"
-          )}
-        >
+        <div className="absolute inset-x-3 bottom-3 translate-y-4 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
           <a
             href={buildWhatsAppUrl(
               whatsappNumber,
@@ -150,3 +134,6 @@ export function ProductCard({
     </div>
   )
 }
+
+export const ProductCard = memo(ProductCardComponent)
+ProductCard.displayName = "ProductCard"

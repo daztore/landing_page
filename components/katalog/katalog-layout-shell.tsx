@@ -21,13 +21,21 @@ export function KatalogLayoutShell({
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
+    const mobileQuery = window.matchMedia("(max-width: 767px)")
+    const syncMobileState = () => {
+      setIsMobile(mobileQuery.matches)
     }
-    checkMobile()
-    window.addEventListener("resize", checkMobile)
-    return () => window.removeEventListener("resize", checkMobile)
+
+    const frameId = window.requestAnimationFrame(() => {
+      syncMobileState()
+      setMounted(true)
+    })
+    mobileQuery.addEventListener("change", syncMobileState)
+
+    return () => {
+      window.cancelAnimationFrame(frameId)
+      mobileQuery.removeEventListener("change", syncMobileState)
+    }
   }, [])
 
   if (!mounted) {
@@ -43,7 +51,7 @@ export function KatalogLayoutShell({
   return (
     <>
       {!isMobile && <SiteNavigation items={navigation} contact={contact} />}
-      {isMobile && <KatalogHeader searchQuery="" onSearchChange={() => {}} />}
+      {isMobile && <KatalogHeader />}
       <main className={`min-h-screen ${!isMobile ? "pt-20 pb-20 md:pt-0 md:pb-0" : "pb-0"}`}>
         {children}
       </main>

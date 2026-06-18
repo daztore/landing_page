@@ -1,7 +1,4 @@
-"use client"
-
 import Image from "next/image"
-import { useEffect, useState } from "react"
 import { ArrowRight, Sparkles } from "lucide-react"
 import { FloatingFlower } from "./floating-flower"
 import { fallbackContact, fallbackHero } from "@/lib/data/fallback"
@@ -17,14 +14,6 @@ export function Hero({
   data = fallbackHero,
   whatsappNumber = fallbackContact.whatsappNumber,
 }: HeroProps) {
-  const [offset, setOffset] = useState(0)
-
-  useEffect(() => {
-    const onScroll = () => setOffset(Math.min(window.scrollY * 0.3, 200))
-    window.addEventListener("scroll", onScroll, { passive: true })
-    return () => window.removeEventListener("scroll", onScroll)
-  }, [])
-
   return (
     <section
       id="top"
@@ -145,7 +134,6 @@ export function Hero({
         <div className="hero-visual relative md:col-span-6">
           <div
             className="relative aspect-[3/4] sm:aspect-[4/5] overflow-hidden rounded-2xl sm:rounded-[2rem] shadow-lg sm:shadow-2xl shadow-primary/10"
-            style={{ transform: `translateY(-${offset * 0.15}px)` }}
           >
             <Image
               src={data.imageUrl}
@@ -177,7 +165,6 @@ export function Hero({
           {/* Floating accent card - hidden on mobile */}
           <div
             className="absolute -left-4 top-10 hidden rounded-2xl border border-border bg-card/95 px-5 py-4 shadow-xl backdrop-blur md:block"
-            style={{ transform: `translateY(${offset * 0.08}px)` }}
           >
             <div className="text-[10px] uppercase tracking-[0.22em] text-primary">{data.accentLabel}</div>
             <div className="mt-1 font-serif text-base text-foreground">

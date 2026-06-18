@@ -2,16 +2,9 @@
 
 import { useRouter } from "next/navigation"
 import { Search, ArrowLeft } from "lucide-react"
-import { cn } from "@/lib/utils"
 
-interface KatalogHeaderProps {
-  searchQuery: string
-  onSearchChange: (query: string) => void
-}
-
-export function KatalogHeader({ searchQuery, onSearchChange }: KatalogHeaderProps) {
+export function KatalogHeader() {
   const router = useRouter()
-  const isMobile = typeof window !== "undefined" && window.innerWidth < 768
 
   return (
     <>
