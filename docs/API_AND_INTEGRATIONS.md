@@ -2,15 +2,24 @@
 
 ## Ringkasan
 
-Project tidak memiliki API route internal, tetapi sekarang menggunakan Supabase PostgREST melalui SDK resmi untuk membaca konten publik. Tidak ditemukan:
+Project menggunakan Supabase PostgREST melalui SDK resmi untuk membaca konten publik, menjalankan admin CMS, dan memproses feedback pelanggan. Route Handler internal aktif terbatas pada feedback dan admin feedback request.
+
+Tidak ditemukan:
 
 - Axios;
-- API route;
 - Server Action;
 - GraphQL client;
-- authentication provider;
-- session store;
-- payment gateway.
+- Pages Router API route;
+- payment gateway;
+- shipping provider.
+
+Ditemukan:
+
+- Supabase Auth untuk admin;
+- Supabase SSR cookie session;
+- Supabase Storage public/private;
+- Route Handler `POST` untuk submit feedback;
+- Route Handler `GET`/`POST` admin untuk feedback request.
 
 Data produk dan konten pemasaran dibaca pada server melalui `lib/data/landing-page.ts`. Source code lokal tetap menjadi fallback.
 
@@ -38,8 +47,7 @@ Query dilakukan oleh data access layer, bukan langsung dari komponen UI. Query:
 - menggunakan RLS public read-only;
 - kembali ke fallback lokal saat gagal atau kosong.
 
-Tidak ada service-role key atau public write policy. Modul `/admin-daz` menggunakan Supabase
-Auth email/password dan RLS admin untuk CRUD serta upload.
+Modul `/admin-daz` menggunakan Supabase Auth email/password dan RLS admin untuk CRUD serta upload. `SUPABASE_SERVICE_ROLE_KEY` hanya digunakan server-side untuk flow feedback publik yang sudah di-hardening agar data privat tidak dibaca/ditulis langsung oleh client.
 
 ### Supabase Storage
 
@@ -52,6 +60,18 @@ Kolom database menyimpan object path, lalu `lib/supabase/storage.ts` membentuk p
 melalui Supabase client. URL `http(s)` dan fallback lokal yang diawali `/` tetap didukung.
 Bucket tetap dapat dibaca publik. Insert/update/delete object hanya diizinkan untuk user
 authenticated yang terdaftar sebagai admin aktif. Admin uploader menyimpan object path saja.
+
+Bucket `feedback_customer_photos` bersifat private setelah migration `005`. Foto pelanggan diupload melalui Route Handler server-side dan dibaca admin melalui signed URL atau akses admin yang sesuai.
+
+## Route Handler Internal
+
+| Route | File | Method | Akses | Catatan |
+| --- | --- | --- | --- | --- |
+| `/feedback/[id]/submit` | `app/feedback/[id]/submit/route.ts` | `POST` | Public via UUID link | Validasi input, rate limit dasar, upload foto, dan insert feedback memakai service-role server-only. |
+| `/admin-daz/feedback/requests` | `app/admin-daz/(protected)/feedback/requests/route.ts` | `GET` | Admin | List feedback request melalui session admin dan RLS. |
+| `/admin-daz/feedback/requests` | `app/admin-daz/(protected)/feedback/requests/route.ts` | `POST` | Admin | Membuat feedback request dan asset terkait dari panel admin. |
+
+Tidak ada route payment, order, shipping, checkout, atau webhook provider.
 
 ## WhatsApp
 
@@ -115,17 +135,13 @@ https://instagram.com/daztore.id
 
 Tidak ada Instagram API, feed embedding, access token, atau tracking khusus.
 
-## Vercel Analytics
+## Analytics
 
-Package:
+Analytics belum aktif.
 
-```text
-@vercel/analytics 1.6.1
-```
+`app/layout.tsx` masih memiliki import/render `@vercel/analytics/next` yang dikomentari, dan package `@vercel/analytics` tidak terdaftar di `package.json`. Tidak ada analytics runtime aktif saat ini.
 
-`Analytics` dirender oleh `app/layout.tsx` hanya ketika `NODE_ENV` bernilai `production`.
-
-Tidak ditemukan konfigurasi consent banner, opt-out, atau dokumentasi privasi analytics.
+Jika analytics diaktifkan kembali, perlu ditambahkan dependency, consent/privacy review, dan dokumentasi opt-out bila diwajibkan.
 
 > **Perhatian:** Kebutuhan consent dan privacy notice bergantung pada wilayah pengguna serta kebijakan bisnis. Needs confirmation.
 
@@ -178,22 +194,26 @@ login email/password
 Publishable key tetap merupakan credential publik. Akses admin berasal dari JWT user dan
 allowlist, bukan dari kerahasiaan key.
 
+Route `/feedback/[id]` dan `/feedback/[id]/submit` tidak memakai session user. Aksesnya berbasis UUID request feedback dan diproses server-side. Submit feedback juga memiliki rate limit in-memory per IP sebelum parsing form dan upload foto.
+
 `components/ui/sidebar.tsx` memiliki kode cookie untuk menyimpan state sidebar, tetapi komponen tersebut tidak dipakai oleh halaman aktif. Cookie itu bukan cookie autentikasi.
 
-Tidak ada bearer token custom, local storage session custom, atau service-role key.
+Tidak ada bearer token custom atau local storage session custom. Service-role key ada, tetapi hanya berada di server-only code untuk feedback.
 
 ## Keamanan dan Privasi
 
 - Link external dengan target tab baru umumnya memakai `rel="noreferrer"`.
 - Tidak ada secret di URL integrasi yang ditemukan.
 - Nomor WhatsApp, email, Instagram, dan alamat dibaca dari `site_settings`, dengan fallback lokal.
-- Bila form kontak diaktifkan, kebijakan privasi perlu menjelaskan bahwa data diteruskan ke WhatsApp dan tidak disimpan oleh aplikasi.
+- Feedback pelanggan disimpan di Supabase melalui Route Handler server-side; data feedback dan foto pelanggan perlu diperlakukan sebagai data privat.
+- Submit feedback dapat mengembalikan HTTP `429` dengan header `Retry-After` jika rate limit terlampaui.
+- Bila form kontak/inquiry diaktifkan, kebijakan privasi perlu menjelaskan data apa yang disimpan atau diteruskan ke WhatsApp.
 - Link legal footer masih placeholder.
 
 ## Needs Confirmation
 
 - Apakah kontak dan akun eksternal pada seed/fallback adalah identitas production resmi.
-- Apakah Vercel Analytics digunakan saat aplikasi dijalankan di luar Vercel.
+- Apakah analytics akan diaktifkan kembali dan provider apa yang dipakai.
 - Apakah ada backend atau CRM eksternal yang digunakan secara operasional tetapi belum terhubung ke repository.
 - Apakah Supabase akan menjadi CMS permanen atau hanya sumber data sementara.
 - Siapa owner dan proses operasional upload gambar Supabase Storage.

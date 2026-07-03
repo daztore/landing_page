@@ -48,8 +48,8 @@ Baseline existing masih menghasilkan warning non-blocking yang didokumentasikan 
 
 ```text
 app/                Route dan layout App Router
-components/         Section landing page, katalog, dan primitive UI
-lib/                Data katalog dan utility
+components/         Section landing page, katalog, feedback, admin, dan primitive UI
+lib/                Data access, Supabase helper, admin, feedback, security, dan utility
 supabase/           SQL migration dan seed
 public/             Asset gambar
 docker/             Konfigurasi Nginx serta file legacy PHP/Supervisor
@@ -63,7 +63,10 @@ Route aktif:
 | --- | --- |
 | `/` | Landing page utama dan CTA kontak. |
 | `/katalog` | Katalog Supabase dengan pencarian, filter, dan sorting client-side. |
-| `/admin-daz` | Panel admin terproteksi untuk konten, katalog, dan gambar. |
+| `/feedback/[id]` | Form feedback pelanggan berbasis link UUID dan tidak diindex. |
+| `/feedback/[id]/submit` | Route Handler `POST` untuk submission feedback dan upload foto pelanggan. |
+| `/admin-daz` | Redirect ke dashboard admin terproteksi. |
+| `/admin-daz/**` | Panel admin terproteksi untuk konten, katalog, feedback, settings, dan gambar. |
 
 ## Supabase
 
@@ -101,17 +104,19 @@ Aplikasi tersedia di `http://localhost:8002`.
 
 ## Deployment Production
 
-Flow yang direkomendasikan:
+Workflow CI/CD aktif saat ini berhenti sampai verifikasi, build Docker image, dan push ke GHCR. Deploy SSH otomatis belum aktif di `.github/workflows/ci-cd.yml`.
+
+Flow production yang direkomendasikan tetap:
 
 ```text
 push ke main
--> CI lint/build
+-> CI lint/typecheck/build
 -> Docker build
 -> Docker push dengan tag commit SHA
--> SSH ke server
+-> server production pull image
 -> docker compose pull
 -> docker compose up -d
--> health check
+-> health check manual/operasional
 ```
 
 Server production tidak perlu menjalankan `npm install` atau `npm run build`. Server hanya menarik image yang sudah divalidasi CI dan me-restart container.
@@ -156,4 +161,6 @@ Dokumentasi teknis dan operasional existing:
 - Supabase public content memakai publishable key; feedback publik memakai service-role key server-only melalui route Next.js.
 - Admin memakai Supabase Auth cookie session dan allowlist `admin_users`.
 - Write database/Storage hanya diizinkan RLS untuk admin aktif.
+- `feedback_customer_photos` adalah bucket private; public feedback submit diproses server-side.
+- CI/CD aktif saat ini tidak melakukan SSH deploy otomatis.
 - Beberapa area production masih memerlukan hardening; lihat maintenance notes sebelum go-live.

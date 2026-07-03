@@ -37,6 +37,88 @@ Notes:
 
 ## Entries
 
+### 2026-07-03 - Environment and security audit before commerce
+
+Type:
+
+- Documentation
+- Security
+
+Impact:
+
+- Low
+
+Summary:
+
+- Mengaudit penggunaan env aktif, termasuk boundary `NEXT_PUBLIC_*`, `SUPABASE_SERVICE_ROLE_KEY`, Docker build args, Compose runtime env, GitHub Actions env, `.gitignore`, dan `.dockerignore`.
+- Mengaudit baseline security sebelum commerce, termasuk RLS, admin allowlist, feedback public route, upload validation, error handling, security headers, dependency advisory, dan CodeQL workflow.
+- Menambahkan rate limit dasar server-side untuk submit feedback publik dengan response `429` dan header `Retry-After`.
+- Memperbarui status roadmap untuk audit env dan security check tanpa membuat fitur order, payment, shipping, cart, checkout, atau customer account.
+- Memperbarui `SECURITY.md` agar tidak lagi memakai template GitHub generik.
+
+Files:
+
+- `SECURITY.md`
+- `app/feedback/[id]/submit/route.ts`
+- `lib/security/rate-limit.ts`
+- `docs/API_AND_INTEGRATIONS.md`
+- `docs/ROUTES_AND_PAGES.md`
+- `docs/ENVIRONMENT_VARIABLES.md`
+- `docs/SECURITY_AND_PERFORMANCE.md`
+- `docs/MAINTENANCE_NOTES.md`
+- `docs/ROADMAP.md`
+- `docs/CHANGELOG_NOTES.md`
+
+Notes:
+
+- Logic aplikasi yang diubah hanya guard rate limit pada Route Handler feedback publik.
+- Tidak ada migration database yang dibuat.
+- Rate limit feedback masih in-memory per proses; endpoint commerce publik nanti tetap membutuhkan abuse prevention yang sesuai skala.
+- Magic-byte/content validation upload, CSP/HSTS, dan advisory PostCSS internal Next.js tetap menjadi gap sebelum commerce publik.
+
+### 2026-07-03 - Sync README and documentation with current code
+
+Type:
+
+- Documentation
+
+Impact:
+
+- Low
+
+Summary:
+
+- Menyinkronkan README dan dokumen teknis dengan route aktif, termasuk `/feedback/[id]`, Route Handler feedback submit, dan admin feedback requests.
+- Menyinkronkan catatan service-role usage agar jelas hanya dipakai server-side untuk feedback.
+- Menyinkronkan port Compose lokal `8002` dan Compose production `8003`.
+- Menyinkronkan status CI/CD aktif: verify, build image, dan push GHCR; deploy SSH otomatis belum aktif.
+- Mencatat gap yang belum langsung diperbaiki, seperti rate limit feedback publik, analytics nonaktif, dan deploy manual.
+
+Files:
+
+- `README.md`
+- `docs/PROJECT_OVERVIEW.md`
+- `docs/ROUTES_AND_PAGES.md`
+- `docs/API_AND_INTEGRATIONS.md`
+- `docs/ENVIRONMENT_VARIABLES.md`
+- `docs/SUPABASE_MIGRATION.md`
+- `docs/DOCKER_AND_DEPLOYMENT.md`
+- `docs/CI_CD_RECOMMENDATION.md`
+- `docs/CI_CD_DEPLOYMENT.md`
+- `docs/SETUP_LOCAL.md`
+- `docs/TROUBLESHOOTING.md`
+- `docs/COMPONENTS.md`
+- `docs/MAINTENANCE_NOTES.md`
+- `docs/ROADMAP.md`
+- `docs/CHANGELOG_NOTES.md`
+
+Notes:
+
+- Tidak ada logic aplikasi utama yang diubah.
+- Tidak ada schema database yang diubah.
+- Tidak ada fitur order, payment, shipping, cart, checkout, atau customer account yang dibuat.
+- Gap yang tidak langsung diperbaiki tetap dicatat sebagai risiko/needs confirmation pada dokumen terkait.
+
 ### 2026-07-03 - Documentation roadmap foundation
 
 Type:

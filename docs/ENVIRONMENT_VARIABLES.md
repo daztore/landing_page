@@ -4,11 +4,34 @@
 
 | Variable | Contoh aman | Digunakan di | Klasifikasi | Sensitif |
 | --- | --- | --- | --- | --- |
-| `NODE_ENV` | `production` | Next.js, Docker, analytics | Framework-managed, build/runtime | Tidak |
-| `NEXT_PUBLIC_SITE_URL` | `https://daztore.web.id` | Metadata, robots, sitemap | Public, build/runtime | Tidak |
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://project-ref.supabase.co` | `lib/supabase/client.ts` | Public, build/runtime | Tidak |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_example` | `lib/supabase/client.ts` | Public client-side, build/runtime | Tidak rahasia |
-| `SUPABASE_SERVICE_ROLE_KEY` | `sb_secret_example` | `lib/supabase/service-role.ts` | Server-only runtime | Ya |
+| `NODE_ENV` | `production` | Next.js dan Docker runtime | Framework-managed, build/runtime | Tidak |
+| `NEXT_PUBLIC_SITE_URL` | `https://daztore.web.id` | `lib/site-url.ts`, `next.config.mjs`, `lib/security/safe-image-src.ts` | Public, build/runtime | Tidak |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://project-ref.supabase.co` | Public Supabase client, admin SSR/browser client, service-role URL, remote image allowlist | Public, build/runtime | Tidak |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_example` | Public Supabase client dan admin SSR/browser client | Public client-side, build/runtime | Tidak rahasia |
+| `SUPABASE_SERVICE_ROLE_KEY` | `sb_secret_example` | `lib/supabase/service-role.ts`, dipakai oleh feedback server code | Server-only runtime | Ya |
+
+## Audit 2026-07-03
+
+Audit env dilakukan terhadap source code, Dockerfile, Compose, workflow GitHub Actions, `.gitignore`, dan `.dockerignore`.
+
+Hasil:
+
+- Tidak ada `SUPABASE_SERVICE_ROLE_KEY` dengan prefix `NEXT_PUBLIC_*`.
+- `SUPABASE_SERVICE_ROLE_KEY` hanya dibaca oleh `lib/supabase/service-role.ts`.
+- `lib/supabase/service-role.ts` memakai import `server-only`, sehingga module tersebut tidak boleh masuk client bundle.
+- Import service-role hanya ditemukan pada `lib/feedback/data.ts` dan `app/feedback/[id]/submit/route.ts`.
+- Client/browser Supabase hanya memakai `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+- `Dockerfile` hanya menerima build argument `NEXT_PUBLIC_*`; service-role tidak masuk build argument.
+- Workflow GitHub Actions aktif hanya memakai env public untuk verify/build image dan tidak memakai `SUPABASE_SERVICE_ROLE_KEY`.
+- `docker-compose.production.yml` mewajibkan `SUPABASE_SERVICE_ROLE_KEY` sebagai runtime environment.
+- `.gitignore` mengecualikan `.env*` dan hanya membuka `.env.example`.
+- `.dockerignore` mengecualikan `.env*`, sehingga env lokal tidak masuk build context Docker.
+
+Catatan gap:
+
+- Belum ada schema validasi env terpusat. Saat ini module Supabase memakai fallback/null handling, tetapi fitur commerce nanti sebaiknya punya validasi env server-side yang fail-fast untuk credential wajib.
+- `docker-compose.yml` lokal memakai fallback kosong untuk env. Ini nyaman untuk development dengan fallback data lokal, tetapi route feedback akan gagal aman jika `SUPABASE_SERVICE_ROLE_KEY` belum tersedia.
+- Provider commerce seperti payment, shipping, SMTP, dan anti-spam belum memiliki env aktif. Jangan menambahkan nama credential baru ke `.env.example` sebelum implementasi/provider diputuskan.
 
 ## Local Development
 
@@ -102,14 +125,15 @@ docker compose up -d
 Production Compose juga memerlukan:
 
 ```dotenv
-APP_IMAGE=ghcr.io/OWNER/REPO
-APP_TAG=<full-commit-sha>
 NEXT_PUBLIC_SITE_URL=https://daztore.web.id
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_your_service_role_key
 ```
 
-Workflow GitHub Actions mengisi `APP_IMAGE`, `APP_TAG`, dan kedua variable Supabase saat
-menjalankan Compose di server. `.env` server menyediakan fallback untuk deploy manual.
+`docker-compose.production.yml` saat ini memakai image `ghcr.io/daztore/landing_page:production` secara langsung. File tersebut juga masih menyimpan contoh baris komentar untuk pola `${APP_IMAGE}:${APP_TAG}` jika nanti rollback berbasis SHA ingin diaktifkan melalui environment server.
+
+Workflow GitHub Actions aktif saat ini tidak menjalankan Compose di server. Workflow hanya memakai env public Supabase saat verify/build image, lalu push image ke GHCR. `.env` server tetap dibutuhkan untuk deploy manual dengan `docker-compose.production.yml`.
 
 Pada PowerShell:
 
@@ -132,7 +156,7 @@ docker compose up -d
 
 Dengan demikian `.env.local` tidak disalin oleh `COPY . .` dan tidak masuk build context.
 
-GitHub Actions memerlukan repository secrets:
+GitHub Actions aktif memerlukan repository secrets/variables berikut untuk verify dan build image:
 
 ```text
 NEXT_PUBLIC_SUPABASE_URL
@@ -142,7 +166,7 @@ NEXT_PUBLIC_SITE_URL
 
 `NEXT_PUBLIC_SITE_URL` dapat disimpan sebagai Actions variable. Kedua Supabase public variable
 tetap dapat disimpan sebagai Actions secrets untuk pengelolaan environment yang konsisten.
-`SUPABASE_SERVICE_ROLE_KEY` wajib ada di environment runtime server, bukan build argument.
+`SUPABASE_SERVICE_ROLE_KEY` tidak dipakai oleh workflow build saat ini. Key ini wajib ada di environment runtime server untuk feedback, bukan build argument.
 
 ## Rotation
 

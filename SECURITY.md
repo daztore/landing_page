@@ -2,20 +2,28 @@
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
-
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| Version | Supported |
+| --- | --- |
+| 0.1.x | Yes |
+| < 0.1.0 | No |
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+Laporkan vulnerability melalui channel private maintainer atau project owner. Jangan membuka
+issue publik untuk vulnerability, secret exposure, bypass admin, RLS bypass, upload abuse,
+payment/order flaw, atau masalah lain yang dapat dieksploitasi.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+Sertakan informasi berikut bila tersedia:
+
+- commit atau versi yang terdampak;
+- environment terdampak, misalnya development, staging, atau production;
+- langkah reproduksi minimal;
+- dampak keamanan yang terlihat;
+- screenshot atau log yang sudah disanitasi.
+
+Jangan menyertakan secret asli, token, password, private key, cookie session, atau data pribadi
+customer di laporan.
+
+Maintainer akan menilai laporan, menentukan prioritas, dan memberi update melalui channel private.
+Jika vulnerability diterima, perbaikan dan catatan rilis akan dipublikasikan setelah risiko
+eksploitasi langsung ditangani.

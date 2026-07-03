@@ -2,9 +2,9 @@
 
 ## Ringkasan
 
-`daztore.id` adalah landing page dan katalog produk untuk layanan wedding atelier yang menawarkan mahar, seserahan, bouquet, hampers, wedding gift box, dan paket custom. Aplikasi menampilkan informasi pemasaran, galeri, testimoni, FAQ, katalog statis, serta beberapa CTA yang mengarahkan pengunjung ke WhatsApp atau email.
+`daztore.id` adalah landing page, katalog produk, admin CMS, dan flow feedback pelanggan untuk layanan wedding atelier yang menawarkan mahar, seserahan, bouquet, hampers, wedding gift box, dan paket custom. Aplikasi menampilkan informasi pemasaran, galeri, testimoni, FAQ, katalog, form feedback berbasis link, serta beberapa CTA yang mengarahkan pengunjung ke WhatsApp atau email.
 
-Repository ini menggunakan Next.js dan Supabase untuk konten publik. Tidak ditemukan autentikasi, penyimpanan form, atau integrasi pembayaran.
+Repository ini menggunakan Next.js dan Supabase untuk konten publik, admin CMS, feedback, Storage, Auth, dan RLS. Belum ada integrasi order, payment gateway, shipping, cart, checkout, customer account, SMTP, atau backend terpisah.
 
 ## Teknologi Utama
 
@@ -16,17 +16,20 @@ Repository ini menggunakan Next.js dan Supabase untuk konten publik. Tidak ditem
 | Bahasa | TypeScript `5.7.3` |
 | Styling | Tailwind CSS `4.x`, PostCSS, CSS variables |
 | Komponen UI | Radix UI, pola shadcn/ui, Lucide icons |
-| Analytics | `@vercel/analytics`, aktif saat `NODE_ENV=production` |
+| Analytics | Belum aktif; import `@vercel/analytics` dikomentari dan package tidak terdaftar |
 | Database content | Supabase Postgres melalui `@supabase/supabase-js` |
+| Auth dan session | Supabase Auth + `@supabase/ssr` untuk admin |
+| Storage | Supabase Storage untuk asset publik, katalog, dan foto feedback private |
 | Container | Docker multi-stage berbasis `node:20-alpine` |
 | Reverse proxy | Nginx `1.30.1-alpine` melalui Docker Compose |
 
 ## Tujuan Aplikasi
 
-Aplikasi memiliki dua tujuan utama:
+Aplikasi memiliki tiga tujuan utama:
 
 1. Menjadi landing page pemasaran yang menjelaskan positioning, proses layanan, galeri, testimoni, FAQ, dan jalur kontak.
 2. Menjadi katalog statis yang memungkinkan pengunjung mencari, memfilter, mengurutkan, dan menghubungi bisnis terkait produk tertentu.
+3. Menjadi admin CMS dan feedback collection tool untuk konten, katalog, request feedback, submission feedback, dan upload gambar.
 
 Seluruh CTA transaksi saat ini berakhir di kanal komunikasi eksternal. Tidak ada checkout atau pemesanan yang diproses oleh aplikasi.
 
@@ -34,20 +37,33 @@ Seluruh CTA transaksi saat ini berakhir di kanal komunikasi eksternal. Tidak ada
 
 ```text
 app/
-  layout.tsx                 Root layout, metadata global, font, analytics
+  layout.tsx                 Root layout, metadata global, font, loading provider
   page.tsx                   Halaman utama
   globals.css                Tema dan utility CSS aktif
   katalog/
     layout.tsx               Layout responsif khusus katalog
     page.tsx                 Route /katalog
+  feedback/[id]/
+    page.tsx                 Form feedback pelanggan berbasis UUID
+    submit/route.ts          Route Handler POST feedback
+  admin-daz/
+    page.tsx                 Redirect ke dashboard admin
+    login/page.tsx           Login admin
+    (protected)/             Route admin terproteksi
 components/
+  admin-daz/                 Komponen admin CMS
+  feedback/                  Komponen form feedback
   katalog/                   Komponen filter dan kartu produk
   ui/                        Koleksi primitive UI bergaya shadcn/ui
   *.tsx                      Section dan komponen landing page
 hooks/                       Hook toast dan deteksi mobile
 lib/
+  admin-daz/                  Auth, service CRUD admin, permission, dan validation
   data/                       Data access, tipe, dan fallback landing page
+  feedback/                   Kontrak, storage, dan data access feedback
+  security/                   Helper keamanan seperti safe image source
   supabase/client.ts          Supabase client dari environment
+  supabase/service-role.ts    Supabase service-role client server-only
   katalog-data.ts            Fallback katalog dan pilihan sorting
   utils.ts                   Helper penggabungan class Tailwind
 public/                      Gambar hero, galeri, dan background
@@ -59,9 +75,11 @@ docker/
   php/                       Konfigurasi PHP yang tidak dipakai Compose saat ini
   supervisord.conf           Konfigurasi lama/tidak terhubung ke image saat ini
 .github/workflows/
+  ci-cd.yml                  Verify, build image, dan push GHCR
   codeql.yml                 Security scanning JavaScript/TypeScript
 Dockerfile                   Build dan runtime Next.js
 docker-compose.yml           Service app dan Nginx
+docker-compose.production.yml Compose production berbasis image GHCR
 ```
 
 `styles/globals.css` juga tersedia, tetapi tidak diimpor oleh root layout. Tema yang aktif berasal dari `app/globals.css`.
@@ -72,8 +90,13 @@ docker-compose.yml           Service app dan Nginx
 | --- | --- |
 | `/` | Landing page utama dengan navigasi, hero, cerita, proses, keunggulan, galeri, testimoni, FAQ, urgency CTA, kontak, footer, dan tombol WhatsApp mengambang. |
 | `/katalog` | Katalog produk statis dengan pencarian, filter kategori, sorting, kartu produk, favorite state lokal, dan CTA WhatsApp. |
+| `/feedback/[id]` | Halaman feedback pelanggan berbasis UUID, `force-dynamic`, dan `noindex`. |
+| `/feedback/[id]/submit` | Route Handler `POST` untuk submit rating, kritik/saran, testimoni, rekomendasi, dan foto pelanggan. |
+| `/admin-daz` | Redirect ke `/admin-daz/dashboard`. |
+| `/admin-daz/login` | Login email/password admin melalui Supabase Auth. |
+| `/admin-daz/**` | Admin CMS terproteksi untuk dashboard, landing content, katalog, feedback, media, dan settings. |
 
-Tidak ditemukan dynamic route, route handler API, middleware, custom loading page, custom error page, atau custom not-found page.
+Route dynamic aktif adalah `/feedback/[id]`. Route Handler aktif berada pada feedback submit dan admin feedback requests. `proxy.ts` berjalan untuk `/admin-daz/:path*` guna refresh cookie Supabase Auth. Custom loading tersedia; custom `error.tsx`, `global-error.tsx`, dan `not-found.tsx` belum tersedia.
 
 Detail route tersedia di [ROUTES_AND_PAGES.md](./ROUTES_AND_PAGES.md).
 
@@ -146,7 +169,6 @@ Server dan client component Next.js
         +--> CTA WhatsApp
         +--> mailto
         +--> Instagram
-        +--> Vercel Analytics saat production
 ```
 
 ## Build dan Runtime
@@ -155,7 +177,8 @@ Server dan client component Next.js
 - Build production dijalankan dengan `next build`.
 - Runtime production dijalankan dengan `next start` pada port default `3000`.
 - Docker builder menggunakan Node.js 20 Alpine dan `npm ci`.
-- Nginx pada Compose meneruskan port host `8002` ke service `app:3000`.
+- Nginx pada Compose lokal meneruskan port host `8002` ke service `app:3000`.
+- Nginx pada Compose production saat ini meneruskan port host `8003` ke service `app:3000`.
 - Optimasi image bawaan Next.js aktif untuk gambar publik yang sudah masuk remote pattern.
 - Error TypeScript menggagalkan build; CI juga menjalankan `npm run typecheck`.
 
@@ -168,15 +191,17 @@ Lihat [DOCKER_AND_DEPLOYMENT.md](./DOCKER_AND_DEPLOYMENT.md) untuk batasan konfi
 | WhatsApp `wa.me` | Semua CTA konsultasi dan produk; nomor berasal dari `site_settings` dengan fallback lokal. |
 | Email | Link `mailto:hello@daztore.id`. |
 | Instagram | Link menuju akun `daztore.id`. |
-| Vercel Analytics | Dirender oleh root layout hanya pada mode production. |
+| Supabase Auth | Login dan session admin melalui cookie `@supabase/ssr`. |
+| Supabase Storage | Asset publik, katalog, dan foto feedback pelanggan private. |
 | Google Fonts | `Inter` dan `Playfair Display` dimuat melalui `next/font/google`. |
 
-Tidak ditemukan Axios client, API route internal, cookie autentikasi, session, storage eksternal, maps, SMTP, atau payment gateway.
+Tidak ditemukan Axios client, Pages Router API route, Server Action, GraphQL client, maps, SMTP, active analytics package, payment gateway, shipping provider, cart, checkout, atau customer account.
 
 ## Needs Confirmation
 
 - Apakah nomor WhatsApp, email, akun Instagram, alamat Jakarta, dan klaim pengiriman nasional merupakan data production resmi.
 - Apakah klaim jumlah pelanggan, rating, tahun pengalaman, response time, support 24/7, dan kapasitas delapan slot per bulan sudah tervalidasi bisnis.
-- Apakah Supabase menjadi sumber konten production permanen dan siapa owner datanya.
+- Apakah Supabase menjadi sumber konten dan feedback production permanen serta siapa owner datanya.
 - Apakah komponen `Packages`, `InquiryForm`, dan `Testimonials` akan diaktifkan kembali.
 - Apakah file PHP dan Supervisor di folder `docker/` masih diperlukan oleh sistem lain.
+- Apakah deploy SSH otomatis akan diaktifkan kembali atau tetap manual pull dari GHCR.

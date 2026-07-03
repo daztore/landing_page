@@ -85,6 +85,33 @@ Dokumen ini berisi checklist keamanan dan performa yang wajib dijaga saat projec
 - [ ] Logging harus aman tanpa data sensitif berlebihan.
 - [ ] Data export/delete policy perlu ditentukan sebelum customer account dibuat.
 
+## Phase 0 Security Audit 2026-07-03
+
+Audit ini hanya memeriksa baseline keamanan sebelum commerce work. Tidak ada endpoint order,
+payment, shipping, cart, checkout, atau customer account yang dibuat.
+
+| Area | Status | Catatan |
+| --- | --- | --- |
+| Env boundary | OK | `SUPABASE_SERVICE_ROLE_KEY` hanya dibaca server-side melalui `lib/supabase/service-role.ts` dan tidak dipakai oleh Client Component. |
+| Docker/CI secret flow | OK | Build image hanya menerima `NEXT_PUBLIC_*`; service-role hanya runtime env server/Compose production. |
+| RLS public/admin/feedback | OK | Migration mengaktifkan RLS, membatasi public read/write, menutup direct public feedback insert/read, dan membatasi admin via `admin_users`. |
+| Admin protection | OK | Route admin memakai Supabase Auth cookie session, proxy refresh, dan allowlist active admin. |
+| Feedback public route | OK untuk baseline saat ini | Validasi UUID/body/upload, error publik aman, dan rate limit in-memory per IP sudah tersedia. |
+| Upload validation | Perlu tindak lanjut | Validasi MIME, ukuran, jumlah file, extension/path, dan cleanup gagal sudah ada; magic-byte/content sniffing dan malware scan belum tersedia. |
+| Error handling | OK | Route publik mengembalikan error generik dan log teknis server-side. |
+| Security headers | Perlu tindak lanjut | Nginx sudah mengirim frame policy, nosniff, referrer policy, permissions policy; CSP dan HSTS belum ditentukan. |
+| Dependency advisory | Perlu tindak lanjut | `npm audit` masih melaporkan moderate advisory pada PostCSS internal Next.js; fix otomatis mengarah ke downgrade tidak layak. Monitor patch Next.js yang kompatibel. |
+| CodeQL | OK | Workflow CodeQL JavaScript/TypeScript dengan `security-extended` aktif untuk push, PR, dan jadwal mingguan. |
+
+Keputusan sebelum commerce:
+
+- Jangan menambah endpoint publik write baru sebelum rate limit/abuse prevention dipilih.
+- Rate limit feedback saat ini masih in-memory per proses; gunakan store terpusat bila deployment menjadi multi-instance atau traffic meningkat.
+- Jangan membuka public write policy Supabase untuk lead/order/payment; validasi tetap lewat server route/service layer.
+- Payment/shipping webhook wajib punya signature validation, idempotency, dan logging tanpa secret sebelum implementasi.
+- Upload file tambahan harus menambahkan validasi konten yang lebih kuat jika file berasal dari publik.
+- CSP/HSTS perlu diputuskan bersama konfigurasi TLS/CDN sebelum go-live commerce.
+
 ## Commerce Security Gate
 
 Sebelum payment/order/shipping/checkout dibuat:

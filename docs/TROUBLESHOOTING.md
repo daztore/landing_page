@@ -182,9 +182,9 @@ docker compose logs --tail=200 app web
 Jika app belum ready, Nginx lokal dapat gagal proxy. Production Compose menunggu healthcheck
 service app sebelum menjalankan Nginx.
 
-### Port `8002` sudah dipakai
+### Port Compose sudah dipakai
 
-Periksa listener host dan ubah mapping hanya melalui override yang sesuai environment.
+Compose lokal menggunakan port host `8002`. Compose production saat ini menggunakan port host `8003`. Periksa listener host dan ubah mapping hanya melalui override yang sesuai environment.
 
 ```bash
 docker compose config
@@ -214,13 +214,9 @@ Link `mailto:` memerlukan email client yang terkonfigurasi pada device pengguna.
 
 ### Analytics tidak muncul
 
-`Analytics` hanya dirender saat:
+Analytics belum aktif pada code saat ini. Import dan render `@vercel/analytics/next` masih dikomentari di `app/layout.tsx`, dan package `@vercel/analytics` tidak terdaftar di `package.json`.
 
-```text
-NODE_ENV=production
-```
-
-Periksa ad blocker, browser privacy settings, dan apakah deployment mendukung Vercel Analytics.
+Jika analytics diaktifkan kembali pada pekerjaan terpisah, periksa dependency, render condition, ad blocker, browser privacy settings, consent/privacy requirement, dan dukungan deployment.
 
 ## Cache dan Static Asset
 

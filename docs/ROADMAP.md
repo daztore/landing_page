@@ -46,7 +46,7 @@ Subtask:
 - Buat `docs/CHANGELOG_NOTES.md`.
 - Tambahkan link dokumentasi baru di README.
 
-### [P0][TODO] Sync existing README and docs with current code
+### [P0][DONE] Sync existing README and docs with current code
 
 Subtask:
 
@@ -56,7 +56,7 @@ Subtask:
 - Sinkronkan status CI/CD yang benar-benar aktif.
 - Catat gap yang tidak langsung diperbaiki di `docs/CHANGELOG_NOTES.md`.
 
-### [P0][TODO] Audit environment variable usage
+### [P0][DONE] Audit environment variable usage
 
 Subtask:
 
@@ -66,6 +66,15 @@ Subtask:
 - Dokumentasikan env wajib dan opsional.
 - Bedakan env build-time, runtime, server-only, dan public client.
 - Pastikan `.env.local` tidak pernah masuk repo atau Docker image.
+
+Hasil audit 2026-07-03:
+
+- `SUPABASE_SERVICE_ROLE_KEY` hanya dibaca oleh `lib/supabase/service-role.ts` dan module tersebut memakai `server-only`.
+- Import service-role hanya ditemukan di flow feedback server-side: `lib/feedback/data.ts` dan `app/feedback/[id]/submit/route.ts`.
+- Client/admin browser Supabase hanya memakai `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
+- Docker build dan workflow GitHub Actions hanya memakai env public; service-role hanya runtime env server/Compose.
+- `.gitignore` dan `.dockerignore` sudah mengecualikan `.env*`; `.env.example` tetap boleh di-commit.
+- Gap lanjutan: belum ada schema validasi env terpusat untuk fail-fast credential commerce/server-only.
 
 ### [P0][IN_PROGRESS] Decide official package manager
 
@@ -77,7 +86,7 @@ Subtask:
 - Tambahkan `packageManager` di `package.json` setelah keputusan final.
 - Samakan local, CI, Docker, dan dokumentasi.
 
-### [P0][TODO] Security check before commerce work
+### [P0][DONE] Security check before commerce work
 
 Subtask:
 
@@ -87,6 +96,15 @@ Subtask:
 - Review error handling agar detail internal tidak bocor ke user publik.
 - Siapkan rate limit untuk endpoint publik sebelum inquiry/checkout.
 - Review dependency advisory dan CodeQL findings.
+
+Hasil audit 2026-07-03:
+
+- RLS public/admin/feedback dan Storage sudah sesuai baseline saat ini.
+- Admin route memakai Supabase Auth cookie session, proxy refresh, dan allowlist `admin_users`.
+- Feedback public route sudah validasi UUID, body, rating, rekomendasi, jumlah file, MIME/extension/size, path, rate limit in-memory per IP, dan cleanup upload jika database insert gagal.
+- Error publik dibuat generik; detail teknis hanya dilog server-side.
+- CodeQL aktif untuk JavaScript/TypeScript dengan `security-extended`.
+- Gap sebelum commerce: rate limit feedback masih in-memory per proses dan perlu store terpusat bila deployment multi-instance, upload belum validasi magic byte/content scanning, CSP/HSTS belum ditentukan, dan `npm audit` masih melaporkan moderate advisory pada PostCSS internal Next.js tanpa patch upgrade yang kompatibel.
 
 ### [P0][TODO] Performance baseline
 

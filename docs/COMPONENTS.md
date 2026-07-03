@@ -12,8 +12,9 @@ Tanggung jawab:
 - font global;
 - stylesheet global;
 - bahasa dokumen;
-- route transition loading provider;
-- Vercel Analytics pada production.
+- route transition loading provider.
+
+Catatan: Vercel Analytics belum aktif; import dan render analytics masih dikomentari di `app/layout.tsx`.
 
 ### `KatalogLayout`
 
@@ -88,6 +89,23 @@ Favorite tidak dipersist ke local storage atau backend.
 Lokasi: `components/katalog/katalog-header.tsx`
 
 Header mobile menyediakan tombol kembali dan tombol search visual. Tombol search belum memiliki handler.
+
+## Komponen Feedback
+
+### `FeedbackSubmissionForm`
+
+Lokasi: `components/feedback/feedback-submission-form.tsx`
+
+Tanggung jawab:
+
+- menampilkan form rating pelanggan;
+- menerima kritik/saran dan testimoni;
+- memilih rekomendasi dari daftar yang diizinkan;
+- upload foto pelanggan;
+- mengirim `FormData` ke `/feedback/[id]/submit`;
+- menampilkan state berhasil/gagal di sisi client.
+
+Data request feedback dibaca server-side oleh `app/feedback/[id]/page.tsx`. Submission diproses oleh Route Handler dengan service-role key server-only.
 
 ## Komponen Admin
 
