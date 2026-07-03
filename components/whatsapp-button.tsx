@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { fallbackContact } from "@/lib/data/fallback"
 import { buildWhatsAppUrl } from "@/lib/whatsapp"
@@ -12,14 +13,14 @@ interface WhatsappButtonProps {
 export function WhatsappButton({
   whatsappNumber = fallbackContact.whatsappNumber,
 }: WhatsappButtonProps) {
+  const pathname = usePathname()
   const [visible, setVisible] = useState(false)
-  const [isKatalogPage, setIsKatalogPage] = useState(false)
+  const isKatalogPage = pathname.startsWith("/katalog")
 
   useEffect(() => {
     const onScroll = () => setVisible(window.scrollY > 400)
     onScroll()
     window.addEventListener("scroll", onScroll, { passive: true })
-    setIsKatalogPage(window.location.pathname.includes("/katalog"))
     return () => window.removeEventListener("scroll", onScroll)
   }, [])
 

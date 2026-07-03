@@ -1,32 +1,47 @@
 /** @type {import('next').NextConfig} */
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-let supabaseRemotePattern
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
 
-try {
-  const parsedSupabaseUrl = supabaseUrl ? new URL(supabaseUrl) : undefined
+function createRemotePattern(rawUrl, pathname) {
+  try {
+    const parsedUrl = rawUrl ? new URL(rawUrl) : undefined
 
-  if (
-    parsedSupabaseUrl &&
-    (parsedSupabaseUrl.protocol === "https:" || parsedSupabaseUrl.protocol === "http:")
-  ) {
-    supabaseRemotePattern = {
-      protocol: parsedSupabaseUrl.protocol.slice(0, -1),
-      hostname: parsedSupabaseUrl.hostname,
-      port: parsedSupabaseUrl.port,
-      pathname: "/storage/v1/object/public/**",
+    if (parsedUrl && parsedUrl.protocol === "https:") {
+      return {
+        protocol: "https",
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port,
+        pathname,
+      }
     }
+  } catch {
+    return undefined
   }
-} catch {
-  supabaseRemotePattern = undefined
+
+  return undefined
 }
 
+const supabaseRemotePattern = createRemotePattern(
+  supabaseUrl,
+  "/storage/v1/object/public/**",
+)
+const siteRemotePattern = createRemotePattern(siteUrl, "/**")
+
+const remotePatterns = [supabaseRemotePattern, siteRemotePattern].filter(
+  (pattern, index, patterns) =>
+    pattern &&
+    patterns.findIndex(
+      (candidate) =>
+        candidate?.protocol === pattern.protocol &&
+        candidate?.hostname === pattern.hostname &&
+        candidate?.port === pattern.port &&
+        candidate?.pathname === pattern.pathname,
+    ) === index,
+)
+
 const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   images: {
-    unoptimized: true,
-    remotePatterns: supabaseRemotePattern ? [supabaseRemotePattern] : [],
+    remotePatterns,
   },
 }
 

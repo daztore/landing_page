@@ -43,6 +43,7 @@ job yang menggunakan environment `production`.
 | `PROD_KNOWN_HOSTS` | Host key server yang sudah diverifikasi. |
 | `PROD_APP_DIR` | Direktori server yang berisi production Compose. |
 | `PROD_URL` | Base URL HTTPS untuk smoke test. |
+| `NEXT_PUBLIC_SITE_URL` | Base URL canonical untuk metadata, robots, dan sitemap. |
 | `NEXT_PUBLIC_SUPABASE_URL` | URL project Supabase yang ditanam saat image build. |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable key Supabase. |
 
@@ -95,6 +96,8 @@ APP_IMAGE=ghcr.io/OWNER/REPO
 APP_TAG=production
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx
+NEXT_PUBLIC_SITE_URL=https://daztore.web.id
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_xxx
 ```
 
 Workflow menimpa nilai tersebut untuk proses deployment dengan image dan full commit SHA

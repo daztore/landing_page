@@ -1,6 +1,4 @@
-'use client'
-
-import { useEffect, useState } from 'react'
+import type { CSSProperties } from "react"
 
 interface FloatingFlowerProps {
   delay?: number
@@ -13,29 +11,21 @@ export function FloatingFlower({
   delay = 0,
   duration = 6,
   xStart = 0,
-  className = '',
+  className = "",
 }: FloatingFlowerProps) {
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-
-  if (!mounted) return null
-
   return (
     <div
-      className={`pointer-events-none fixed ${className}`}
+      className={`pointer-events-none fixed motion-reduce:hidden ${className}`}
       style={
         {
-          '--delay': `${delay}s`,
-          '--duration': `${duration}s`,
-          '--x-start': `${xStart}px`,
+          "--delay": `${delay}s`,
+          "--duration": `${duration}s`,
+          "--x-start": `${xStart}px`,
           animation: `floatDown var(--duration) linear var(--delay) infinite`,
-        } as React.CSSProperties & {
-          '--delay'?: string
-          '--duration'?: string
-          '--x-start'?: string
+        } as CSSProperties & {
+          "--delay"?: string
+          "--duration"?: string
+          "--x-start"?: string
         }
       }
     >

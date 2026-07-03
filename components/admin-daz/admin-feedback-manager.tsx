@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react"
+import { useMemo, useState, type FormEvent } from "react"
 import {
   Check,
   Clipboard,
@@ -14,6 +14,7 @@ import {
 
 import { AdminCard } from "@/components/admin-daz/admin-card"
 import { AdminFormField } from "@/components/admin-daz/admin-form-field"
+import { LocalImageCanvasPreview } from "@/components/shared/local-image-canvas-preview"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -21,6 +22,8 @@ import type { AdminFeedbackRequest } from "@/lib/admin-daz/feedback-service"
 import { feedbackProductCategories } from "@/lib/feedback/constants"
 import { getFeedbackImageValidationError } from "@/lib/feedback/storage"
 import { getPublicImageUrl } from "@/lib/admin-daz/storage-service"
+import { optimizeImageFile } from "@/lib/images/compress"
+import { getSafeImageSrc } from "@/lib/security/safe-image-src"
 
 function feedbackUrl(id: string) {
   if (typeof window === "undefined") {
@@ -75,8 +78,6 @@ export function AdminFeedbackManager({
   )
   const [productDescription, setProductDescription] = useState("")
   const [productPhoto, setProductPhoto] = useState<File | null>(null)
-  const [productPhotoPreview, setProductPhotoPreview] = useState("")
-  const productPhotoPreviewRef = useRef("")
   const [createdRequestId, setCreatedRequestId] = useState("")
   const [copiedId, setCopiedId] = useState("")
   const [loading, setLoading] = useState(false)
@@ -84,52 +85,38 @@ export function AdminFeedbackManager({
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
 
-  useEffect(() => {
-    return () => {
-      if (productPhotoPreviewRef.current) {
-        URL.revokeObjectURL(productPhotoPreviewRef.current)
-      }
-    }
-  }, [])
-
   const createdLink = useMemo(
     () => (createdRequestId ? feedbackUrl(createdRequestId) : ""),
     [createdRequestId],
   )
 
-  function selectProductPhoto(file?: File) {
+  async function selectProductPhoto(file?: File) {
     setError("")
 
     if (!file) {
       setProductPhoto(null)
-      if (productPhotoPreviewRef.current) {
-        URL.revokeObjectURL(productPhotoPreviewRef.current)
-      }
-      productPhotoPreviewRef.current = ""
-      setProductPhotoPreview("")
       return
     }
 
     const validationError = getFeedbackImageValidationError(file)
     if (validationError) {
       setProductPhoto(null)
-      if (productPhotoPreviewRef.current) {
-        URL.revokeObjectURL(productPhotoPreviewRef.current)
-      }
-      productPhotoPreviewRef.current = ""
-      setProductPhotoPreview("")
       setError(validationError)
       return
     }
 
-    if (productPhotoPreviewRef.current) {
-      URL.revokeObjectURL(productPhotoPreviewRef.current)
+    const optimizedFile = await optimizeImageFile(file, {
+      maxWidth: 1600,
+      quality: 0.82,
+    })
+    const optimizedValidationError = getFeedbackImageValidationError(optimizedFile)
+    if (optimizedValidationError) {
+      setProductPhoto(null)
+      setError(optimizedValidationError)
+      return
     }
 
-    const objectUrl = URL.createObjectURL(file)
-    productPhotoPreviewRef.current = objectUrl
-    setProductPhotoPreview(objectUrl)
-    setProductPhoto(file)
+    setProductPhoto(optimizedFile)
   }
 
   function resetForm() {
@@ -138,11 +125,6 @@ export function AdminFeedbackManager({
     setProductCategory(feedbackProductCategories[0].value)
     setProductDescription("")
     setProductPhoto(null)
-    if (productPhotoPreviewRef.current) {
-      URL.revokeObjectURL(productPhotoPreviewRef.current)
-    }
-    productPhotoPreviewRef.current = ""
-    setProductPhotoPreview("")
   }
 
   async function refreshRequests() {
@@ -234,8 +216,8 @@ export function AdminFeedbackManager({
       <div>
         <h1 className="font-serif text-2xl font-bold">Feedback Pelanggan</h1>
         <p className="mt-1 text-sm leading-6 text-stone-600">
-          Buat link feedback unik, simpan produk ke katalog nonaktif, dan pantau
-          hasil feedback pelanggan.
+          Buat link feedback unik, simpan produk sebagai draft non-publik, dan
+          pantau hasil feedback pelanggan.
         </p>
       </div>
 
@@ -344,21 +326,16 @@ export function AdminFeedbackManager({
             label="Foto produk"
             htmlFor="feedback-product-photo"
             required
-            helpText="JPEG, PNG, atau WebP. Maksimal 5 MB."
+            helpText="JPEG, PNG, atau WebP. Maksimal 5 MB, otomatis dioptimalkan."
           >
             <div className="space-y-3 rounded-xl border bg-stone-50 p-3">
               <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl border border-dashed bg-white text-sm text-stone-400">
-                {productPhotoPreview ? (
-                  <Image
-                    src={productPhotoPreview}
-                    alt="Preview foto produk"
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
-                ) : (
-                  <span>Belum ada gambar</span>
-                )}
+                <LocalImageCanvasPreview
+                  file={productPhoto}
+                  alt="Preview foto produk"
+                  className="h-full w-full object-cover"
+                  placeholder={<span>Belum ada gambar</span>}
+                />
               </div>
               <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-amber-400 bg-white px-4 text-sm font-semibold text-stone-700">
                 <ImagePlus className="size-4" />
@@ -369,7 +346,7 @@ export function AdminFeedbackManager({
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   onChange={(event) =>
-                    selectProductPhoto(event.target.files?.[0])
+                    void selectProductPhoto(event.target.files?.[0])
                   }
                 />
               </label>
@@ -414,9 +391,8 @@ export function AdminFeedbackManager({
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
           {requests.map((item) => {
-            const productImage = getPublicImageUrl(
-              "catalogs",
-              item.productPhotoUrl,
+            const productImage = getSafeImageSrc(
+              getPublicImageUrl("catalogs", item.productPhotoUrl),
             )
 
             return (
@@ -428,7 +404,6 @@ export function AdminFeedbackManager({
                       alt={item.productName}
                       fill
                       className="object-cover"
-                      unoptimized
                     />
                   </div>
                 )}
@@ -516,22 +491,17 @@ export function AdminFeedbackManager({
                     {item.submission.customerPhotoUrls.length > 0 && (
                       <div className="grid grid-cols-3 gap-2">
                         {item.submission.customerPhotoUrls.map((path) => {
-                          const image = getPublicImageUrl(
-                            "feedback_customer_photos",
-                            path,
-                          )
+                          const image = getSafeImageSrc(path)
 
                           return image ? (
                             <div
                               key={path}
                               className="relative aspect-square overflow-hidden rounded-lg border bg-stone-100"
                             >
-                              <Image
+                              <img
                                 src={image}
                                 alt="Foto feedback pelanggan"
-                                fill
-                                className="object-cover"
-                                unoptimized
+                                className="h-full w-full object-cover"
                               />
                             </div>
                           ) : null

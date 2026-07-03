@@ -36,8 +36,8 @@ export function KatalogPage({ data = fallbackCatalog }: KatalogPageProps) {
     }
 
     // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
+    const query = searchQuery.trim().toLowerCase()
+    if (query) {
       filtered = filtered.filter(
         (p) =>
           p.title.toLowerCase().includes(query) ||
@@ -51,8 +51,8 @@ export function KatalogPage({ data = fallbackCatalog }: KatalogPageProps) {
       case "popular":
         sorted.sort((a, b) => {
           const badgeOrder = { bestseller: 0, loved: 1, limited: 2, undefined: 3 }
-          return (badgeOrder[a.badge as keyof typeof badgeOrder] || 3) -
-                 (badgeOrder[b.badge as keyof typeof badgeOrder] || 3)
+          return (badgeOrder[a.badge as keyof typeof badgeOrder] ?? 3) -
+                 (badgeOrder[b.badge as keyof typeof badgeOrder] ?? 3)
         })
         break
       case "price-asc":
@@ -67,7 +67,7 @@ export function KatalogPage({ data = fallbackCatalog }: KatalogPageProps) {
     }
 
     return sorted
-  }, [selectedCategory, searchQuery, sortBy])
+  }, [products, selectedCategory, searchQuery, sortBy])
 
   return (
     <div className="relative bg-background">
@@ -87,6 +87,7 @@ export function KatalogPage({ data = fallbackCatalog }: KatalogPageProps) {
           <div className="relative max-w-2xl mx-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
             <input
+              id="catalog-search"
               type="text"
               placeholder={section.searchPlaceholder}
               value={searchQuery}
@@ -113,7 +114,7 @@ export function KatalogPage({ data = fallbackCatalog }: KatalogPageProps) {
             onClick={() => setShowFilters(!showFilters)}
             className="flex items-center gap-2 rounded-lg border border-border/60 bg-card px-4 py-2 text-sm font-medium text-foreground"
           >
-            🎯 Filter {selectedCategory !== "all" && "(1)"}
+            Filter {selectedCategory !== "all" && "(1)"}
           </button>
           <select
             value={sortBy}

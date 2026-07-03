@@ -4,13 +4,12 @@
 
 | Prioritas | Area | Risiko |
 | --- | --- | --- |
-| Tinggi | Type safety | `typescript.ignoreBuildErrors: true` memungkinkan build lolos dengan type error. |
 | Sedang | Lint baseline | ESLint berjalan, tetapi masih melaporkan warning existing non-blocking. |
 | Sedang | Dependency management | `package-lock.json` dan `pnpm-lock.yaml` dipelihara bersamaan. |
 | Sedang | Dependency advisory | Audit masih melaporkan PostCSS internal Next.js; npm belum menawarkan patch kompatibel selain downgrade yang tidak layak. |
 | Sedang | Navigasi | Anchor `#packages` dan `#testimonials` tidak memiliki target aktif. |
 | Sedang | Konfigurasi kontak | Kontak memiliki fallback lokal yang harus dijaga tetap sinkron dengan Supabase. |
-| Sedang | Image performance | Optimasi Next Image dinonaktifkan; asset aktif dilayani dari Supabase Storage. |
+| Sedang | Image performance | Asset aktif dilayani dari Supabase Storage dan perlu audit ukuran berkala. |
 | Sedang | Legacy files | File PHP/Supervisor tidak terhubung ke aplikasi saat ini. |
 | Sedang | Quality assurance | Tidak ada unit, integration, atau end-to-end test. |
 | Sedang | Admin operations | CRUD dan upload masih memerlukan uji manual terhadap project Supabase target. |
@@ -32,7 +31,7 @@ Prioritas lanjutan:
 
 ## TypeScript dan Lint
 
-`strict: true` sudah aktif, tetapi manfaatnya berkurang karena build mengabaikan error.
+`strict: true` sudah aktif dan build gagal jika ada TypeScript error.
 
 ESLint flat config Next.js/TypeScript dan job CI sudah tersedia. Tiga aturan React baru
 diturunkan menjadi warning agar aktivasi lint tidak memaksa refactor perilaku existing:
@@ -44,7 +43,6 @@ diturunkan menjadi warning agar aktivasi lint tidak memaksa refactor perilaku ex
 Target perbaikan lanjutan:
 
 - selesaikan warning secara bertahap lalu naikkan kembali severity;
-- hapus `ignoreBuildErrors` setelah error yang ada diselesaikan;
 - pertimbangkan `noUnusedLocals` setelah baseline bersih.
 
 Next.js telah dinaikkan dari `16.2.4` ke `16.2.7` untuk menutup advisory high yang terdeteksi saat implementasi Supabase.
@@ -81,9 +79,8 @@ Tree shaking dapat mengurangi bundle client, tetapi maintenance dependency tetap
 
 ### Image
 
-`images.unoptimized: true` menonaktifkan optimasi Next Image.
-Konfigurasi tersebut dipertahankan saat migrasi Storage. `next.config.mjs` mengizinkan host
-Supabase dari `NEXT_PUBLIC_SUPABASE_URL` tanpa hardcode project hostname.
+Next Image optimization aktif untuk asset publik. `next.config.mjs` mengizinkan host Supabase
+dari `NEXT_PUBLIC_SUPABASE_URL` tanpa hardcode project hostname.
 
 Area evaluasi:
 
@@ -98,7 +95,11 @@ Migration hanya membuat bucket/policy dan tidak meng-upload asset.
 
 ### Client Components
 
-Beberapa section menjadi Client Component untuk interaksi atau animasi. `app/katalog/layout.tsx` menjadi client hanya untuk viewport detection.
+Beberapa section tetap menjadi Client Component untuk interaksi yang memang dibutuhkan,
+seperti navigation, gallery lightbox, FAQ accordion, filter katalog, dan tombol WhatsApp.
+Section statis seperti `Hero`, `OurProcess`, `WhyChooseUs`, `TestimonialsEnhanced`,
+`UrgencySection`, dan dekorasi `FloatingFlower` dirender sebagai Server Component atau
+komponen non-hydrated bila memungkinkan.
 
 Evaluasi masa depan:
 
@@ -109,7 +110,34 @@ Evaluasi masa depan:
 
 ### Scroll dan Resize Listener
 
-`Hero`, `SiteNavigation`, `WhatsappButton`, dan layout katalog memasang listener browser. Sebagian sudah passive dan cleanup tersedia. Tetap ukur dampaknya pada device low-end sebelum menambah animasi baru.
+`Hero` tidak lagi memasang scroll listener untuk parallax. `SiteNavigation` dan
+`WhatsappButton` masih memakai listener scroll passive untuk perubahan visual setelah scroll.
+Layout katalog memakai CSS responsive untuk membedakan mobile dan desktop.
+
+Tetap ukur dampaknya pada device low-end sebelum menambah animasi baru.
+
+### Loading Screen dan Route Transition
+
+Loading brand global berada di:
+
+- `components/loading/daztore-loader.tsx`;
+- `components/loading/route-loading-provider.tsx`;
+- `app/loading.tsx`.
+
+Perilaku:
+
+- loader menampilkan bentuk huruf D dengan palet daztore.id;
+- muncul untuk klik link internal dengan delay singkat agar tidak flashing;
+- tidak muncul untuk `mailto:`, `tel:`, external URL, target tab baru, download, atau hash-only link;
+- berhenti saat pathname atau search params berubah dan memiliki safety timeout sekitar 6,5 detik;
+- memakai CSS/Tailwind saja tanpa library animasi eksternal;
+- mengikuti `prefers-reduced-motion` melalui class Tailwind dan aturan global CSS.
+
+Catatan manual test:
+
+- klik dari `/` ke `/katalog`, pastikan loader muncul bila transisi tidak instan dan hilang setelah halaman katalog siap;
+- klik anchor seperti `#gallery` atau CTA WhatsApp, pastikan loader tidak muncul;
+- uji mobile viewport untuk memastikan overlay memenuhi layar dan tidak menyebabkan layout shift.
 
 ## Konten dan Data
 
@@ -131,7 +159,6 @@ Catatan:
 - `#packages` rusak karena section tidak dirender;
 - `#testimonials` rusak karena ID tidak tersedia;
 - link legal masih placeholder;
-- tombol search mobile katalog belum berfungsi;
 - favorite katalog tidak persisten;
 - FAQ belum memiliki `aria-expanded`;
 - lightbox belum memiliki focus trap;
@@ -172,7 +199,9 @@ Vercel Analytics aktif pada production. Privacy policy dan consent requirement b
 
 ### Headers
 
-Tidak ditemukan Content Security Policy, HSTS, frame policy, referrer policy, atau permissions policy khusus pada Nginx/Next config. Terapkan berdasarkan arsitektur TLS dan kebutuhan integrasi setelah pengujian.
+Nginx mengirim frame policy, content-type nosniff, referrer policy, permissions policy, dan cache
+immutable untuk `/_next/static`. Content Security Policy dan HSTS masih perlu dikonfirmasi sesuai
+arsitektur TLS/CDN.
 
 ### External links
 

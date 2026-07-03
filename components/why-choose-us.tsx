@@ -1,5 +1,3 @@
-"use client"
-
 import { Reveal } from "./reveal"
 import { Award, Heart, Zap, Users } from "lucide-react"
 import type { LucideIcon } from "lucide-react"

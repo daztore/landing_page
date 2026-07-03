@@ -2,7 +2,7 @@ import {
   getFeedbackCategoryLabel,
   type FeedbackProductCategory,
 } from "@/lib/feedback/constants"
-import { getSupabaseClient } from "@/lib/supabase/client"
+import { getSupabaseServiceRoleClient } from "@/lib/supabase/service-role"
 
 export type PublicFeedbackStatus = "pending" | "submitted" | "expired"
 
@@ -45,7 +45,7 @@ export async function getPublicFeedbackRequest(
     return { status: "not-found" }
   }
 
-  const supabase = getSupabaseClient()
+  const supabase = getSupabaseServiceRoleClient()
   if (!supabase) {
     return { status: "unconfigured" }
   }
@@ -59,7 +59,11 @@ export async function getPublicFeedbackRequest(
     .maybeSingle()
 
   if (error) {
-    return { status: "error", message: error.message }
+    console.error("[Supabase] Gagal memuat feedback request:", error.message)
+    return {
+      status: "error",
+      message: "Feedback belum bisa dimuat. Silakan coba lagi beberapa saat lagi.",
+    }
   }
 
   if (!data) {

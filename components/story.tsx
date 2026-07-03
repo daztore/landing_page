@@ -4,6 +4,7 @@ import { Heart, Flower2, Gem } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { fallbackStory } from "@/lib/data/fallback"
 import type { StorySection } from "@/lib/data/types"
+import { getSafeImageSrc } from "@/lib/security/safe-image-src"
 
 const icons: Record<string, LucideIcon> = {
   heart: Heart,
@@ -16,6 +17,8 @@ interface StoryProps {
 }
 
 export function Story({ data = fallbackStory }: StoryProps) {
+  const imageSrc = getSafeImageSrc(data.imageUrl) || fallbackStory.imageUrl
+
   return (
     <section id="story" className="relative bg-background py-24 md:py-32">
       <div className="mx-auto max-w-7xl px-6 md:px-10">
@@ -23,7 +26,7 @@ export function Story({ data = fallbackStory }: StoryProps) {
           <Reveal className="relative">
             <div className="relative aspect-[4/5] overflow-hidden rounded-[1.75rem] shadow-xl">
               <Image
-                src={data.imageUrl}
+                src={imageSrc}
                 alt={data.imageAlt}
                 fill
                 sizes="(min-width: 768px) 45vw, 100vw"
@@ -50,7 +53,7 @@ export function Story({ data = fallbackStory }: StoryProps) {
 
             <Reveal delay={100}>
               <h2 className="mt-5 font-serif text-4xl leading-tight text-foreground text-balance md:text-5xl">
-                {data.title}
+                {data.title}{" "}
                 <span className="block italic text-gold-gradient">{data.highlightedTitle}</span>
               </h2>
             </Reveal>

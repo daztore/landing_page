@@ -1,9 +1,9 @@
 "use client"
 
-import Image from "next/image"
-import { useEffect, useRef, useState, type FormEvent } from "react"
+import { useState, type FormEvent } from "react"
 import { CheckCircle2, ImagePlus, Loader2, Send, Star, X } from "lucide-react"
 
+import { LocalImageCanvasPreview } from "@/components/shared/local-image-canvas-preview"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -11,10 +11,10 @@ import {
   feedbackRecommendations,
 } from "@/lib/feedback/constants"
 import { getFeedbackImageValidationError } from "@/lib/feedback/storage"
+import { optimizeImageFile } from "@/lib/images/compress"
 
 interface PhotoItem {
   file: File
-  previewUrl: string
 }
 
 export function FeedbackSubmissionForm({
@@ -29,19 +29,11 @@ export function FeedbackSubmissionForm({
     [],
   )
   const [photos, setPhotos] = useState<PhotoItem[]>([])
-  const photosRef = useRef<PhotoItem[]>([])
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState("")
 
-  useEffect(() => {
-    return () => {
-      photosRef.current.forEach((photo) => URL.revokeObjectURL(photo.previewUrl))
-    }
-  }, [])
-
   function updatePhotos(nextPhotos: PhotoItem[]) {
-    photosRef.current = nextPhotos
     setPhotos(nextPhotos)
   }
 
@@ -53,7 +45,7 @@ export function FeedbackSubmissionForm({
     )
   }
 
-  function selectPhotos(files?: FileList | null) {
+  async function selectPhotos(files?: FileList | null) {
     setError("")
 
     const nextPhotos = Array.from(files ?? [])
@@ -74,21 +66,32 @@ export function FeedbackSubmissionForm({
       }
     }
 
+    const optimizedPhotos: File[] = []
+    for (const photo of nextPhotos) {
+      const optimizedPhoto = await optimizeImageFile(photo, {
+        maxWidth: 1400,
+        quality: 0.82,
+      })
+      const optimizedValidationError =
+        getFeedbackImageValidationError(optimizedPhoto)
+
+      if (optimizedValidationError) {
+        setError(optimizedValidationError)
+        return
+      }
+
+      optimizedPhotos.push(optimizedPhoto)
+    }
+
     updatePhotos([
       ...photos,
-      ...nextPhotos.map((photo) => ({
+      ...optimizedPhotos.map((photo) => ({
         file: photo,
-        previewUrl: URL.createObjectURL(photo),
       })),
     ])
   }
 
   function removePhoto(index: number) {
-    const removedPhoto = photos[index]
-    if (removedPhoto) {
-      URL.revokeObjectURL(removedPhoto.previewUrl)
-    }
-
     updatePhotos(photos.filter((_, currentIndex) => currentIndex !== index))
   }
 
@@ -127,7 +130,6 @@ export function FeedbackSubmissionForm({
         throw new Error(payload.error ?? "Gagal mengirim feedback.")
       }
 
-      photos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl))
       updatePhotos([])
       setSubmitted(true)
     } catch (submitError) {
@@ -185,7 +187,8 @@ export function FeedbackSubmissionForm({
         <div>
           <h2 className="font-semibold text-stone-900">Foto terbaik</h2>
           <p className="mt-1 text-sm text-stone-500">
-            Maksimal {feedbackCustomerPhotoMaxFiles} foto, masing-masing 5 MB.
+            Maksimal {feedbackCustomerPhotoMaxFiles} foto, masing-masing 5 MB,
+            otomatis dioptimalkan.
           </p>
         </div>
         <label className="flex min-h-14 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-amber-300 bg-white px-4 text-sm font-semibold text-stone-700 shadow-sm">
@@ -196,33 +199,18 @@ export function FeedbackSubmissionForm({
             type="file"
             multiple
             accept="image/jpeg,image/png,image/webp"
-            onChange={(event) => selectPhotos(event.target.files)}
+            onChange={(event) => void selectPhotos(event.target.files)}
           />
         </label>
 
         {photos.length > 0 && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {photos.map((photo, index) => (
-              <div
-                key={photo.previewUrl}
-                className="relative aspect-square overflow-hidden rounded-xl border bg-stone-100"
-              >
-                <Image
-                  src={photo.previewUrl}
-                  alt="Preview foto pelanggan"
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-                <button
-                  type="button"
-                  className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-white/90 text-stone-700 shadow-sm"
-                  onClick={() => removePhoto(index)}
-                  aria-label="Hapus foto"
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
+              <PhotoPreview
+                key={`${photo.file.name}-${photo.file.lastModified}-${index}`}
+                photo={photo}
+                onRemove={() => removePhoto(index)}
+              />
             ))}
           </div>
         )}
@@ -295,5 +283,31 @@ export function FeedbackSubmissionForm({
         {loading ? "Mengirim feedback..." : "Kirim Feedback"}
       </Button>
     </form>
+  )
+}
+
+function PhotoPreview({
+  photo,
+  onRemove,
+}: {
+  photo: PhotoItem
+  onRemove: () => void
+}) {
+  return (
+    <div className="relative aspect-square overflow-hidden rounded-xl border bg-stone-100">
+      <LocalImageCanvasPreview
+        file={photo.file}
+        alt="Preview foto pelanggan"
+        className="h-full w-full object-cover"
+      />
+      <button
+        type="button"
+        className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-white/90 text-stone-700 shadow-sm"
+        onClick={onRemove}
+        aria-label="Hapus foto"
+      >
+        <X className="size-4" />
+      </button>
+    </div>
   )
 }

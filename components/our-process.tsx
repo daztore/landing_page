@@ -1,5 +1,3 @@
-"use client"
-
 import { Reveal } from "./reveal"
 import { CheckCircle2 } from "lucide-react"
 import { fallbackProcess } from "@/lib/data/fallback"

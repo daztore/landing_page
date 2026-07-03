@@ -1,3 +1,4 @@
+import { cache } from "react"
 import {
   fallbackCarouselTestimonials,
   fallbackCatalog,
@@ -124,6 +125,7 @@ interface ProductRow {
   is_customizable: boolean
   is_available: boolean
   sort_order: number
+  source: string | null
 }
 
 interface PackageTierRow {
@@ -254,7 +256,7 @@ function resolveContact(value: unknown): SiteContact {
   }
 }
 
-async function querySiteContact(): Promise<SiteContact> {
+const querySiteContact = cache(async function querySiteContact(): Promise<SiteContact> {
   const supabase = getSupabaseClient()
 
   if (!supabase) {
@@ -271,9 +273,9 @@ async function querySiteContact(): Promise<SiteContact> {
 
   reportQueryError("site settings", error)
   return error || !data ? fallbackContact : resolveContact(data.value)
-}
+})
 
-async function queryNavigation(): Promise<NavigationItem[]> {
+const queryNavigation = cache(async function queryNavigation(): Promise<NavigationItem[]> {
   const supabase = getSupabaseClient()
 
   if (!supabase) {
@@ -302,7 +304,7 @@ async function queryNavigation(): Promise<NavigationItem[]> {
     disabled: item.is_disabled,
     sortOrder: item.sort_order,
   }))
-}
+})
 
 async function querySections(slugs: string[]): Promise<SectionRow[]> {
   const supabase = getSupabaseClient()
@@ -528,9 +530,10 @@ export async function getCatalogData(): Promise<CatalogData> {
     supabase
       .from("products")
       .select(
-        "slug,category_slug,title,description,start_price,end_price,image_url,badge,processing_time,is_customizable,is_available,sort_order",
+        "slug,category_slug,title,description,start_price,end_price,image_url,badge,processing_time,is_customizable,is_available,sort_order,source",
       )
       .eq("is_active", true)
+      .neq("source", "feedback_request")
       .order("sort_order"),
   ])
 

@@ -12,6 +12,7 @@ Tanggung jawab:
 - font global;
 - stylesheet global;
 - bahasa dokumen;
+- route transition loading provider;
 - Vercel Analytics pada production.
 
 ### `KatalogLayout`
@@ -24,14 +25,15 @@ Tanggung jawab:
 - menambahkan spacing untuk fixed navigation;
 - menampilkan footer hanya pada desktop.
 
-Route layout tetap Server Component agar dapat mengambil data Supabase. `KatalogLayoutShell` menggunakan `window.innerWidth` dan event `resize`.
+Route layout tetap Server Component agar dapat mengambil data Supabase. `KatalogLayoutShell`
+menggunakan `matchMedia` breakpoint change untuk mengurangi kerja saat resize.
 
 ## Komponen Aktif Halaman Utama
 
 | Komponen | Tanggung jawab |
 | --- | --- |
-| `SiteNavigation` | Header fixed, menu mobile, bottom navigation mobile, deteksi halaman katalog, dan navigation props dari Supabase. |
-| `Hero` | Hero copy, statistik, CTA, parallax ringan, gambar prioritas, dekorasi bunga. |
+| `SiteNavigation` | Header fixed, menu mobile, bottom navigation mobile, deteksi halaman katalog, navigation props dari Supabase, dan `next/link` untuk href internal path. |
+| `Hero` | Hero copy, statistik, CTA, gambar prioritas, dan dekorasi bunga tanpa scroll listener parallax. |
 | `Story` | Narasi brand, gambar, dan tiga nilai layanan. |
 | `OurProcess` | Empat langkah proses layanan. |
 | `WhyChooseUs` | Empat alasan memilih layanan. |
@@ -85,13 +87,6 @@ Favorite tidak dipersist ke local storage atau backend.
 
 Lokasi: `components/katalog/katalog-header.tsx`
 
-Props:
-
-| Prop | Type | Kondisi saat ini |
-| --- | --- | --- |
-| `searchQuery` | `string` | Diterima tetapi tidak digunakan dalam render. |
-| `onSearchChange` | `(query: string) => void` | Diterima tetapi tidak dipanggil. |
-
 Header mobile menyediakan tombol kembali dan tombol search visual. Tombol search belum memiliki handler.
 
 ## Komponen Admin
@@ -135,7 +130,24 @@ Props:
 | `xStart` | `number` | `0` |
 | `className` | `string` | string kosong |
 
-Merender dekorasi SVG setelah component mount dan menjalankan animasi CSS fixed-position.
+Merender dekorasi SVG fixed-position tanpa client state. Animasi disembunyikan saat
+`prefers-reduced-motion` aktif.
+
+### Loading Components
+
+| Komponen | Tanggung jawab |
+| --- | --- |
+| `DaztoreLoader` | Overlay loading ringan dengan bentuk huruf D dan label `daztore.id`. |
+| `RouteLoadingProvider` | Menampilkan loader saat klik link internal, menyembunyikan saat pathname berubah, dan menghindari external/hash-only link. |
+
+Lokasi:
+
+- `components/loading/daztore-loader.tsx`;
+- `components/loading/route-loading-provider.tsx`;
+- `app/loading.tsx`.
+
+Provider memakai delay pendek, minimum display singkat, dan safety timeout agar loader tidak
+terasa memperlambat halaman atau tersangkut.
 
 ### `cn`
 
@@ -187,7 +199,7 @@ Komponen halaman aktif saat ini sebagian besar menggunakan elemen HTML dan class
 - Favorite button memiliki label berbahasa Inggris.
 - FAQ button belum mendefinisikan `aria-expanded` atau relasi panel.
 - Lightbox belum mengelola focus trap atau mengembalikan fokus setelah ditutup.
-- Animasi belum terlihat memiliki penanganan `prefers-reduced-motion`.
+- Animasi global dan loader sudah memiliki penanganan `prefers-reduced-motion`.
 
 ## Needs Confirmation
 

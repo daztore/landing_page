@@ -1,16 +1,18 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { ImagePlus, Loader2, Trash2, Upload } from "lucide-react"
 
 import { AdminConfirmDialog } from "@/components/admin-daz/admin-confirm-dialog"
 import { AdminImagePreview } from "@/components/admin-daz/admin-image-preview"
+import { LocalImageCanvasPreview } from "@/components/shared/local-image-canvas-preview"
 import { Button } from "@/components/ui/button"
 import {
   deleteAdminImage,
   getAdminImageValidationError,
   uploadAdminImage,
 } from "@/lib/admin-daz/storage-service"
+import { optimizeImageFile } from "@/lib/images/compress"
 import type { StorageBucket } from "@/lib/supabase/storage"
 
 export function AdminImageUploader({
@@ -25,37 +27,36 @@ export function AdminImageUploader({
   onChange: (path: string) => void
 }) {
   const [file, setFile] = useState<File | null>(null)
-  const [previewUrl, setPreviewUrl] = useState("")
   const [uploading, setUploading] = useState(false)
   const [deleteOldAfterReplace, setDeleteOldAfterReplace] = useState(false)
   const [error, setError] = useState("")
 
-  useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl)
-      }
-    }
-  }, [previewUrl])
-
-  function selectFile(nextFile?: File) {
+  async function selectFile(nextFile?: File) {
     setError("")
     if (!nextFile) {
       setFile(null)
-      setPreviewUrl("")
       return
     }
 
     const validationError = getAdminImageValidationError(nextFile)
     if (validationError) {
       setFile(null)
-      setPreviewUrl("")
       setError(validationError)
       return
     }
 
-    setFile(nextFile)
-    setPreviewUrl(URL.createObjectURL(nextFile))
+    const optimizedFile = await optimizeImageFile(nextFile, {
+      maxWidth: 1600,
+      quality: 0.82,
+    })
+    const optimizedValidationError = getAdminImageValidationError(optimizedFile)
+    if (optimizedValidationError) {
+      setFile(null)
+      setError(optimizedValidationError)
+      return
+    }
+
+    setFile(optimizedFile)
   }
 
   async function upload() {
@@ -70,7 +71,6 @@ export function AdminImageUploader({
       const path = await uploadAdminImage(bucket, folder, file)
       onChange(path)
       setFile(null)
-      setPreviewUrl("")
 
       if (
         deleteOldAfterReplace &&
@@ -108,7 +108,17 @@ export function AdminImageUploader({
 
   return (
     <div className="space-y-3 rounded-xl border bg-stone-50 p-3">
-      <AdminImagePreview bucket={bucket} path={value} previewUrl={previewUrl} />
+      {file ? (
+        <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl border bg-stone-100 text-sm text-stone-400">
+          <LocalImageCanvasPreview
+            file={file}
+            alt="Preview gambar"
+            className="h-full w-full object-cover"
+          />
+        </div>
+      ) : (
+        <AdminImagePreview bucket={bucket} path={value} />
+      )}
       <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-amber-400 bg-white px-4 text-sm font-semibold text-stone-700">
         <ImagePlus className="size-4" />
         Pilih gambar
@@ -116,10 +126,12 @@ export function AdminImageUploader({
           className="sr-only"
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          onChange={(event) => selectFile(event.target.files?.[0])}
+          onChange={(event) => void selectFile(event.target.files?.[0])}
         />
       </label>
-      <p className="text-xs text-stone-500">JPEG, PNG, atau WebP. Maksimal 5 MB.</p>
+      <p className="text-xs text-stone-500">
+        JPEG, PNG, atau WebP. Maksimal 5 MB, otomatis dioptimalkan.
+      </p>
 
       {file && (
         <>

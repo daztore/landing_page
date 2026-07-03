@@ -24,10 +24,11 @@ jobs:
     timeout-minutes: 20
 
     # UPDATED:
-    # Saat ini hanya memakai 2 env Supabase.
+    # Build memakai public site URL dan 2 env Supabase public.
     # Pastikan sudah dibuat di GitHub:
     # Settings > Secrets and variables > Actions > Repository secrets
     env:
+      NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL || 'https://daztore.web.id' }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
 
@@ -72,6 +73,7 @@ jobs:
       packages: write
 
     env:
+      NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL || 'https://daztore.web.id' }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
 
@@ -123,6 +125,7 @@ jobs:
           # NEXT_PUBLIC_* milik Next.js harus tersedia saat docker build,
           # karena akan masuk ke hasil build frontend.
           build-args: |
+            NEXT_PUBLIC_SITE_URL=${{ env.NEXT_PUBLIC_SITE_URL }}
             NEXT_PUBLIC_SUPABASE_URL=${{ env.NEXT_PUBLIC_SUPABASE_URL }}
             NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${{ env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
 

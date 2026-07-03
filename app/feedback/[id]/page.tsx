@@ -1,12 +1,23 @@
+import type { Metadata } from "next"
 import Image from "next/image"
 import { notFound } from "next/navigation"
 
 import { FeedbackSubmissionForm } from "@/components/feedback/feedback-submission-form"
 import { feedbackProductPhotoBucket } from "@/lib/feedback/constants"
 import { getPublicFeedbackRequest } from "@/lib/feedback/data"
+import { getSafeImageSrc } from "@/lib/security/safe-image-src"
 import { resolveStorageImageUrl } from "@/lib/supabase/storage"
 
 export const dynamic = "force-dynamic"
+
+const feedbackRobots: Metadata["robots"] = {
+  index: false,
+  follow: false,
+  googleBot: {
+    index: false,
+    follow: false,
+  },
+}
 
 interface FeedbackPageProps {
   params: Promise<{ id: string }>
@@ -19,12 +30,14 @@ export async function generateMetadata({ params }: FeedbackPageProps) {
   if (result.status !== "ok") {
     return {
       title: "Feedback Produk | daztore.id",
+      robots: feedbackRobots,
     }
   }
 
   return {
     title: `Feedback ${result.request.productName} | daztore.id`,
     description: "Halaman feedback pelanggan daztore.id.",
+    robots: feedbackRobots,
   }
 }
 
@@ -79,6 +92,7 @@ export default async function FeedbackPage({ params }: FeedbackPageProps) {
     request.productPhotoUrl,
     "/gallery-1.jpg",
   )
+  const safeProductImage = getSafeImageSrc(productImage) || "/gallery-1.jpg"
   const submitted = request.status === "submitted"
   const expired = request.status === "expired"
 
@@ -102,12 +116,11 @@ export default async function FeedbackPage({ params }: FeedbackPageProps) {
           <section className="overflow-hidden rounded-2xl border border-amber-200/70 bg-white shadow-sm">
             <div className="relative aspect-[4/3] bg-stone-100">
               <Image
-                src={productImage}
+                src={safeProductImage}
                 alt={request.productName}
                 fill
                 className="object-cover"
                 priority
-                unoptimized
               />
             </div>
             <div className="space-y-3 p-5">

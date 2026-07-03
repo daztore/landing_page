@@ -25,7 +25,7 @@ FROM node:20-alpine AS builder
 Urutan:
 
 1. Set working directory `/app`.
-2. Terima build arguments Supabase public.
+2. Terima build arguments public untuk site URL dan Supabase.
 3. Salin `package.json` dan `package-lock.json`.
 4. Jalankan `npm ci`.
 5. Salin config Next.js dan TypeScript.
@@ -43,7 +43,8 @@ FROM node:20-alpine AS runner
 Runtime:
 
 - `NODE_ENV=production`;
-- Supabase URL dan publishable key dari build arguments/runtime environment;
+- site URL, Supabase URL, dan publishable key dari build arguments/runtime environment;
+- service-role key hanya dari runtime environment server;
 - menyalin `.next`;
 - menyalin `public`;
 - menyalin `package.json`;
@@ -115,16 +116,18 @@ README.md
 docs
 ```
 
-`.env.local` tidak masuk build context. Nilai Supabase diteruskan melalui build arguments dan environment.
+`.env.local` tidak masuk build context. Nilai public diteruskan melalui build arguments dan
+environment. Service-role key hanya diteruskan sebagai runtime environment.
 
 ### 4. Compose lokal tidak memiliki health check
 
 Compose lokal tidak memeriksa apakah Next.js atau Nginx benar-benar siap menerima traffic.
 Production Compose memiliki healthcheck service app.
 
-### 5. TypeScript build errors diabaikan
+### 5. Runtime secret tidak boleh jadi build arg
 
-`next.config.mjs` menetapkan `typescript.ignoreBuildErrors: true`, sehingga image dapat berhasil dibangun walaupun type check gagal.
+`SUPABASE_SERVICE_ROLE_KEY` dibutuhkan untuk feedback privat, tetapi tidak boleh dijadikan
+Docker build argument atau disalin ke image.
 
 ## Menjalankan Compose Lokal
 
@@ -159,6 +162,10 @@ services:
     image: ${APP_IMAGE}:${APP_TAG}
     environment:
       NODE_ENV: production
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://daztore.web.id}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?NEXT_PUBLIC_SUPABASE_URL is required}
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:?NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is required}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?SUPABASE_SERVICE_ROLE_KEY is required}
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ >/dev/null || exit 1"]
@@ -187,7 +194,8 @@ Karakteristik wajib:
 - secret diberikan saat runtime, bukan disalin ke image;
 - Nginx hanya memasang config yang diperlukan;
 - health check aktif.
-- environment Supabase tersedia pada build dan runtime.
+- environment public Supabase tersedia pada build dan runtime.
+- service-role key tersedia hanya pada runtime.
 
 File tersebut tidak memiliki `build`, bind mount source, atau mount `node_modules`.
 
