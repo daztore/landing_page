@@ -29,6 +29,12 @@ interface TrustedPreview {
   trusted: boolean
 }
 
+const allowedPreviewMimeTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+])
+
 const emptyPreview: TrustedPreview = {
   url: "",
   trusted: false,
@@ -135,6 +141,13 @@ export function AdminFeedbackManager({
       setProductPhoto(null)
       setProductPhotoPreview(emptyPreview)
       setError(optimizedValidationError)
+      return
+    }
+
+    if (!allowedPreviewMimeTypes.has(optimizedFile.type)) {
+      setProductPhoto(null)
+      setProductPhotoPreview(emptyPreview)
+      setError("Format gambar tidak didukung.")
       return
     }
 
