@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { useEffect, useMemo, useState, type FormEvent } from "react"
+import { useMemo, useState, type FormEvent } from "react"
 import {
   Check,
   Clipboard,
@@ -14,6 +14,7 @@ import {
 
 import { AdminCard } from "@/components/admin-daz/admin-card"
 import { AdminFormField } from "@/components/admin-daz/admin-form-field"
+import { LocalImageCanvasPreview } from "@/components/shared/local-image-canvas-preview"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -23,22 +24,6 @@ import { getFeedbackImageValidationError } from "@/lib/feedback/storage"
 import { getPublicImageUrl } from "@/lib/admin-daz/storage-service"
 import { optimizeImageFile } from "@/lib/images/compress"
 import { getSafeImageSrc } from "@/lib/security/safe-image-src"
-
-interface TrustedPreview {
-  url: string
-  trusted: boolean
-}
-
-const allowedPreviewMimeTypes = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-])
-
-const emptyPreview: TrustedPreview = {
-  url: "",
-  trusted: false,
-}
 
 function feedbackUrl(id: string) {
   if (typeof window === "undefined") {
@@ -93,22 +78,12 @@ export function AdminFeedbackManager({
   )
   const [productDescription, setProductDescription] = useState("")
   const [productPhoto, setProductPhoto] = useState<File | null>(null)
-  const [productPhotoPreview, setProductPhotoPreview] =
-    useState<TrustedPreview>(emptyPreview)
   const [createdRequestId, setCreatedRequestId] = useState("")
   const [copiedId, setCopiedId] = useState("")
   const [loading, setLoading] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState("")
   const [notice, setNotice] = useState("")
-
-  useEffect(() => {
-    return () => {
-      if (productPhotoPreview.trusted && productPhotoPreview.url) {
-        URL.revokeObjectURL(productPhotoPreview.url)
-      }
-    }
-  }, [productPhotoPreview])
 
   const createdLink = useMemo(
     () => (createdRequestId ? feedbackUrl(createdRequestId) : ""),
@@ -120,14 +95,12 @@ export function AdminFeedbackManager({
 
     if (!file) {
       setProductPhoto(null)
-      setProductPhotoPreview(emptyPreview)
       return
     }
 
     const validationError = getFeedbackImageValidationError(file)
     if (validationError) {
       setProductPhoto(null)
-      setProductPhotoPreview(emptyPreview)
       setError(validationError)
       return
     }
@@ -139,20 +112,10 @@ export function AdminFeedbackManager({
     const optimizedValidationError = getFeedbackImageValidationError(optimizedFile)
     if (optimizedValidationError) {
       setProductPhoto(null)
-      setProductPhotoPreview(emptyPreview)
       setError(optimizedValidationError)
       return
     }
 
-    if (!allowedPreviewMimeTypes.has(optimizedFile.type)) {
-      setProductPhoto(null)
-      setProductPhotoPreview(emptyPreview)
-      setError("Format gambar tidak didukung.")
-      return
-    }
-
-    const objectUrl = URL.createObjectURL(optimizedFile)
-    setProductPhotoPreview({ url: objectUrl, trusted: true })
     setProductPhoto(optimizedFile)
   }
 
@@ -162,7 +125,6 @@ export function AdminFeedbackManager({
     setProductCategory(feedbackProductCategories[0].value)
     setProductDescription("")
     setProductPhoto(null)
-    setProductPhotoPreview(emptyPreview)
   }
 
   async function refreshRequests() {
@@ -248,10 +210,6 @@ export function AdminFeedbackManager({
       setLoading(false)
     }
   }
-
-  const safeProductPhotoPreview = getSafeImageSrc(productPhotoPreview.url, {
-    allowBlob: productPhotoPreview.trusted,
-  })
 
   return (
     <div className="space-y-6">
@@ -372,15 +330,12 @@ export function AdminFeedbackManager({
           >
             <div className="space-y-3 rounded-xl border bg-stone-50 p-3">
               <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl border border-dashed bg-white text-sm text-stone-400">
-                {safeProductPhotoPreview ? (
-                  <img
-                    src={safeProductPhotoPreview}
-                    alt="Preview foto produk"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span>Belum ada gambar</span>
-                )}
+                <LocalImageCanvasPreview
+                  file={productPhoto}
+                  alt="Preview foto produk"
+                  className="h-full w-full object-cover"
+                  placeholder={<span>Belum ada gambar</span>}
+                />
               </div>
               <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-amber-400 bg-white px-4 text-sm font-semibold text-stone-700">
                 <ImagePlus className="size-4" />

@@ -4,23 +4,6 @@ interface OptimizeImageOptions {
   preferredType?: "image/jpeg" | "image/webp"
 }
 
-function loadImage(file: File) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const url = URL.createObjectURL(file)
-    const image = new Image()
-
-    image.onload = () => {
-      URL.revokeObjectURL(url)
-      resolve(image)
-    }
-    image.onerror = () => {
-      URL.revokeObjectURL(url)
-      reject(new Error("Gagal membaca gambar."))
-    }
-    image.src = url
-  })
-}
-
 function canvasToBlob(
   canvas: HTMLCanvasElement,
   type: string,
@@ -52,11 +35,17 @@ export async function optimizeImageFile(
     return file
   }
 
+  if (typeof createImageBitmap !== "function") {
+    return file
+  }
+
+  let bitmap: ImageBitmap | null = null
+
   try {
-    const image = await loadImage(file)
-    const scale = Math.min(1, maxWidth / image.naturalWidth)
-    const width = Math.max(1, Math.round(image.naturalWidth * scale))
-    const height = Math.max(1, Math.round(image.naturalHeight * scale))
+    bitmap = await createImageBitmap(file)
+    const scale = Math.min(1, maxWidth / bitmap.width)
+    const width = Math.max(1, Math.round(bitmap.width * scale))
+    const height = Math.max(1, Math.round(bitmap.height * scale))
     const canvas = document.createElement("canvas")
     const context = canvas.getContext("2d")
 
@@ -68,7 +57,7 @@ export async function optimizeImageFile(
     canvas.height = height
     context.fillStyle = "#ffffff"
     context.fillRect(0, 0, width, height)
-    context.drawImage(image, 0, 0, width, height)
+    context.drawImage(bitmap, 0, 0, width, height)
 
     const outputType = getOutputType(file, preferredType)
     const blob = await canvasToBlob(canvas, outputType, quality)
@@ -83,5 +72,7 @@ export async function optimizeImageFile(
     })
   } catch {
     return file
+  } finally {
+    bitmap?.close()
   }
 }

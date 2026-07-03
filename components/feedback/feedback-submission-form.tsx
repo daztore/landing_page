@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useRef, useState, type FormEvent } from "react"
+import { useState, type FormEvent } from "react"
 import { CheckCircle2, ImagePlus, Loader2, Send, Star, X } from "lucide-react"
 
+import { LocalImageCanvasPreview } from "@/components/shared/local-image-canvas-preview"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import {
@@ -11,16 +12,9 @@ import {
 } from "@/lib/feedback/constants"
 import { getFeedbackImageValidationError } from "@/lib/feedback/storage"
 import { optimizeImageFile } from "@/lib/images/compress"
-import { getSafeImageSrc } from "@/lib/security/safe-image-src"
-
-interface TrustedPreview {
-  url: string
-  trusted: boolean
-}
 
 interface PhotoItem {
   file: File
-  preview: TrustedPreview
 }
 
 export function FeedbackSubmissionForm({
@@ -35,23 +29,11 @@ export function FeedbackSubmissionForm({
     [],
   )
   const [photos, setPhotos] = useState<PhotoItem[]>([])
-  const photosRef = useRef<PhotoItem[]>([])
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState("")
 
-  useEffect(() => {
-    return () => {
-      photosRef.current.forEach((photo) => {
-        if (photo.preview.trusted && photo.preview.url) {
-          URL.revokeObjectURL(photo.preview.url)
-        }
-      })
-    }
-  }, [])
-
   function updatePhotos(nextPhotos: PhotoItem[]) {
-    photosRef.current = nextPhotos
     setPhotos(nextPhotos)
   }
 
@@ -105,20 +87,11 @@ export function FeedbackSubmissionForm({
       ...photos,
       ...optimizedPhotos.map((photo) => ({
         file: photo,
-        preview: {
-          url: URL.createObjectURL(photo),
-          trusted: true,
-        },
       })),
     ])
   }
 
   function removePhoto(index: number) {
-    const removedPhoto = photos[index]
-    if (removedPhoto?.preview.trusted && removedPhoto.preview.url) {
-      URL.revokeObjectURL(removedPhoto.preview.url)
-    }
-
     updatePhotos(photos.filter((_, currentIndex) => currentIndex !== index))
   }
 
@@ -157,11 +130,6 @@ export function FeedbackSubmissionForm({
         throw new Error(payload.error ?? "Gagal mengirim feedback.")
       }
 
-      photos.forEach((photo) => {
-        if (photo.preview.trusted && photo.preview.url) {
-          URL.revokeObjectURL(photo.preview.url)
-        }
-      })
       updatePhotos([])
       setSubmitted(true)
     } catch (submitError) {
@@ -239,7 +207,7 @@ export function FeedbackSubmissionForm({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {photos.map((photo, index) => (
               <PhotoPreview
-                key={photo.preview.url}
+                key={`${photo.file.name}-${photo.file.lastModified}-${index}`}
                 photo={photo}
                 onRemove={() => removePhoto(index)}
               />
@@ -325,19 +293,13 @@ function PhotoPreview({
   photo: PhotoItem
   onRemove: () => void
 }) {
-  const safePreviewUrl = getSafeImageSrc(photo.preview.url, {
-    allowBlob: photo.preview.trusted,
-  })
-
   return (
     <div className="relative aspect-square overflow-hidden rounded-xl border bg-stone-100">
-      {safePreviewUrl && (
-        <img
-          src={safePreviewUrl}
-          alt="Preview foto pelanggan"
-          className="h-full w-full object-cover"
-        />
-      )}
+      <LocalImageCanvasPreview
+        file={photo.file}
+        alt="Preview foto pelanggan"
+        className="h-full w-full object-cover"
+      />
       <button
         type="button"
         className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-white/90 text-stone-700 shadow-sm"

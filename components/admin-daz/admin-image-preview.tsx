@@ -4,48 +4,17 @@ import { getPublicImageUrl } from "@/lib/admin-daz/storage-service"
 import { getSafeImageSrc } from "@/lib/security/safe-image-src"
 import type { StorageBucket } from "@/lib/supabase/storage"
 
-function getSafeImageSrc(src: string, allowBlob: boolean) {
-  if (!src) {
-    return ""
-  }
-
-  if (src.startsWith("blob:")) {
-    return allowBlob ? src : ""
-  }
-
-  if (src.startsWith("/")) {
-    return src
-  }
-
-  try {
-    const parsed = new URL(src)
-    if (parsed.protocol === "https:" || parsed.protocol === "http:") {
-      return src
-    }
-  } catch {
-    return ""
-  }
-
-  return ""
-}
-
 export function AdminImagePreview({
   bucket,
   path,
   alt = "Preview gambar",
-  previewUrl,
-  previewTrusted = false,
 }: {
   bucket: StorageBucket
   path?: string | null
   alt?: string
-  previewUrl?: string
-  previewTrusted?: boolean
 }) {
-  const src = previewUrl || (path ? getPublicImageUrl(bucket, path) : "")
-  const safeSrc = getSafeImageSrc(src, {
-    allowBlob: previewTrusted,
-  })
+  const storedSrc = path ? getPublicImageUrl(bucket, path) : ""
+  const safeSrc = getSafeImageSrc(storedSrc)
 
   if (!safeSrc) {
     return (

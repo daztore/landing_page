@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { ImagePlus, Loader2, Trash2, Upload } from "lucide-react"
 
 import { AdminConfirmDialog } from "@/components/admin-daz/admin-confirm-dialog"
 import { AdminImagePreview } from "@/components/admin-daz/admin-image-preview"
+import { LocalImageCanvasPreview } from "@/components/shared/local-image-canvas-preview"
 import { Button } from "@/components/ui/button"
 import {
   deleteAdminImage,
@@ -13,16 +14,6 @@ import {
 } from "@/lib/admin-daz/storage-service"
 import { optimizeImageFile } from "@/lib/images/compress"
 import type { StorageBucket } from "@/lib/supabase/storage"
-
-interface TrustedPreview {
-  url: string
-  trusted: boolean
-}
-
-const emptyPreview: TrustedPreview = {
-  url: "",
-  trusted: false,
-}
 
 export function AdminImageUploader({
   bucket,
@@ -36,31 +27,20 @@ export function AdminImageUploader({
   onChange: (path: string) => void
 }) {
   const [file, setFile] = useState<File | null>(null)
-  const [preview, setPreview] = useState<TrustedPreview>(emptyPreview)
   const [uploading, setUploading] = useState(false)
   const [deleteOldAfterReplace, setDeleteOldAfterReplace] = useState(false)
   const [error, setError] = useState("")
-
-  useEffect(() => {
-    return () => {
-      if (preview.trusted && preview.url) {
-        URL.revokeObjectURL(preview.url)
-      }
-    }
-  }, [preview])
 
   async function selectFile(nextFile?: File) {
     setError("")
     if (!nextFile) {
       setFile(null)
-      setPreview(emptyPreview)
       return
     }
 
     const validationError = getAdminImageValidationError(nextFile)
     if (validationError) {
       setFile(null)
-      setPreview(emptyPreview)
       setError(validationError)
       return
     }
@@ -72,14 +52,11 @@ export function AdminImageUploader({
     const optimizedValidationError = getAdminImageValidationError(optimizedFile)
     if (optimizedValidationError) {
       setFile(null)
-      setPreview(emptyPreview)
       setError(optimizedValidationError)
       return
     }
 
-    const objectUrl = URL.createObjectURL(optimizedFile)
     setFile(optimizedFile)
-    setPreview({ url: objectUrl, trusted: true })
   }
 
   async function upload() {
@@ -94,7 +71,6 @@ export function AdminImageUploader({
       const path = await uploadAdminImage(bucket, folder, file)
       onChange(path)
       setFile(null)
-      setPreview(emptyPreview)
 
       if (
         deleteOldAfterReplace &&
@@ -132,12 +108,17 @@ export function AdminImageUploader({
 
   return (
     <div className="space-y-3 rounded-xl border bg-stone-50 p-3">
-      <AdminImagePreview
-        bucket={bucket}
-        path={value}
-        previewUrl={preview.url}
-        previewTrusted={preview.trusted}
-      />
+      {file ? (
+        <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl border bg-stone-100 text-sm text-stone-400">
+          <LocalImageCanvasPreview
+            file={file}
+            alt="Preview gambar"
+            className="h-full w-full object-cover"
+          />
+        </div>
+      ) : (
+        <AdminImagePreview bucket={bucket} path={value} />
+      )}
       <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-amber-400 bg-white px-4 text-sm font-semibold text-stone-700">
         <ImagePlus className="size-4" />
         Pilih gambar

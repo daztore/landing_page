@@ -24,7 +24,6 @@ function getAllowedImageOrigins() {
 export function getSafeImageSrc(
   src: string | null | undefined,
   options?: {
-    allowBlob?: boolean
     allowRelative?: boolean
   },
 ) {
@@ -32,10 +31,6 @@ export function getSafeImageSrc(
 
   if (!value || value.startsWith("//")) {
     return ""
-  }
-
-  if (value.startsWith("blob:")) {
-    return options?.allowBlob ? value : ""
   }
 
   if (value.startsWith("/")) {
