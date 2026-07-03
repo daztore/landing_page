@@ -377,7 +377,7 @@ export const fallbackCarouselTestimonials: TestimonialItem[] = [
 export const fallbackTestimonials: TestimonialsSection = {
   slug: "testimonials",
   title: "Cerita Pasangan Bahagia",
-  description: "Ribuan pasangan telah mempercayai daztore.id untuk mewujudkan hari istimewa mereka.",
+  description: "Ratusan pasangan telah mempercayai daztore.id untuk mewujudkan hari istimewa mereka.",
   items: fallbackGridTestimonials,
 }
 

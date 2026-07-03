@@ -1,5 +1,7 @@
 "use client"
 
+/* eslint-disable @next/next/no-img-element -- Blob and signed URLs are not compatible with Next image optimization. */
+
 import Image from "next/image"
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react"
 import {
@@ -21,6 +23,7 @@ import type { AdminFeedbackRequest } from "@/lib/admin-daz/feedback-service"
 import { feedbackProductCategories } from "@/lib/feedback/constants"
 import { getFeedbackImageValidationError } from "@/lib/feedback/storage"
 import { getPublicImageUrl } from "@/lib/admin-daz/storage-service"
+import { optimizeImageFile } from "@/lib/images/compress"
 
 function feedbackUrl(id: string) {
   if (typeof window === "undefined") {
@@ -97,7 +100,7 @@ export function AdminFeedbackManager({
     [createdRequestId],
   )
 
-  function selectProductPhoto(file?: File) {
+  async function selectProductPhoto(file?: File) {
     setError("")
 
     if (!file) {
@@ -122,14 +125,30 @@ export function AdminFeedbackManager({
       return
     }
 
+    const optimizedFile = await optimizeImageFile(file, {
+      maxWidth: 1600,
+      quality: 0.82,
+    })
+    const optimizedValidationError = getFeedbackImageValidationError(optimizedFile)
+    if (optimizedValidationError) {
+      setProductPhoto(null)
+      if (productPhotoPreviewRef.current) {
+        URL.revokeObjectURL(productPhotoPreviewRef.current)
+      }
+      productPhotoPreviewRef.current = ""
+      setProductPhotoPreview("")
+      setError(optimizedValidationError)
+      return
+    }
+
     if (productPhotoPreviewRef.current) {
       URL.revokeObjectURL(productPhotoPreviewRef.current)
     }
 
-    const objectUrl = URL.createObjectURL(file)
+    const objectUrl = URL.createObjectURL(optimizedFile)
     productPhotoPreviewRef.current = objectUrl
     setProductPhotoPreview(objectUrl)
-    setProductPhoto(file)
+    setProductPhoto(optimizedFile)
   }
 
   function resetForm() {
@@ -234,8 +253,8 @@ export function AdminFeedbackManager({
       <div>
         <h1 className="font-serif text-2xl font-bold">Feedback Pelanggan</h1>
         <p className="mt-1 text-sm leading-6 text-stone-600">
-          Buat link feedback unik, simpan produk ke katalog nonaktif, dan pantau
-          hasil feedback pelanggan.
+          Buat link feedback unik, simpan produk sebagai draft non-publik, dan
+          pantau hasil feedback pelanggan.
         </p>
       </div>
 
@@ -344,17 +363,15 @@ export function AdminFeedbackManager({
             label="Foto produk"
             htmlFor="feedback-product-photo"
             required
-            helpText="JPEG, PNG, atau WebP. Maksimal 5 MB."
+            helpText="JPEG, PNG, atau WebP. Maksimal 5 MB, otomatis dioptimalkan."
           >
             <div className="space-y-3 rounded-xl border bg-stone-50 p-3">
               <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl border border-dashed bg-white text-sm text-stone-400">
                 {productPhotoPreview ? (
-                  <Image
+                  <img
                     src={productPhotoPreview}
                     alt="Preview foto produk"
-                    fill
-                    className="object-cover"
-                    unoptimized
+                    className="h-full w-full object-cover"
                   />
                 ) : (
                   <span>Belum ada gambar</span>
@@ -369,7 +386,7 @@ export function AdminFeedbackManager({
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
                   onChange={(event) =>
-                    selectProductPhoto(event.target.files?.[0])
+                    void selectProductPhoto(event.target.files?.[0])
                   }
                 />
               </label>
@@ -428,7 +445,6 @@ export function AdminFeedbackManager({
                       alt={item.productName}
                       fill
                       className="object-cover"
-                      unoptimized
                     />
                   </div>
                 )}
@@ -526,12 +542,10 @@ export function AdminFeedbackManager({
                               key={path}
                               className="relative aspect-square overflow-hidden rounded-lg border bg-stone-100"
                             >
-                              <Image
+                              <img
                                 src={image}
                                 alt="Foto feedback pelanggan"
-                                fill
-                                className="object-cover"
-                                unoptimized
+                                className="h-full w-full object-cover"
                               />
                             </div>
                           ) : null

@@ -70,9 +70,9 @@ npm list eslint
 
 Warning existing tidak membuat command gagal. Error baru harus diperbaiki sebelum merge.
 
-### TypeScript error tidak terlihat pada build
+### TypeScript error pada build
 
-Build Next.js saat ini mengabaikan type errors.
+Build Next.js gagal jika ada type errors.
 
 Jalankan:
 
@@ -80,7 +80,7 @@ Jalankan:
 npx tsc --noEmit
 ```
 
-Jangan menganggap `npm run build` yang sukses berarti type check sukses.
+Jalankan type check eksplisit untuk melihat error lebih cepat sebelum build.
 
 ### Development server memakai port lain
 
@@ -104,15 +104,10 @@ npm run build
 
 Jika organisasi memblokir Google Fonts saat build, evaluasi self-hosted font sebagai perubahan terpisah.
 
-### Build sukses tetapi ada bug type
+### Feedback gagal karena service-role key kosong
 
-Periksa `next.config.mjs`:
-
-```text
-typescript.ignoreBuildErrors = true
-```
-
-Jalankan type check eksplisit di CI.
+`SUPABASE_SERVICE_ROLE_KEY` dibutuhkan saat menjalankan route feedback, tetapi tidak dibutuhkan
+sebagai Docker build argument. Pastikan secret tersedia pada environment runtime server.
 
 ### Static asset tidak ditemukan
 
@@ -241,7 +236,8 @@ Hard refresh browser hanya alat diagnosis, bukan strategi invalidasi production.
 
 ### Image lambat
 
-`images.unoptimized: true` membuat Next.js tidak melakukan optimasi image runtime. Periksa ukuran file, format WebP/AVIF, cache header, dan CDN.
+Next Image optimization aktif untuk gambar publik. Periksa remote pattern Supabase, ukuran file,
+format WebP/AVIF, cache header, dan CDN.
 
 ## Navigasi
 

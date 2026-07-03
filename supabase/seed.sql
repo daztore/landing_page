@@ -123,7 +123,7 @@ values
     null,
     'Cerita Pasangan Bahagia',
     null,
-    'Ribuan pasangan telah mempercayai daztore.id untuk mewujudkan hari istimewa mereka.',
+    'Ratusan pasangan telah mempercayai daztore.id untuk mewujudkan hari istimewa mereka.',
     null,
     null,
     '{}'::jsonb,

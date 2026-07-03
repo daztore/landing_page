@@ -156,8 +156,8 @@ Server dan client component Next.js
 - Runtime production dijalankan dengan `next start` pada port default `3000`.
 - Docker builder menggunakan Node.js 20 Alpine dan `npm ci`.
 - Nginx pada Compose meneruskan port host `8002` ke service `app:3000`.
-- Optimasi image bawaan Next.js dinonaktifkan dengan `images.unoptimized: true`.
-- Error TypeScript tidak menggagalkan build karena `typescript.ignoreBuildErrors: true`.
+- Optimasi image bawaan Next.js aktif untuk gambar publik yang sudah masuk remote pattern.
+- Error TypeScript menggagalkan build; CI juga menjalankan `npm run typecheck`.
 
 Lihat [DOCKER_AND_DEPLOYMENT.md](./DOCKER_AND_DEPLOYMENT.md) untuk batasan konfigurasi production saat ini.
 

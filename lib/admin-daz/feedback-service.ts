@@ -62,6 +62,8 @@ export interface AdminFeedbackRequest {
   submission: AdminFeedbackSubmission | null
 }
 
+const feedbackProductDescription = "Produk custom berdasarkan request pelanggan."
+
 function getRequiredText(formData: FormData, name: string, label: string) {
   const value = String(formData.get(name) ?? "").trim()
   if (!value) {
@@ -120,7 +122,12 @@ async function getNextProductSortOrder(client: SupabaseClient) {
 function mapRequest(
   row: FeedbackRequestRow,
   submission: FeedbackSubmissionRow | undefined,
+  signedPhotoUrls = new Map<string, string>(),
 ): AdminFeedbackRequest {
+  const customerPhotoUrls = (submission?.customer_photo_urls ?? [])
+    .map((path) => signedPhotoUrls.get(path))
+    .filter((url): url is string => Boolean(url))
+
   return {
     id: row.id,
     customerName: row.customer_name,
@@ -140,11 +147,41 @@ function mapRequest(
           criticism: submission.criticism ?? "",
           testimonial: submission.testimonial ?? "",
           recommendations: submission.recommendations ?? [],
-          customerPhotoUrls: submission.customer_photo_urls ?? [],
+          customerPhotoUrls,
           createdAt: submission.created_at,
         }
       : null,
   }
+}
+
+async function createSignedCustomerPhotoUrls(
+  client: SupabaseClient,
+  submissions: FeedbackSubmissionRow[],
+) {
+  const paths = Array.from(
+    new Set(
+      submissions.flatMap((submission) => submission.customer_photo_urls ?? []),
+    ),
+  )
+
+  if (paths.length === 0) {
+    return new Map<string, string>()
+  }
+
+  const { data, error } = await client.storage
+    .from(feedbackCustomerPhotoBucket)
+    .createSignedUrls(paths, 60 * 60)
+
+  if (error) {
+    console.error("[Supabase] Gagal membuat signed URL foto feedback:", error.message)
+    return new Map<string, string>()
+  }
+
+  return new Map(
+    ((data ?? []) as { path?: string; signedUrl?: string }[])
+      .filter((item) => item.path && item.signedUrl)
+      .map((item) => [item.path!, item.signedUrl!]),
+  )
 }
 
 export async function listFeedbackRequests(
@@ -186,9 +223,13 @@ export async function listFeedbackRequests(
       submission,
     ]),
   )
+  const signedPhotoUrls = await createSignedCustomerPhotoUrls(
+    client,
+    (submissionRows ?? []) as FeedbackSubmissionRow[],
+  )
 
   return requests.map((request) =>
-    mapRequest(request, submissionsByRequestId.get(request.id)),
+    mapRequest(request, submissionsByRequestId.get(request.id), signedPhotoUrls),
   )
 }
 
@@ -230,7 +271,7 @@ export async function createFeedbackRequest(
       title: productName,
       description:
         productDescription ||
-        `Produk dari request feedback pelanggan ${customerName}.`,
+        feedbackProductDescription,
       start_price: 0,
       end_price: null,
       image_url: uploadedProductPhotoPath,

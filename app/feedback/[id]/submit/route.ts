@@ -10,7 +10,7 @@ import {
   getFeedbackImageValidationError,
   uploadFeedbackImage,
 } from "@/lib/feedback/storage"
-import { getSupabaseClient } from "@/lib/supabase/client"
+import { getSupabaseServiceRoleClient } from "@/lib/supabase/service-role"
 
 interface FeedbackRouteContext {
   params: Promise<{ id: string }>
@@ -45,13 +45,15 @@ export async function POST(
     )
   }
 
-  const supabase = getSupabaseClient()
+  const supabase = getSupabaseServiceRoleClient()
   if (!supabase) {
     return NextResponse.json(
-      { error: "Konfigurasi Supabase belum tersedia." },
+      { error: "Konfigurasi feedback belum tersedia." },
       { status: 503 },
     )
   }
+
+  const uploadedPhotoUrls: string[] = []
 
   try {
     const formData = await request.formData()
@@ -111,8 +113,9 @@ export async function POST(
       .maybeSingle()
 
     if (requestError) {
+      console.error("[Supabase] Gagal validasi feedback request:", requestError.message)
       return NextResponse.json(
-        { error: requestError.message },
+        { error: "Feedback belum bisa diproses. Silakan coba lagi." },
         { status: 500 },
       )
     }
@@ -131,7 +134,6 @@ export async function POST(
       )
     }
 
-    const uploadedPhotoUrls: string[] = []
     for (const photo of photos) {
       const path = await uploadFeedbackImage(
         supabase,
@@ -154,23 +156,39 @@ export async function POST(
       })
 
     if (insertError) {
+      if (uploadedPhotoUrls.length > 0) {
+        await supabase.storage
+          .from(feedbackCustomerPhotoBucket)
+          .remove(uploadedPhotoUrls)
+      }
+
       const duplicate = insertError.code === "23505"
+      if (!duplicate) {
+        console.error("[Supabase] Gagal menyimpan feedback submission:", insertError.message)
+      }
+
       return NextResponse.json(
         {
           error: duplicate
             ? "Feedback sudah pernah dikirim."
-            : insertError.message,
+            : "Feedback belum bisa disimpan. Silakan coba lagi.",
         },
-        { status: duplicate ? 409 : 400 },
+        { status: duplicate ? 409 : 500 },
       )
     }
 
     return NextResponse.json({ ok: true })
   } catch (error) {
+    if (uploadedPhotoUrls.length > 0) {
+      await supabase.storage
+        .from(feedbackCustomerPhotoBucket)
+        .remove(uploadedPhotoUrls)
+    }
+
+    console.error("[Feedback] Gagal mengirim feedback:", error)
     return NextResponse.json(
       {
-        error:
-          error instanceof Error ? error.message : "Gagal mengirim feedback.",
+        error: "Gagal mengirim feedback. Silakan coba lagi.",
       },
       { status: 500 },
     )

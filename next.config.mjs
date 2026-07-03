@@ -21,11 +21,7 @@ try {
 }
 
 const nextConfig = {
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   images: {
-    unoptimized: true,
     remotePatterns: supabaseRemotePattern ? [supabaseRemotePattern] : [],
   },
 }

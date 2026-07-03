@@ -1,6 +1,6 @@
 "use client"
 
-import Image from "next/image"
+/* eslint-disable @next/next/no-img-element -- Blob preview URLs are not compatible with Next image optimization. */
 
 import { getPublicImageUrl } from "@/lib/admin-daz/storage-service"
 import type { StorageBucket } from "@/lib/supabase/storage"
@@ -28,7 +28,7 @@ export function AdminImagePreview({
 
   return (
     <div className="relative aspect-video overflow-hidden rounded-xl border bg-stone-100">
-      <Image src={src} alt={alt} fill className="object-cover" unoptimized />
+      <img src={src} alt={alt} className="h-full w-full object-cover" />
     </div>
   )
 }

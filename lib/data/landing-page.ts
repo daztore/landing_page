@@ -125,6 +125,7 @@ interface ProductRow {
   is_customizable: boolean
   is_available: boolean
   sort_order: number
+  source: string | null
 }
 
 interface PackageTierRow {
@@ -529,9 +530,10 @@ export async function getCatalogData(): Promise<CatalogData> {
     supabase
       .from("products")
       .select(
-        "slug,category_slug,title,description,start_price,end_price,image_url,badge,processing_time,is_customizable,is_available,sort_order",
+        "slug,category_slug,title,description,start_price,end_price,image_url,badge,processing_time,is_customizable,is_available,sort_order,source",
       )
       .eq("is_active", true)
+      .neq("source", "feedback_request")
       .order("sort_order"),
   ])
 

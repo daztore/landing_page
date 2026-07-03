@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  Suspense,
   createContext,
   useCallback,
   useContext,
@@ -10,7 +11,7 @@ import {
   type MutableRefObject,
   type ReactNode,
 } from "react"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { DaztoreLoader } from "@/components/loading/daztore-loader"
 
 const SHOW_DELAY_MS = 180
@@ -65,15 +66,42 @@ function shouldHandleAnchor(anchor: HTMLAnchorElement, event: MouseEvent) {
   return destination.pathname !== current.pathname || destination.search !== current.search
 }
 
+function createNavigationKey(pathname: string, search: string) {
+  return search ? `${pathname}?${search}` : pathname
+}
+
+function getCurrentNavigationKey() {
+  return createNavigationKey(
+    window.location.pathname,
+    window.location.search.replace(/^\?/, ""),
+  )
+}
+
+function RouteLoadingCompletion({
+  onComplete,
+}: {
+  onComplete: (navigationKey: string) => void
+}) {
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const search = searchParams.toString()
+
+  useEffect(() => {
+    onComplete(createNavigationKey(pathname, search))
+  }, [onComplete, pathname, search])
+
+  return null
+}
+
 export function useRouteLoading() {
   return useContext(RouteLoadingContext)
 }
 
 export function RouteLoadingProvider({ children }: { children: ReactNode }) {
-  const pathname = usePathname()
   const [visible, setVisible] = useState(false)
   const visibleRef = useRef(false)
   const shownAtRef = useRef(0)
+  const currentNavigationKeyRef = useRef("")
   const showTimerRef = useRef<number | undefined>(undefined)
   const hideTimerRef = useRef<number | undefined>(undefined)
   const safetyTimerRef = useRef<number | undefined>(undefined)
@@ -126,9 +154,10 @@ export function RouteLoadingProvider({ children }: { children: ReactNode }) {
     }, remaining)
   }, [clearTimer, hideNow])
 
-  useEffect(() => {
+  const finishRouteLoading = useCallback((navigationKey: string) => {
+    currentNavigationKeyRef.current = navigationKey
     finishLoading()
-  }, [pathname, finishLoading])
+  }, [finishLoading])
 
   useEffect(() => {
     const handleClick = (event: MouseEvent) => {
@@ -144,9 +173,13 @@ export function RouteLoadingProvider({ children }: { children: ReactNode }) {
     }
 
     const handlePopState = () => {
-      startLoading()
+      const nextNavigationKey = getCurrentNavigationKey()
+      if (nextNavigationKey !== currentNavigationKeyRef.current) {
+        startLoading()
+      }
     }
 
+    currentNavigationKeyRef.current = getCurrentNavigationKey()
     document.addEventListener("click", handleClick, true)
     window.addEventListener("popstate", handlePopState)
 
@@ -162,6 +195,9 @@ export function RouteLoadingProvider({ children }: { children: ReactNode }) {
   return (
     <RouteLoadingContext.Provider value={{ startLoading }}>
       {children}
+      <Suspense fallback={null}>
+        <RouteLoadingCompletion onComplete={finishRouteLoading} />
+      </Suspense>
       {visible && <DaztoreLoader fullscreen />}
     </RouteLoadingContext.Provider>
   )

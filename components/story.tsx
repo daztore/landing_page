@@ -50,7 +50,7 @@ export function Story({ data = fallbackStory }: StoryProps) {
 
             <Reveal delay={100}>
               <h2 className="mt-5 font-serif text-4xl leading-tight text-foreground text-balance md:text-5xl">
-                {data.title}
+                {data.title}{" "}
                 <span className="block italic text-gold-gradient">{data.highlightedTitle}</span>
               </h2>
             </Reveal>

@@ -1,6 +1,7 @@
 "use client"
 
-import Image from "next/image"
+/* eslint-disable @next/next/no-img-element -- Blob preview URLs are not compatible with Next image optimization. */
+
 import { useEffect, useRef, useState, type FormEvent } from "react"
 import { CheckCircle2, ImagePlus, Loader2, Send, Star, X } from "lucide-react"
 
@@ -11,6 +12,7 @@ import {
   feedbackRecommendations,
 } from "@/lib/feedback/constants"
 import { getFeedbackImageValidationError } from "@/lib/feedback/storage"
+import { optimizeImageFile } from "@/lib/images/compress"
 
 interface PhotoItem {
   file: File
@@ -53,7 +55,7 @@ export function FeedbackSubmissionForm({
     )
   }
 
-  function selectPhotos(files?: FileList | null) {
+  async function selectPhotos(files?: FileList | null) {
     setError("")
 
     const nextPhotos = Array.from(files ?? [])
@@ -74,9 +76,26 @@ export function FeedbackSubmissionForm({
       }
     }
 
+    const optimizedPhotos: File[] = []
+    for (const photo of nextPhotos) {
+      const optimizedPhoto = await optimizeImageFile(photo, {
+        maxWidth: 1400,
+        quality: 0.82,
+      })
+      const optimizedValidationError =
+        getFeedbackImageValidationError(optimizedPhoto)
+
+      if (optimizedValidationError) {
+        setError(optimizedValidationError)
+        return
+      }
+
+      optimizedPhotos.push(optimizedPhoto)
+    }
+
     updatePhotos([
       ...photos,
-      ...nextPhotos.map((photo) => ({
+      ...optimizedPhotos.map((photo) => ({
         file: photo,
         previewUrl: URL.createObjectURL(photo),
       })),
@@ -185,7 +204,8 @@ export function FeedbackSubmissionForm({
         <div>
           <h2 className="font-semibold text-stone-900">Foto terbaik</h2>
           <p className="mt-1 text-sm text-stone-500">
-            Maksimal {feedbackCustomerPhotoMaxFiles} foto, masing-masing 5 MB.
+            Maksimal {feedbackCustomerPhotoMaxFiles} foto, masing-masing 5 MB,
+            otomatis dioptimalkan.
           </p>
         </div>
         <label className="flex min-h-14 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-amber-300 bg-white px-4 text-sm font-semibold text-stone-700 shadow-sm">
@@ -196,7 +216,7 @@ export function FeedbackSubmissionForm({
             type="file"
             multiple
             accept="image/jpeg,image/png,image/webp"
-            onChange={(event) => selectPhotos(event.target.files)}
+            onChange={(event) => void selectPhotos(event.target.files)}
           />
         </label>
 
@@ -207,12 +227,10 @@ export function FeedbackSubmissionForm({
                 key={photo.previewUrl}
                 className="relative aspect-square overflow-hidden rounded-xl border bg-stone-100"
               >
-                <Image
+                <img
                   src={photo.previewUrl}
                   alt="Preview foto pelanggan"
-                  fill
-                  className="object-cover"
-                  unoptimized
+                  className="h-full w-full object-cover"
                 />
                 <button
                   type="button"

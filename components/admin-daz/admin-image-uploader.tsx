@@ -11,6 +11,7 @@ import {
   getAdminImageValidationError,
   uploadAdminImage,
 } from "@/lib/admin-daz/storage-service"
+import { optimizeImageFile } from "@/lib/images/compress"
 import type { StorageBucket } from "@/lib/supabase/storage"
 
 export function AdminImageUploader({
@@ -38,7 +39,7 @@ export function AdminImageUploader({
     }
   }, [previewUrl])
 
-  function selectFile(nextFile?: File) {
+  async function selectFile(nextFile?: File) {
     setError("")
     if (!nextFile) {
       setFile(null)
@@ -54,8 +55,20 @@ export function AdminImageUploader({
       return
     }
 
-    setFile(nextFile)
-    setPreviewUrl(URL.createObjectURL(nextFile))
+    const optimizedFile = await optimizeImageFile(nextFile, {
+      maxWidth: 1600,
+      quality: 0.82,
+    })
+    const optimizedValidationError = getAdminImageValidationError(optimizedFile)
+    if (optimizedValidationError) {
+      setFile(null)
+      setPreviewUrl("")
+      setError(optimizedValidationError)
+      return
+    }
+
+    setFile(optimizedFile)
+    setPreviewUrl(URL.createObjectURL(optimizedFile))
   }
 
   async function upload() {
@@ -116,10 +129,12 @@ export function AdminImageUploader({
           className="sr-only"
           type="file"
           accept="image/jpeg,image/png,image/webp"
-          onChange={(event) => selectFile(event.target.files?.[0])}
+          onChange={(event) => void selectFile(event.target.files?.[0])}
         />
       </label>
-      <p className="text-xs text-stone-500">JPEG, PNG, atau WebP. Maksimal 5 MB.</p>
+      <p className="text-xs text-stone-500">
+        JPEG, PNG, atau WebP. Maksimal 5 MB, otomatis dioptimalkan.
+      </p>
 
       {file && (
         <>

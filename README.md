@@ -20,7 +20,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Isi `.env.local` dengan URL dan publishable key Supabase. Jika database belum siap, aplikasi tetap memakai fallback lokal.
+Isi `.env.local` dengan URL, publishable key Supabase, site URL, dan service-role key server-only untuk fitur feedback. Jika database belum siap, aplikasi tetap memakai fallback lokal.
 
 Buka:
 
@@ -72,11 +72,13 @@ Setup ringkas:
 1. Jalankan `supabase/migrations/001_create_landing_page_tables.sql` di Supabase SQL Editor.
 2. Jalankan `supabase/migrations/002_create_storage_buckets.sql`.
 3. Jalankan `supabase/migrations/003_create_admin_access.sql`.
-4. Upload asset landing page ke bucket `landing_page` dan asset produk ke bucket `catalogs`.
-5. Jalankan `supabase/seed.sql`.
-6. Buat user email/password melalui Supabase Auth, lalu tambahkan user tersebut ke `public.admin_users`.
-7. Isi `.env.local`.
-8. Restart development server.
+4. Jalankan `supabase/migrations/004_create_feedback_feature.sql`.
+5. Jalankan `supabase/migrations/005_harden_feedback_privacy_and_catalog_cleanup.sql`.
+6. Upload asset landing page ke bucket `landing_page` dan asset produk ke bucket `catalogs`.
+7. Jalankan `supabase/seed.sql`.
+8. Buat user email/password melalui Supabase Auth, lalu tambahkan user tersebut ke `public.admin_users`.
+9. Isi `.env.local`.
+10. Restart development server.
 
 Nilai gambar pada database disimpan sebagai object path portabel, bukan full public URL.
 File di `public/` tetap dipertahankan sebagai fallback lokal. Daftar object path yang perlu
@@ -138,7 +140,7 @@ Panduan secrets, persiapan server, deploy manual, dan rollback:
 - Gambar aktif dibaca dari bucket publik `landing_page` dan `catalogs`.
 - `lib/katalog-data.ts` dan `lib/data/fallback.ts` dipertahankan sebagai fallback.
 - CTA utama membuka WhatsApp, email, atau Instagram.
-- Supabase memakai publishable key; service-role key tidak digunakan.
+- Supabase public content memakai publishable key; feedback publik memakai service-role key server-only melalui route Next.js.
 - Admin memakai Supabase Auth cookie session dan allowlist `admin_users`.
 - Write database/Storage hanya diizinkan RLS untuk admin aktif.
 - Beberapa area production masih memerlukan hardening; lihat maintenance notes sebelum go-live.

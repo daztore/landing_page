@@ -37,7 +37,7 @@ tetap dibatasi pada push branch `main`.
 ## Status Prasyarat
 
 - ESLint flat config Next.js/TypeScript tersedia.
-- Typecheck berjalan terpisah walaupun Next.js masih memiliki `ignoreBuildErrors`.
+- Typecheck berjalan terpisah dan `next build` juga gagal jika ada TypeScript error.
 - `.dockerignore` mengecualikan dependency, build output, Git, env, docs, dan Compose.
 - `docker-compose.production.yml` memakai image registry dan healthcheck.
 - Dockerfile memakai Node.js 20, `npm ci`, build multi-stage, dan production dependency prune.
@@ -62,7 +62,7 @@ Tag SHA digunakan oleh workflow deploy dan rollback. Tag `production` hanya alia
 - Host key SSH diverifikasi melalui `PROD_KNOWN_HOSTS`.
 - Private key deployment disimpan sebagai GitHub Secret.
 - Nilai yang diteruskan ke remote shell di-base64 agar tidak dirangkai sebagai shell input mentah.
-- Service-role key tidak digunakan.
+- Service-role key hanya dibutuhkan sebagai runtime secret di server untuk fitur feedback privat.
 - Server private GHCR harus memakai credential read-only `read:packages`.
 
 Untuk supply-chain hardening berikutnya, pin GitHub Actions ke full commit SHA, bukan hanya

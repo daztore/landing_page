@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Image from "next/image"
 import { notFound } from "next/navigation"
 
@@ -7,6 +8,15 @@ import { getPublicFeedbackRequest } from "@/lib/feedback/data"
 import { resolveStorageImageUrl } from "@/lib/supabase/storage"
 
 export const dynamic = "force-dynamic"
+
+const feedbackRobots: Metadata["robots"] = {
+  index: false,
+  follow: false,
+  googleBot: {
+    index: false,
+    follow: false,
+  },
+}
 
 interface FeedbackPageProps {
   params: Promise<{ id: string }>
@@ -19,12 +29,14 @@ export async function generateMetadata({ params }: FeedbackPageProps) {
   if (result.status !== "ok") {
     return {
       title: "Feedback Produk | daztore.id",
+      robots: feedbackRobots,
     }
   }
 
   return {
     title: `Feedback ${result.request.productName} | daztore.id`,
     description: "Halaman feedback pelanggan daztore.id.",
+    robots: feedbackRobots,
   }
 }
 
@@ -107,7 +119,6 @@ export default async function FeedbackPage({ params }: FeedbackPageProps) {
                 fill
                 className="object-cover"
                 priority
-                unoptimized
               />
             </div>
             <div className="space-y-3 p-5">
