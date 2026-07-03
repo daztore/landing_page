@@ -26,31 +26,34 @@ export function AdminImageUploader({
   onChange: (path: string) => void
 }) {
   const [file, setFile] = useState<File | null>(null)
-  const [previewUrl, setPreviewUrl] = useState("")
+  const [preview, setPreview] = useState<{ url: string; trusted: boolean }>({
+    url: "",
+    trusted: false,
+  })
   const [uploading, setUploading] = useState(false)
   const [deleteOldAfterReplace, setDeleteOldAfterReplace] = useState(false)
   const [error, setError] = useState("")
 
   useEffect(() => {
     return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl)
+      if (preview.url) {
+        URL.revokeObjectURL(preview.url)
       }
     }
-  }, [previewUrl])
+  }, [preview.url])
 
   async function selectFile(nextFile?: File) {
     setError("")
     if (!nextFile) {
       setFile(null)
-      setPreviewUrl("")
+      setPreview({ url: "", trusted: false })
       return
     }
 
     const validationError = getAdminImageValidationError(nextFile)
     if (validationError) {
       setFile(null)
-      setPreviewUrl("")
+      setPreview({ url: "", trusted: false })
       setError(validationError)
       return
     }
@@ -62,13 +65,13 @@ export function AdminImageUploader({
     const optimizedValidationError = getAdminImageValidationError(optimizedFile)
     if (optimizedValidationError) {
       setFile(null)
-      setPreviewUrl("")
+      setPreview({ url: "", trusted: false })
       setError(optimizedValidationError)
       return
     }
 
     setFile(optimizedFile)
-    setPreviewUrl(URL.createObjectURL(optimizedFile))
+    setPreview({ url: URL.createObjectURL(optimizedFile), trusted: true })
   }
 
   async function upload() {
@@ -83,7 +86,7 @@ export function AdminImageUploader({
       const path = await uploadAdminImage(bucket, folder, file)
       onChange(path)
       setFile(null)
-      setPreviewUrl("")
+      setPreview({ url: "", trusted: false })
 
       if (
         deleteOldAfterReplace &&
@@ -121,7 +124,12 @@ export function AdminImageUploader({
 
   return (
     <div className="space-y-3 rounded-xl border bg-stone-50 p-3">
-      <AdminImagePreview bucket={bucket} path={value} previewUrl={previewUrl} />
+      <AdminImagePreview
+        bucket={bucket}
+        path={value}
+        previewUrl={preview.url}
+        previewTrusted={preview.trusted}
+      />
       <label className="flex min-h-12 cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-amber-400 bg-white px-4 text-sm font-semibold text-stone-700">
         <ImagePlus className="size-4" />
         Pilih gambar

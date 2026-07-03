@@ -5,12 +5,16 @@
 import { getPublicImageUrl } from "@/lib/admin-daz/storage-service"
 import type { StorageBucket } from "@/lib/supabase/storage"
 
-function getSafeImageSrc(src: string) {
+function getSafeImageSrc(src: string, allowBlob: boolean) {
   if (!src) {
     return ""
   }
 
-  if (src.startsWith("blob:") || src.startsWith("/")) {
+  if (src.startsWith("blob:")) {
+    return allowBlob ? src : ""
+  }
+
+  if (src.startsWith("/")) {
     return src
   }
 
@@ -31,14 +35,16 @@ export function AdminImagePreview({
   path,
   alt = "Preview gambar",
   previewUrl,
+  previewTrusted = false,
 }: {
   bucket: StorageBucket
   path?: string | null
   alt?: string
   previewUrl?: string
+  previewTrusted?: boolean
 }) {
   const src = previewUrl || (path ? getPublicImageUrl(bucket, path) : "")
-  const safeSrc = getSafeImageSrc(src)
+  const safeSrc = getSafeImageSrc(src, previewTrusted)
 
   if (!safeSrc) {
     return (
