@@ -7,6 +7,7 @@ import { Reveal } from "@/components/reveal"
 import { cn } from "@/lib/utils"
 import { fallbackGallery } from "@/lib/data/fallback"
 import type { GallerySection } from "@/lib/data/types"
+import { getSafeImageSrc } from "@/lib/security/safe-image-src"
 
 interface GalleryProps {
   data?: GallerySection
@@ -16,6 +17,14 @@ export function Gallery({ data = fallbackGallery }: GalleryProps) {
   const items = data.items
   const [loaded, setLoaded] = useState<boolean[]>(Array(items.length).fill(false))
   const [active, setActive] = useState<number | null>(null)
+
+  function getGalleryImageSrc(index: number) {
+    return (
+      getSafeImageSrc(items[index]?.imageUrl) ||
+      fallbackGallery.items[index]?.imageUrl ||
+      "/gallery-1.jpg"
+    )
+  }
 
   useEffect(() => {
     if (active === null) return
@@ -61,7 +70,7 @@ export function Gallery({ data = fallbackGallery }: GalleryProps) {
                   <div aria-hidden className="absolute inset-0 shimmer" />
                 )}
                 <Image
-                  src={item.imageUrl}
+                  src={getGalleryImageSrc(i)}
                   alt={item.imageAlt}
                   fill
                   loading="lazy"
@@ -144,7 +153,7 @@ export function Gallery({ data = fallbackGallery }: GalleryProps) {
             onClick={(e) => e.stopPropagation()}
           >
             <Image
-              src={items[active].imageUrl}
+              src={getGalleryImageSrc(active)}
               alt={items[active].imageAlt}
               fill
               sizes="80vw"

@@ -1,9 +1,7 @@
 "use client"
 
-/* eslint-disable @next/next/no-img-element -- Blob and signed URLs are not compatible with Next image optimization. */
-
 import Image from "next/image"
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react"
+import { useEffect, useMemo, useState, type FormEvent } from "react"
 import {
   Check,
   Clipboard,
@@ -24,6 +22,17 @@ import { feedbackProductCategories } from "@/lib/feedback/constants"
 import { getFeedbackImageValidationError } from "@/lib/feedback/storage"
 import { getPublicImageUrl } from "@/lib/admin-daz/storage-service"
 import { optimizeImageFile } from "@/lib/images/compress"
+import { getSafeImageSrc } from "@/lib/security/safe-image-src"
+
+interface TrustedPreview {
+  url: string
+  trusted: boolean
+}
+
+const emptyPreview: TrustedPreview = {
+  url: "",
+  trusted: false,
+}
 
 function feedbackUrl(id: string) {
   if (typeof window === "undefined") {
@@ -78,8 +87,8 @@ export function AdminFeedbackManager({
   )
   const [productDescription, setProductDescription] = useState("")
   const [productPhoto, setProductPhoto] = useState<File | null>(null)
-  const [productPhotoPreview, setProductPhotoPreview] = useState("")
-  const productPhotoPreviewRef = useRef("")
+  const [productPhotoPreview, setProductPhotoPreview] =
+    useState<TrustedPreview>(emptyPreview)
   const [createdRequestId, setCreatedRequestId] = useState("")
   const [copiedId, setCopiedId] = useState("")
   const [loading, setLoading] = useState(false)
@@ -89,11 +98,11 @@ export function AdminFeedbackManager({
 
   useEffect(() => {
     return () => {
-      if (productPhotoPreviewRef.current) {
-        URL.revokeObjectURL(productPhotoPreviewRef.current)
+      if (productPhotoPreview.trusted && productPhotoPreview.url) {
+        URL.revokeObjectURL(productPhotoPreview.url)
       }
     }
-  }, [])
+  }, [productPhotoPreview])
 
   const createdLink = useMemo(
     () => (createdRequestId ? feedbackUrl(createdRequestId) : ""),
@@ -105,22 +114,14 @@ export function AdminFeedbackManager({
 
     if (!file) {
       setProductPhoto(null)
-      if (productPhotoPreviewRef.current) {
-        URL.revokeObjectURL(productPhotoPreviewRef.current)
-      }
-      productPhotoPreviewRef.current = ""
-      setProductPhotoPreview("")
+      setProductPhotoPreview(emptyPreview)
       return
     }
 
     const validationError = getFeedbackImageValidationError(file)
     if (validationError) {
       setProductPhoto(null)
-      if (productPhotoPreviewRef.current) {
-        URL.revokeObjectURL(productPhotoPreviewRef.current)
-      }
-      productPhotoPreviewRef.current = ""
-      setProductPhotoPreview("")
+      setProductPhotoPreview(emptyPreview)
       setError(validationError)
       return
     }
@@ -132,22 +133,13 @@ export function AdminFeedbackManager({
     const optimizedValidationError = getFeedbackImageValidationError(optimizedFile)
     if (optimizedValidationError) {
       setProductPhoto(null)
-      if (productPhotoPreviewRef.current) {
-        URL.revokeObjectURL(productPhotoPreviewRef.current)
-      }
-      productPhotoPreviewRef.current = ""
-      setProductPhotoPreview("")
+      setProductPhotoPreview(emptyPreview)
       setError(optimizedValidationError)
       return
     }
 
-    if (productPhotoPreviewRef.current) {
-      URL.revokeObjectURL(productPhotoPreviewRef.current)
-    }
-
     const objectUrl = URL.createObjectURL(optimizedFile)
-    productPhotoPreviewRef.current = objectUrl
-    setProductPhotoPreview(objectUrl)
+    setProductPhotoPreview({ url: objectUrl, trusted: true })
     setProductPhoto(optimizedFile)
   }
 
@@ -157,11 +149,7 @@ export function AdminFeedbackManager({
     setProductCategory(feedbackProductCategories[0].value)
     setProductDescription("")
     setProductPhoto(null)
-    if (productPhotoPreviewRef.current) {
-      URL.revokeObjectURL(productPhotoPreviewRef.current)
-    }
-    productPhotoPreviewRef.current = ""
-    setProductPhotoPreview("")
+    setProductPhotoPreview(emptyPreview)
   }
 
   async function refreshRequests() {
@@ -247,6 +235,10 @@ export function AdminFeedbackManager({
       setLoading(false)
     }
   }
+
+  const safeProductPhotoPreview = getSafeImageSrc(productPhotoPreview.url, {
+    allowBlob: productPhotoPreview.trusted,
+  })
 
   return (
     <div className="space-y-6">
@@ -367,9 +359,9 @@ export function AdminFeedbackManager({
           >
             <div className="space-y-3 rounded-xl border bg-stone-50 p-3">
               <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-xl border border-dashed bg-white text-sm text-stone-400">
-                {productPhotoPreview ? (
+                {safeProductPhotoPreview ? (
                   <img
-                    src={productPhotoPreview}
+                    src={safeProductPhotoPreview}
                     alt="Preview foto produk"
                     className="h-full w-full object-cover"
                   />
@@ -431,9 +423,8 @@ export function AdminFeedbackManager({
       ) : (
         <div className="grid gap-3 lg:grid-cols-2">
           {requests.map((item) => {
-            const productImage = getPublicImageUrl(
-              "catalogs",
-              item.productPhotoUrl,
+            const productImage = getSafeImageSrc(
+              getPublicImageUrl("catalogs", item.productPhotoUrl),
             )
 
             return (
@@ -532,10 +523,7 @@ export function AdminFeedbackManager({
                     {item.submission.customerPhotoUrls.length > 0 && (
                       <div className="grid grid-cols-3 gap-2">
                         {item.submission.customerPhotoUrls.map((path) => {
-                          const image = getPublicImageUrl(
-                            "feedback_customer_photos",
-                            path,
-                          )
+                          const image = getSafeImageSrc(path)
 
                           return image ? (
                             <div

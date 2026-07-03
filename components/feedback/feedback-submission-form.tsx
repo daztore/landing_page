@@ -1,7 +1,5 @@
 "use client"
 
-/* eslint-disable @next/next/no-img-element -- Blob preview URLs are not compatible with Next image optimization. */
-
 import { useEffect, useRef, useState, type FormEvent } from "react"
 import { CheckCircle2, ImagePlus, Loader2, Send, Star, X } from "lucide-react"
 
@@ -13,10 +11,16 @@ import {
 } from "@/lib/feedback/constants"
 import { getFeedbackImageValidationError } from "@/lib/feedback/storage"
 import { optimizeImageFile } from "@/lib/images/compress"
+import { getSafeImageSrc } from "@/lib/security/safe-image-src"
+
+interface TrustedPreview {
+  url: string
+  trusted: boolean
+}
 
 interface PhotoItem {
   file: File
-  previewUrl: string
+  preview: TrustedPreview
 }
 
 export function FeedbackSubmissionForm({
@@ -38,7 +42,11 @@ export function FeedbackSubmissionForm({
 
   useEffect(() => {
     return () => {
-      photosRef.current.forEach((photo) => URL.revokeObjectURL(photo.previewUrl))
+      photosRef.current.forEach((photo) => {
+        if (photo.preview.trusted && photo.preview.url) {
+          URL.revokeObjectURL(photo.preview.url)
+        }
+      })
     }
   }, [])
 
@@ -97,15 +105,18 @@ export function FeedbackSubmissionForm({
       ...photos,
       ...optimizedPhotos.map((photo) => ({
         file: photo,
-        previewUrl: URL.createObjectURL(photo),
+        preview: {
+          url: URL.createObjectURL(photo),
+          trusted: true,
+        },
       })),
     ])
   }
 
   function removePhoto(index: number) {
     const removedPhoto = photos[index]
-    if (removedPhoto) {
-      URL.revokeObjectURL(removedPhoto.previewUrl)
+    if (removedPhoto?.preview.trusted && removedPhoto.preview.url) {
+      URL.revokeObjectURL(removedPhoto.preview.url)
     }
 
     updatePhotos(photos.filter((_, currentIndex) => currentIndex !== index))
@@ -146,7 +157,11 @@ export function FeedbackSubmissionForm({
         throw new Error(payload.error ?? "Gagal mengirim feedback.")
       }
 
-      photos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl))
+      photos.forEach((photo) => {
+        if (photo.preview.trusted && photo.preview.url) {
+          URL.revokeObjectURL(photo.preview.url)
+        }
+      })
       updatePhotos([])
       setSubmitted(true)
     } catch (submitError) {
@@ -223,24 +238,11 @@ export function FeedbackSubmissionForm({
         {photos.length > 0 && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {photos.map((photo, index) => (
-              <div
-                key={photo.previewUrl}
-                className="relative aspect-square overflow-hidden rounded-xl border bg-stone-100"
-              >
-                <img
-                  src={photo.previewUrl}
-                  alt="Preview foto pelanggan"
-                  className="h-full w-full object-cover"
-                />
-                <button
-                  type="button"
-                  className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-white/90 text-stone-700 shadow-sm"
-                  onClick={() => removePhoto(index)}
-                  aria-label="Hapus foto"
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
+              <PhotoPreview
+                key={photo.preview.url}
+                photo={photo}
+                onRemove={() => removePhoto(index)}
+              />
             ))}
           </div>
         )}
@@ -313,5 +315,37 @@ export function FeedbackSubmissionForm({
         {loading ? "Mengirim feedback..." : "Kirim Feedback"}
       </Button>
     </form>
+  )
+}
+
+function PhotoPreview({
+  photo,
+  onRemove,
+}: {
+  photo: PhotoItem
+  onRemove: () => void
+}) {
+  const safePreviewUrl = getSafeImageSrc(photo.preview.url, {
+    allowBlob: photo.preview.trusted,
+  })
+
+  return (
+    <div className="relative aspect-square overflow-hidden rounded-xl border bg-stone-100">
+      {safePreviewUrl && (
+        <img
+          src={safePreviewUrl}
+          alt="Preview foto pelanggan"
+          className="h-full w-full object-cover"
+        />
+      )}
+      <button
+        type="button"
+        className="absolute right-2 top-2 flex size-8 items-center justify-center rounded-full bg-white/90 text-stone-700 shadow-sm"
+        onClick={onRemove}
+        aria-label="Hapus foto"
+      >
+        <X className="size-4" />
+      </button>
+    </div>
   )
 }

@@ -3,6 +3,7 @@ import { ArrowRight, Sparkles } from "lucide-react"
 import { FloatingFlower } from "./floating-flower"
 import { fallbackContact, fallbackHero } from "@/lib/data/fallback"
 import type { HeroSection } from "@/lib/data/types"
+import { getSafeImageSrc } from "@/lib/security/safe-image-src"
 import { buildWhatsAppUrl } from "@/lib/whatsapp"
 
 interface HeroProps {
@@ -14,6 +15,10 @@ export function Hero({
   data = fallbackHero,
   whatsappNumber = fallbackContact.whatsappNumber,
 }: HeroProps) {
+  const heroImage = getSafeImageSrc(data.imageUrl) || fallbackHero.imageUrl
+  const mobileBackground =
+    getSafeImageSrc(data.mobileBackgroundUrl) || fallbackHero.mobileBackgroundUrl
+
   return (
     <section
       id="top"
@@ -25,7 +30,7 @@ export function Hero({
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: `url('${data.mobileBackgroundUrl}')`,
+            backgroundImage: `url('${mobileBackground}')`,
             opacity: 0.25,
           }}
         />
@@ -136,7 +141,7 @@ export function Hero({
             className="relative aspect-[3/4] sm:aspect-[4/5] overflow-hidden rounded-2xl sm:rounded-[2rem] shadow-lg sm:shadow-2xl shadow-primary/10"
           >
             <Image
-              src={data.imageUrl}
+              src={heroImage}
               alt={data.imageAlt}
               fill
               priority

@@ -6,6 +6,7 @@ import { memo, useState } from "react"
 import { cn } from "@/lib/utils"
 import { type Product } from "@/lib/katalog-data"
 import { fallbackContact } from "@/lib/data/fallback"
+import { getSafeImageSrc } from "@/lib/security/safe-image-src"
 import { buildWhatsAppUrl } from "@/lib/whatsapp"
 
 interface ProductCardProps {
@@ -24,6 +25,7 @@ function ProductCardComponent({
   whatsappNumber = fallbackContact.whatsappNumber,
 }: ProductCardProps) {
   const [isFavorite, setIsFavorite] = useState(false)
+  const productImage = getSafeImageSrc(product.image) || "/gallery-1.jpg"
   const formattedPrice = currencyFormatter.format(product.startPrice)
 
   const endPriceText = product.endPrice
@@ -41,7 +43,7 @@ function ProductCardComponent({
       {/* Image Container */}
       <div className="relative aspect-[3/4] overflow-hidden bg-secondary">
         <Image
-          src={product.image}
+          src={productImage}
           alt={product.title}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"

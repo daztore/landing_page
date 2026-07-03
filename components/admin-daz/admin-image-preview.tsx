@@ -1,8 +1,7 @@
 "use client"
 
-/* eslint-disable @next/next/no-img-element -- Blob preview URLs are not compatible with Next image optimization. */
-
 import { getPublicImageUrl } from "@/lib/admin-daz/storage-service"
+import { getSafeImageSrc } from "@/lib/security/safe-image-src"
 import type { StorageBucket } from "@/lib/supabase/storage"
 
 export function AdminImagePreview({
@@ -10,15 +9,20 @@ export function AdminImagePreview({
   path,
   alt = "Preview gambar",
   previewUrl,
+  previewTrusted = false,
 }: {
   bucket: StorageBucket
   path?: string | null
   alt?: string
   previewUrl?: string
+  previewTrusted?: boolean
 }) {
   const src = previewUrl || (path ? getPublicImageUrl(bucket, path) : "")
+  const safeSrc = getSafeImageSrc(src, {
+    allowBlob: previewTrusted,
+  })
 
-  if (!src) {
+  if (!safeSrc) {
     return (
       <div className="flex aspect-video items-center justify-center rounded-xl border border-dashed bg-stone-50 text-sm text-stone-400">
         Belum ada gambar
@@ -28,7 +32,7 @@ export function AdminImagePreview({
 
   return (
     <div className="relative aspect-video overflow-hidden rounded-xl border bg-stone-100">
-      <img src={src} alt={alt} className="h-full w-full object-cover" />
+      <img src={safeSrc} alt={alt} className="h-full w-full object-cover" />
     </div>
   )
 }
