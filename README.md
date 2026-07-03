@@ -121,6 +121,19 @@ Panduan secrets, persiapan server, deploy manual, dan rollback:
 
 ## Dokumentasi
 
+Dokumentasi roadmap dan aturan kerja:
+
+- [Roadmap](./docs/ROADMAP.md)
+- [Development Rules](./docs/DEVELOPMENT_RULES.md)
+- [Agent Guide](./docs/AGENT_GUIDE.md)
+- [Module Architecture](./docs/MODULE_ARCHITECTURE.md)
+- [Security and Performance](./docs/SECURITY_AND_PERFORMANCE.md)
+- [Commerce Preparation](./docs/COMMERCE_PREPARATION.md)
+- [QA/UX Notes](./docs/QA_UX_NOTES.md)
+- [Changelog Notes](./docs/CHANGELOG_NOTES.md)
+
+Dokumentasi teknis dan operasional existing:
+
 - [Project Overview](./docs/PROJECT_OVERVIEW.md)
 - [Setup Local](./docs/SETUP_LOCAL.md)
 - [Environment Variables](./docs/ENVIRONMENT_VARIABLES.md)
