@@ -76,7 +76,7 @@ Hasil audit 2026-07-03:
 - `.gitignore` dan `.dockerignore` sudah mengecualikan `.env*`; `.env.example` tetap boleh di-commit.
 - Gap lanjutan: belum ada schema validasi env terpusat untuk fail-fast credential commerce/server-only.
 
-### [P0][IN_PROGRESS] Decide official package manager
+### [P0][BLOCKED] Decide official package manager
 
 Subtask:
 
@@ -85,6 +85,16 @@ Subtask:
 - Jangan hapus `pnpm-lock.yaml` sebelum ada approval eksplisit.
 - Tambahkan `packageManager` di `package.json` setelah keputusan final.
 - Samakan local, CI, Docker, dan dokumentasi.
+
+Hasil audit 2026-07-03:
+
+- Dockerfile, CI/CD, README, dan setup lokal memakai npm dan `npm ci`.
+- `package-lock.json` tersedia sebagai lockfile npm utama.
+- `pnpm-lock.yaml` masih ada, tetapi tidak dipakai oleh Dockerfile atau workflow aktif.
+- `package.json` belum memiliki field `packageManager`.
+- Rekomendasi teknis: tetapkan npm sebagai package manager resmi.
+- Status `BLOCKED` sampai owner mengonfirmasi npm sebagai package manager resmi, versi npm yang akan dipin, dan nasib `pnpm-lock.yaml`.
+- Detail: `docs/PACKAGE_MANAGER_DECISION.md`.
 
 ### [P0][DONE] Security check before commerce work
 
@@ -106,7 +116,7 @@ Hasil audit 2026-07-03:
 - CodeQL aktif untuk JavaScript/TypeScript dengan `security-extended`.
 - Gap sebelum commerce: rate limit feedback masih in-memory per proses dan perlu store terpusat bila deployment multi-instance, upload belum validasi magic byte/content scanning, CSP/HSTS belum ditentukan, dan `npm audit` masih melaporkan moderate advisory pada PostCSS internal Next.js tanpa patch upgrade yang kompatibel.
 
-### [P0][TODO] Performance baseline
+### [P0][DONE] Performance baseline
 
 Subtask:
 
@@ -117,7 +127,16 @@ Subtask:
 - Pastikan data admin tidak masuk bundle halaman publik.
 - Buat checklist regresi performa untuk fitur besar.
 
-### [P0][TODO] Agent/Codex workflow enforcement
+Hasil baseline 2026-07-03:
+
+- Lighthouse mobile: `/` performance 90, LCP 3.32s, CLS 0.000; `/katalog` performance 92, LCP 3.39s, CLS 0.000.
+- Lighthouse desktop: `/` dan `/katalog` performance 100.
+- Public script transfer: `/` mobile 189.8 KB; `/katalog` mobile 174.2 KB.
+- Admin login baseline: `/admin-daz/login` mobile performance 98, script transfer 223.5 KB.
+- Source/network audit tidak menemukan admin route/data dimuat oleh halaman publik yang dicek.
+- Detail dan checklist regresi: `docs/PERFORMANCE_BASELINE.md`.
+
+### [P0][DONE] Agent/Codex workflow enforcement
 
 Subtask:
 
@@ -126,6 +145,13 @@ Subtask:
 - Wajibkan perubahan dokumentasi jika env, API, database, atau flow bisnis berubah.
 - Catat issue unrelated, jangan langsung diperbaiki kecuali security-critical.
 - Gunakan format response akhir yang konsisten.
+
+Hasil enforcement 2026-07-03:
+
+- `AGENTS.md` menambahkan Roadmap Task Execution Checklist.
+- `docs/AGENT_GUIDE.md` menambahkan Roadmap Task Enforcement dan aturan khusus package manager.
+- `docs/DEVELOPMENT_RULES.md` menambahkan Workflow Enforcement.
+- `docs/prompts/ROADMAP_TASK_PROMPT_TEMPLATE.md` menambahkan section scope/asumsi dan acceptance criteria terkait.
 
 ## Phase 1 - Modular Foundation
 

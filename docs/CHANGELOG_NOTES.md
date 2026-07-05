@@ -37,6 +37,46 @@ Notes:
 
 ## Entries
 
+### 2026-07-03 - Performance baseline and workflow enforcement
+
+Type:
+
+- Documentation
+- Performance
+
+Impact:
+
+- Low
+
+Summary:
+
+- Mencatat baseline Lighthouse lokal untuk `/`, `/katalog`, dan `/admin-daz/login`.
+- Mencatat resource transfer, script transfer, image baseline, admin/public boundary check, dan checklist regresi performance.
+- Mencatat decision record package manager dengan rekomendasi npm dan status blocked sampai owner mengonfirmasi keputusan final.
+- Memperkuat workflow enforcement untuk agent/Codex pada `AGENTS.md`, `docs/AGENT_GUIDE.md`, `docs/DEVELOPMENT_RULES.md`, dan template prompt roadmap.
+- Memperbarui status roadmap untuk Performance baseline dan Agent/Codex workflow enforcement menjadi `DONE`, serta Decide official package manager menjadi `BLOCKED`.
+
+Files:
+
+- `AGENTS.md`
+- `README.md`
+- `docs/PERFORMANCE_BASELINE.md`
+- `docs/PACKAGE_MANAGER_DECISION.md`
+- `docs/AGENT_GUIDE.md`
+- `docs/DEVELOPMENT_RULES.md`
+- `docs/prompts/ROADMAP_TASK_PROMPT_TEMPLATE.md`
+- `docs/SECURITY_AND_PERFORMANCE.md`
+- `docs/MAINTENANCE_NOTES.md`
+- `docs/ROADMAP.md`
+- `docs/CHANGELOG_NOTES.md`
+
+Notes:
+
+- Tidak ada fitur commerce yang dibuat.
+- Tidak ada perubahan package manager, lockfile, Dockerfile, atau workflow CI.
+- Performance baseline adalah lab measurement lokal; field Core Web Vitals production belum tersedia.
+- Package manager tetap menunggu approval owner sebelum `packageManager` ditambahkan ke `package.json` atau lockfile dihapus.
+
 ### 2026-07-03 - Environment and security audit before commerce
 
 Type:

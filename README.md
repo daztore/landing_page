@@ -133,6 +133,7 @@ Dokumentasi roadmap dan aturan kerja:
 - [Agent Guide](./docs/AGENT_GUIDE.md)
 - [Module Architecture](./docs/MODULE_ARCHITECTURE.md)
 - [Security and Performance](./docs/SECURITY_AND_PERFORMANCE.md)
+- [Performance Baseline](./docs/PERFORMANCE_BASELINE.md)
 - [Commerce Preparation](./docs/COMMERCE_PREPARATION.md)
 - [QA/UX Notes](./docs/QA_UX_NOTES.md)
 - [Changelog Notes](./docs/CHANGELOG_NOTES.md)
@@ -141,6 +142,7 @@ Dokumentasi teknis dan operasional existing:
 
 - [Project Overview](./docs/PROJECT_OVERVIEW.md)
 - [Setup Local](./docs/SETUP_LOCAL.md)
+- [Package Manager Decision](./docs/PACKAGE_MANAGER_DECISION.md)
 - [Environment Variables](./docs/ENVIRONMENT_VARIABLES.md)
 - [Routes and Pages](./docs/ROUTES_AND_PAGES.md)
 - [Components](./docs/COMPONENTS.md)

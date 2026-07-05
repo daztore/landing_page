@@ -63,6 +63,27 @@ Sebelum edit:
 - Pastikan tidak ada perubahan user yang tertimpa.
 - Pastikan scope tidak melebihi prompt.
 
+## Roadmap Task Enforcement
+
+Untuk setiap task dari `docs/ROADMAP.md`, agent wajib:
+
+1. tulis item roadmap yang sedang dikerjakan di awal analisis atau update kerja;
+2. baca dokumen mandatory sebelum edit;
+3. baca file source/dokumentasi yang akan diubah;
+4. tentukan status akhir yang realistis: `DONE`, `IN_PROGRESS`, atau `BLOCKED`;
+5. tulis asumsi bila prompt ambigu;
+6. update dokumentasi bila env, API, database, security, performance, deployment, atau flow bisnis berubah;
+7. catat issue unrelated sebagai note, jangan langsung diperbaiki kecuali security-critical atau data-loss risk;
+8. jalankan validasi relevan atau jelaskan alasan validasi tidak dijalankan;
+9. gunakan format final response yang konsisten.
+
+Khusus package manager:
+
+- jangan menambahkan field `packageManager` tanpa approval owner;
+- jangan menghapus `package-lock.json` atau `pnpm-lock.yaml` tanpa approval eksplisit;
+- jangan mengganti command CI/Docker install tanpa keputusan resmi;
+- bila keputusan belum tersedia, ubah status roadmap menjadi `BLOCKED` dan catat rekomendasi teknis.
+
 ## Scope Control
 
 Jika prompt tidak jelas:

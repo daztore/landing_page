@@ -134,6 +134,28 @@ Sebelum payment/order/shipping/checkout dibuat:
 - Data fetching harus terkontrol dan cache-aware.
 - Fitur commerce besar harus punya baseline sebelum dan sesudah perubahan.
 
+## Phase 0 Performance Baseline 2026-07-03
+
+Baseline detail tersedia di `docs/PERFORMANCE_BASELINE.md`.
+
+Ringkasan lab measurement lokal:
+
+| Route | Mode | Performance | LCP | TBT | CLS | Transfer |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| `/` | Mobile | 90 | 3.32s | 39ms | 0.000 | 493.7 KB |
+| `/katalog` | Mobile | 92 | 3.39s | 43ms | 0.000 | 454.1 KB |
+| `/` | Desktop | 100 | 0.69s | 0ms | 0.000 | 535.4 KB |
+| `/katalog` | Desktop | 100 | 0.63s | 0ms | 0.000 | 498.8 KB |
+| `/admin-daz/login` | Mobile | 98 | 2.27s | 75ms | 0.000 | 345.1 KB |
+
+Guardrail sebelum fitur besar:
+
+- pertahankan CLS route publik di bawah `0.05`;
+- pertahankan mobile TBT route publik di bawah `100ms`;
+- investigasi jika public script transfer naik lebih dari sekitar 15%;
+- ukur ulang `/` dan `/katalog` setelah menambah Client Component, dependency, atau asset besar;
+- ukur `/admin-daz/login` bila perubahan menyentuh shell/auth admin.
+
 ## Performance Checklist
 
 ### Rendering and Bundle

@@ -59,16 +59,26 @@ Import `Packages` pada `app/page.tsx` tetap ada walaupun render dikomentari. Qua
 
 ## Package Manager
 
-Docker menggunakan npm, sedangkan repository juga menyimpan pnpm lockfile.
+Docker dan CI menggunakan npm, sedangkan repository juga menyimpan pnpm lockfile.
+Decision record tersedia di `docs/PACKAGE_MANAGER_DECISION.md`.
 
-Pilih satu package manager resmi dan:
+Status per 2026-07-03: `BLOCKED`, menunggu owner mengonfirmasi npm sebagai package manager resmi dan versi npm yang akan ditulis pada `packageManager`.
+
+Rekomendasi teknis saat ini:
+
+- gunakan npm sebagai package manager resmi;
+- pertahankan `package-lock.json` sebagai lockfile utama;
+- jangan menjalankan `pnpm install`;
+- jangan menghapus `pnpm-lock.yaml` sebelum approval eksplisit.
+
+Setelah owner memberi keputusan final:
 
 - dokumentasikan versinya;
 - gunakan satu lockfile;
 - samakan local, CI, dan Docker;
 - tambahkan `packageManager` pada `package.json` bila keputusan sudah dibuat.
 
-Hindari menghapus salah satu lockfile sebelum pemilik project mengonfirmasi package manager resmi.
+Hindari menghapus salah satu lockfile sebelum pemilik project mengonfirmasi cleanup lockfile.
 
 ## Dependency Surface
 
@@ -84,6 +94,19 @@ Dampak:
 Tree shaking dapat mengurangi bundle client, tetapi maintenance dependency tetap ada. Audit usage sebelum menghapus package.
 
 ## Performance
+
+Baseline performance Phase 0 tersedia di `docs/PERFORMANCE_BASELINE.md`.
+
+Ringkasan hasil audit 2026-07-03:
+
+- `/` mobile Lighthouse performance 90, LCP 3.32s, TBT 39ms, CLS 0.000;
+- `/katalog` mobile Lighthouse performance 92, LCP 3.39s, TBT 43ms, CLS 0.000;
+- `/` dan `/katalog` desktop Lighthouse performance 100;
+- public script transfer sekitar 189.8 KB untuk `/` dan 174.2 KB untuk `/katalog`;
+- `/admin-daz/login` mobile Lighthouse performance 98 dengan script transfer sekitar 223.5 KB.
+
+Gunakan baseline tersebut sebagai pembanding sebelum menambah fitur commerce, dependency besar,
+atau asset image baru.
 
 ### Image
 

@@ -62,6 +62,22 @@ If one of the files above does not exist, continue without creating unrelated as
   - Use `DEFERRED` only when intentionally postponed.
 - If only part of a task is completed, keep status as `IN_PROGRESS` and add clear remaining subtasks.
 
+## Roadmap Task Execution Checklist
+
+For every roadmap task, Codex must:
+
+1. identify the exact roadmap item and requested final scope;
+2. read the mandatory docs before editing;
+3. inspect relevant source files or docs before changing them;
+4. state safe assumptions when the task is ambiguous;
+5. keep unrelated findings as notes instead of fixing them, unless they are security-critical or data-loss risks;
+6. update docs when env, API, database, security, performance, deployment, or business flow changes;
+7. update `docs/ROADMAP.md` and `docs/CHANGELOG_NOTES.md` when the task changes roadmap status or important project behavior;
+8. run relevant validation, or explicitly say why it was not run;
+9. answer with the required Indonesian final response format.
+
+Package manager decisions are special: do not add `packageManager`, delete a lockfile, or switch install commands unless the owner explicitly approves the official package manager and version.
+
 ## Project Behavior
 
 Before making changes:

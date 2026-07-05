@@ -59,6 +59,20 @@ Contoh:
 
 ---
 
+# SCOPE AND ASSUMPTIONS
+
+Scope kerja:
+
+- `<file/module/area yang boleh disentuh>`
+- `<file/module/area yang tidak boleh disentuh bila perlu>`
+
+Asumsi:
+
+- `<asumsi aman yang dipakai bila prompt ambigu>`
+- Jika tidak ada asumsi tambahan, tulis `Tidak ada asumsi tambahan.`
+
+---
+
 # MANDATORY READING
 
 Sebelum melakukan perubahan, wajib baca:
@@ -121,6 +135,7 @@ Task dianggap selesai jika:
 - [ ] Dokumentasi diperbarui jika ada perubahan pada roadmap, env, API, DB, security, performance, deployment, atau flow bisnis.
 - [ ] Security dan performance tidak menurun.
 - [ ] Tidak ada secret asli di code atau dokumentasi.
+- [ ] Scope dan asumsi dicatat bila task ambigu.
 - [ ] Roadmap status diperbarui dengan benar jika relevan.
 - [ ] Changelog note ditambahkan jika relevan.
 
@@ -141,9 +156,10 @@ Ikuti prinsip berikut:
 3. Pertahankan pattern project yang sudah ada.
 4. Jangan memindahkan struktur besar tanpa kebutuhan jelas.
 5. Prioritaskan security, performance, dan backward compatibility.
-6. Jika menemukan issue di luar scope, catat di roadmap/changelog, jangan langsung diperbaiki.
-7. Jika task berhubungan dengan QA/UX, update `docs/QA_UX_NOTES.md` sesuai hasil pengerjaan.
-8. Jika task berhubungan dengan commerce, pastikan tidak melompat fase roadmap.
+6. Tulis scope dan asumsi sebelum edit bila prompt ambigu.
+7. Jika menemukan issue di luar scope, catat di roadmap/changelog, jangan langsung diperbaiki.
+8. Jika task berhubungan dengan QA/UX, update `docs/QA_UX_NOTES.md` sesuai hasil pengerjaan.
+9. Jika task berhubungan dengan commerce, pastikan tidak melompat fase roadmap.
 
 ---
 
@@ -179,6 +195,8 @@ Setelah selesai, jawab dalam Bahasa Indonesia dengan format:
 
 ## Notes
 - ...
+- Scope: ...
+- Assumptions: ...
 
 ## Risk
 - Low / Medium / High

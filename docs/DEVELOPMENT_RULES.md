@@ -39,6 +39,20 @@ Sebelum mengubah kode, baca:
 - Jika ada konflik antara prompt dan roadmap, ikuti prompt terbaru tetapi catat konflik dan risikonya.
 - Jika prompt ambigu, buat asumsi kecil yang aman dan tulis asumsi tersebut pada summary akhir.
 
+## Workflow Enforcement
+
+Untuk task roadmap, developer/agent wajib:
+
+- identifikasi item roadmap dan status awal sebelum mengubah file;
+- baca `AGENTS.md`, roadmap, rules, agent guide, dan dokumen terkait task;
+- nyatakan scope dan asumsi bila prompt ambigu;
+- buat perubahan kecil yang bisa direview;
+- update dokumentasi bila menyentuh env, API, database, security, performance, deployment, atau flow bisnis;
+- catat issue unrelated di dokumen terkait, jangan langsung diperbaiki kecuali security-critical atau berisiko data loss;
+- update `docs/ROADMAP.md` jika status task berubah;
+- update `docs/CHANGELOG_NOTES.md` untuk perubahan penting;
+- gunakan format final response yang konsisten dan jangan mengklaim validasi yang tidak dijalankan.
+
 ## Aturan Coding
 
 - Respect existing Next.js App Router structure.
