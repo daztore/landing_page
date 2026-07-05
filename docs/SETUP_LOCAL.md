@@ -5,13 +5,16 @@
 Gunakan environment berikut agar konsisten dengan Dockerfile:
 
 - Node.js 20 LTS;
-- npm yang kompatibel dengan lockfile versi 3;
+- npm `10.9.0` sebagai package manager resmi project;
 - Git;
 - Docker Desktop atau Docker Engine dengan Compose v2, hanya jika menjalankan mode container.
 
-Repository memiliki `package-lock.json` dan `pnpm-lock.yaml`. Dockerfile memakai npm dan `package-lock.json`, sehingga npm adalah package manager acuan untuk setup saat ini.
+Repository memiliki `package-lock.json` dan `pnpm-lock.yaml`. Package manager resmi project
+adalah npm, dan `package-lock.json` adalah lockfile utama. `pnpm-lock.yaml` masih ada sebagai
+legacy lockfile yang tidak dipakai jalur operasional aktif.
 
-> **Peringatan:** Jangan bergantian menjalankan npm dan pnpm tanpa keputusan tim. Dua lockfile dapat menghasilkan dependency tree yang berbeda.
+> **Peringatan:** Jangan menjalankan `pnpm install` untuk project ini dan jangan memperbarui
+> `pnpm-lock.yaml`. Penghapusan `pnpm-lock.yaml` menunggu approval cleanup terpisah.
 
 ## Instalasi
 

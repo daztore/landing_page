@@ -47,6 +47,89 @@ docs/
 
 Struktur existing boleh dipertahankan. Modularisasi dilakukan bertahap saat fitur baru dibuat, bukan melalui refactor massal.
 
+## Phase 1 Architecture Decision 2026-07-05
+
+Keputusan untuk roadmap `[P0] Define modular architecture`:
+
+- Project tetap memakai modular monolith di satu Next.js app.
+- Folder `features/` mulai dibuat saat roadmap item baru membutuhkan domain module nyata,
+  bukan sebagai folder kosong. Trigger pertama yang aman adalah implementasi product detail,
+  lead/inquiry, order, payment, shipping, atau customer yang memiliki data contract dan service
+  sendiri.
+- Kode existing di `app/`, `components/`, dan `lib/` tidak dipindahkan massal. Jika fitur baru
+  perlu memakai logic lama, buat adapter kecil atau public function yang jelas terlebih dahulu.
+- `app/` hanya menjadi route orchestration dan presentation boundary: page/layout/Route Handler
+  boleh memanggil service/query module, tetapi tidak boleh menyimpan business workflow besar,
+  query kompleks, atau integrasi provider langsung.
+- Data access lintas modul harus lewat service/query layer yang diexport secara eksplisit dari
+  module terkait. Hindari deep import ke file internal module lain.
+
+### When To Create `features/`
+
+Buat `features/<domain>/` hanya jika minimal satu kondisi berikut terpenuhi:
+
+- domain baru memiliki route/page/admin flow dari roadmap yang mulai diimplementasikan;
+- domain membutuhkan data model, validation, dan service/query yang dipakai lebih dari satu
+  route atau component;
+- domain akan dipakai lintas area, misalnya product detail dipakai public page dan admin;
+- integrasi eksternal atau workflow status perlu boundary yang mudah diaudit.
+
+Jangan membuat `features/` hanya untuk merapikan tree. Untuk pekerjaan dokumentasi atau desain,
+cukup update dokumen sampai ada implementasi yang benar-benar membutuhkan folder tersebut.
+
+Struktur awal module yang disarankan saat module dibuat:
+
+```text
+features/<domain>/
+  components/        UI spesifik domain bila tidak reusable global
+  queries/           read-only data access dan list/detail query
+  services/          mutation, workflow, provider orchestration
+  validation/        schema input dan domain validation
+  types.ts           kontrak data domain
+  index.ts           public exports yang boleh dipakai module lain
+```
+
+Folder bersifat opsional. Buat hanya bagian yang benar-benar dipakai.
+
+### Module Boundary Matrix
+
+| Module | Tanggung jawab | Boleh depend ke | Tidak boleh depend ke |
+| --- | --- | --- | --- |
+| `features/catalog` | kategori, produk, product detail, pricing display | `shared`, `server` bila server-only | `orders`, `payments`, `shipping` |
+| `features/feedback` | feedback request, submission, upload foto, admin review | `shared`, `server` bila server-only | `leads`, `orders`, `payments`, `shipping` |
+| `features/leads` | inquiry, konsultasi awal, follow-up admin | `catalog` lewat query/service, `customers` bila sudah ada | `payments`, `shipping`, auto-create order publik |
+| `features/customers` | identitas customer minimal, address, consent/privacy | `shared`, `server` bila server-only | `payments`, `shipping`; jangan expose data pribadi ke publik tanpa auth/token aman |
+| `features/orders` | order manual, item snapshot, status workflow, history | `catalog`, `customers`, `leads` lewat service/query resmi | provider payment/shipping langsung, update status dari banyak tempat |
+| `features/payments` | invoice, transaction, webhook event, provider abstraction | `orders` lewat order service | UI catalog, direct order table update tanpa order service |
+| `features/shipping` | shipment, rate/tracking, tracking event, provider abstraction | `orders` lewat order service | payment state mutation |
+
+### Import Rules
+
+- `shared/*` boleh dipakai oleh semua module, tetapi `shared` tidak boleh import `features/*`.
+- `server/*` hanya untuk server-side code dan tidak boleh diimport Client Component.
+- `app/*` boleh import public API dari module, misalnya `features/catalog`, bukan file internal
+  seperti `features/catalog/queries/private-query`.
+- Module yang membutuhkan data module lain harus memakai function service/query yang diexport
+  resmi, bukan query database langsung ke tabel milik module lain.
+- Payment dan shipping tidak boleh mengubah order status langsung; gunakan order service.
+- Client Component tidak boleh import service-role, server-only Supabase client, atau secret
+  runtime.
+
+### Service And Query Layer
+
+Gunakan pembagian berikut saat module dibuat:
+
+- `queries`: read-only, cache-aware bila cocok, memilih kolom yang dibutuhkan saja, dan aman
+  dipakai oleh Server Component atau Route Handler.
+- `services`: mutation, workflow status, transaksi bisnis, integrasi provider, dan operasi yang
+  membutuhkan validasi server-side.
+- `validation`: schema request/body/form dan domain validation yang bisa diuji tanpa UI.
+- `types.ts`: tipe input/output public module dan snapshot data penting.
+- `index.ts`: daftar export resmi module agar dependency antar module tetap terlihat.
+
+Route Handler publik tetap wajib memvalidasi method, path param, body, rate limit, dan error
+publik yang aman sebelum memanggil service.
+
 ## Recommended Future Structure
 
 Struktur target jangka panjang:

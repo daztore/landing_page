@@ -31,8 +31,9 @@ Untuk task Supabase, Docker, CI/CD, atau deployment, baca juga dokumen existing 
 - Supabase dipakai untuk konten publik, admin, feedback, Storage, Auth, dan RLS.
 - Fitur commerce penuh belum dibuat.
 - Order, payment, shipping, cart, checkout, customer account, dan tracking publik masih roadmap.
-- npm adalah baseline operasional saat ini karena CI dan Docker memakai `npm ci`.
-- Jangan menghapus `pnpm-lock.yaml` tanpa approval eksplisit owner project.
+- npm adalah package manager resmi project dengan `packageManager: "npm@10.9.0"`.
+- CI dan Docker tetap memakai `npm ci`.
+- `pnpm-lock.yaml` adalah legacy lockfile yang tidak boleh dihapus tanpa approval eksplisit owner project.
 
 ## Agent Working Rules
 

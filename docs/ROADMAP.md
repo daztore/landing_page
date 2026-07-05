@@ -7,7 +7,7 @@ Roadmap ini tidak memberi izin untuk langsung membangun payment, order, shipping
 ## Current Baseline
 
 - Framework: Next.js App Router.
-- Package manager operasional saat ini: npm, karena `package-lock.json`, Dockerfile, dan CI memakai `npm ci`.
+- Package manager resmi: npm `10.9.0` melalui `packageManager` di `package.json`; `package-lock.json` adalah lockfile utama, sedangkan `pnpm-lock.yaml` masih legacy dan tidak dipakai jalur operasional aktif.
 - Database/CMS: Supabase untuk konten publik, admin CMS, feedback, Storage, Auth, dan RLS.
 - Route publik aktif: `/`, `/katalog`, `/feedback/[id]`.
 - Route admin aktif: `/admin-daz/**`.
@@ -76,7 +76,7 @@ Hasil audit 2026-07-03:
 - `.gitignore` dan `.dockerignore` sudah mengecualikan `.env*`; `.env.example` tetap boleh di-commit.
 - Gap lanjutan: belum ada schema validasi env terpusat untuk fail-fast credential commerce/server-only.
 
-### [P0][BLOCKED] Decide official package manager
+### [P0][DONE] Decide official package manager
 
 Subtask:
 
@@ -93,8 +93,15 @@ Hasil audit 2026-07-03:
 - `pnpm-lock.yaml` masih ada, tetapi tidak dipakai oleh Dockerfile atau workflow aktif.
 - `package.json` belum memiliki field `packageManager`.
 - Rekomendasi teknis: tetapkan npm sebagai package manager resmi.
-- Status `BLOCKED` sampai owner mengonfirmasi npm sebagai package manager resmi, versi npm yang akan dipin, dan nasib `pnpm-lock.yaml`.
 - Detail: `docs/PACKAGE_MANAGER_DECISION.md`.
+
+Hasil keputusan 2026-07-05:
+
+- Owner menyetujui rekomendasi teknis untuk menetapkan npm sebagai package manager resmi.
+- `package.json` menambahkan `packageManager: "npm@10.9.0"`.
+- `package-lock.json` tetap menjadi lockfile utama.
+- Local docs, CI, dan Docker tetap memakai `npm ci`.
+- `pnpm-lock.yaml` tidak dihapus karena belum ada approval eksplisit untuk cleanup lockfile; file tersebut diperlakukan sebagai legacy lockfile yang tidak boleh diperbarui.
 
 ### [P0][DONE] Security check before commerce work
 
@@ -157,7 +164,7 @@ Hasil enforcement 2026-07-03:
 
 Tujuan: menyiapkan struktur modular tanpa merusak fitur lama. Concern utama yang harus dipisah: marketing, catalog, admin, feedback, leads, orders, payments, shipping, dan customers.
 
-### [P0][TODO] Define modular architecture
+### [P0][DONE] Define modular architecture
 
 Subtask:
 
@@ -166,6 +173,20 @@ Subtask:
 - Tentukan aturan import antar modul.
 - Tentukan service/query layer untuk akses data lintas modul.
 - Pastikan `app/` hanya menjadi orchestration dan presentation layer.
+
+Hasil keputusan 2026-07-05:
+
+- Project tetap memakai modular monolith dalam satu Next.js App Router app.
+- Folder `features/` mulai dibuat hanya saat ada domain module nyata dari roadmap yang
+  diimplementasikan, bukan sebagai folder kosong atau refactor massal.
+- Boundary catalog, feedback, leads, customers, orders, payments, dan shipping terdokumentasi
+  di `docs/MODULE_ARCHITECTURE.md`.
+- Import antar modul wajib melalui public service/query API; deep import file internal module
+  lain dihindari.
+- `app/` ditetapkan sebagai route orchestration dan presentation layer, bukan tempat business
+  workflow besar, query kompleks, atau integrasi provider langsung.
+- Tidak ada folder baru, schema database, route commerce, payment, shipping, checkout, atau
+  customer account yang dibuat pada task ini.
 
 ### [P1][TODO] Prepare product detail structure
 

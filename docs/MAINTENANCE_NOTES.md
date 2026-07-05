@@ -5,7 +5,7 @@
 | Prioritas | Area | Risiko |
 | --- | --- | --- |
 | Sedang | Lint baseline | ESLint berjalan, tetapi masih melaporkan warning existing non-blocking. |
-| Sedang | Dependency management | `package-lock.json` dan `pnpm-lock.yaml` dipelihara bersamaan. |
+| Rendah | Dependency management | npm sudah resmi, tetapi `pnpm-lock.yaml` masih ada sebagai legacy lockfile sampai cleanup disetujui. |
 | Sedang | Dependency advisory | Audit masih melaporkan PostCSS internal Next.js; npm belum menawarkan patch kompatibel selain downgrade yang tidak layak. |
 | Sedang | Navigasi | Anchor `#packages` dan `#testimonials` tidak memiliki target aktif. |
 | Sedang | Konfigurasi kontak | Kontak memiliki fallback lokal yang harus dijaga tetap sinkron dengan Supabase. |
@@ -59,26 +59,23 @@ Import `Packages` pada `app/page.tsx` tetap ada walaupun render dikomentari. Qua
 
 ## Package Manager
 
-Docker dan CI menggunakan npm, sedangkan repository juga menyimpan pnpm lockfile.
-Decision record tersedia di `docs/PACKAGE_MANAGER_DECISION.md`.
+npm sudah menjadi package manager resmi project per 2026-07-05. Decision record tersedia di
+`docs/PACKAGE_MANAGER_DECISION.md`.
 
-Status per 2026-07-03: `BLOCKED`, menunggu owner mengonfirmasi npm sebagai package manager resmi dan versi npm yang akan ditulis pada `packageManager`.
+Status:
 
-Rekomendasi teknis saat ini:
+- `package.json` memiliki `packageManager: "npm@10.9.0"`;
+- `package-lock.json` adalah lockfile utama;
+- CI dan Docker tetap memakai `npm ci`;
+- `pnpm-lock.yaml` masih ada sebagai legacy lockfile dan tidak dipakai jalur operasional aktif.
 
-- gunakan npm sebagai package manager resmi;
-- pertahankan `package-lock.json` sebagai lockfile utama;
+Aturan maintenance:
+
+- gunakan `npm ci` untuk install bersih;
+- gunakan `npm install` hanya saat memperbarui dependency pada branch development;
 - jangan menjalankan `pnpm install`;
-- jangan menghapus `pnpm-lock.yaml` sebelum approval eksplisit.
-
-Setelah owner memberi keputusan final:
-
-- dokumentasikan versinya;
-- gunakan satu lockfile;
-- samakan local, CI, dan Docker;
-- tambahkan `packageManager` pada `package.json` bila keputusan sudah dibuat.
-
-Hindari menghapus salah satu lockfile sebelum pemilik project mengonfirmasi cleanup lockfile.
+- jangan memperbarui `pnpm-lock.yaml`;
+- jangan menghapus `pnpm-lock.yaml` sebelum owner menyetujui cleanup lockfile terpisah.
 
 ## Dependency Surface
 
@@ -291,7 +288,6 @@ Jangan menghapus file tersebut tanpa konfirmasi owner dan pengecekan history/dep
 ## Needs Confirmation
 
 - Kebenaran seluruh klaim pemasaran dan testimonial.
-- Package manager resmi.
 - Status file legacy.
 - Apakah dark mode, toast system, dan full shadcn/ui library masuk roadmap.
 - Apakah aplikasi memiliki SLA, monitoring, CDN, WAF, atau backup config di luar repository.

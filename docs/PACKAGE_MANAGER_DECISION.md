@@ -4,10 +4,14 @@ Dokumen ini mencatat status keputusan package manager resmi project.
 
 ## Status
 
-Status per 2026-07-03: `BLOCKED`, menunggu konfirmasi eksplisit owner project.
+Status per 2026-07-05: `DONE`.
 
-Rekomendasi teknis saat ini: jadikan npm sebagai package manager resmi, karena semua jalur
-operasional aktif sudah memakai npm.
+Keputusan resmi: gunakan npm sebagai package manager project dengan pin
+`packageManager: "npm@10.9.0"` di `package.json`.
+
+`package-lock.json` adalah lockfile utama. `pnpm-lock.yaml` masih dipertahankan sebagai
+legacy lockfile yang tidak dipakai oleh jalur operasional aktif dan tidak boleh diperbarui.
+Penghapusan `pnpm-lock.yaml` membutuhkan approval cleanup terpisah.
 
 ## Audit 2026-07-03
 
@@ -22,42 +26,41 @@ Temuan:
 - README dan dokumen setup lokal sudah mengarahkan developer memakai `npm ci`.
 - Environment lokal audit memiliki Node.js `v22.13.1`, npm `10.9.2`, dan tidak memiliki `pnpm` di PATH.
 
-## Decision Needed
+## Decision 2026-07-05
 
-Owner project perlu mengonfirmasi:
+Owner menyetujui rekomendasi teknis untuk memakai package manager resmi yang sudah menjadi
+jalur operasional aktif project. Karena Dockerfile, CI, README, dan setup lokal sudah memakai
+npm, keputusan final adalah npm.
 
-- npm disetujui sebagai package manager resmi;
-- versi npm yang akan ditulis pada `packageManager`, misalnya `npm@10.9.2` atau versi npm 10.x yang disepakati tim;
-- apakah `pnpm-lock.yaml` boleh dihapus pada cleanup terpisah setelah npm resmi.
+Versi yang dipin adalah `npm@10.9.0`, mengikuti versi `npm.cmd --version` pada environment
+lokal saat keputusan dibuat. Audit 2026-07-03 sempat mencatat npm `10.9.2`; bila tim nanti
+menetapkan versi npm lain, update `packageManager` dan dokumen ini dalam task tooling
+terpisah.
 
-## Jika npm Disetujui
+## Implementation
 
-Langkah aman setelah approval:
+- `package.json` memiliki field `packageManager: "npm@10.9.0"`.
+- `package-lock.json` dipertahankan sebagai lockfile utama.
+- Dockerfile tetap memakai `COPY package.json package-lock.json ./` dan `npm ci`.
+- Workflow `.github/workflows/ci-cd.yml` tetap memakai `actions/setup-node` dengan cache npm,
+  lalu `npm ci`, `npm run lint`, `npm run typecheck`, dan `npm run build`.
+- README, setup lokal, troubleshooting, dan maintenance notes diarahkan ke npm.
+- `pnpm-lock.yaml` tidak dihapus karena belum ada approval eksplisit untuk cleanup lockfile.
 
-1. Tambahkan field `packageManager` di `package.json`.
-2. Pertahankan `package-lock.json` sebagai lockfile utama.
-3. Pastikan local, CI, Docker, dan dokumentasi tetap memakai `npm ci`.
-4. Jangan menjalankan `pnpm install`.
-5. Hapus `pnpm-lock.yaml` hanya jika owner menyetujui cleanup lockfile.
+## Operational Rules
 
-## Yang Tidak Dilakukan Pada Task Ini
+- Gunakan `npm ci` setelah clone atau saat memastikan install bersih.
+- Gunakan `npm install` hanya di development branch ketika memang mengubah dependency dan perlu
+  memperbarui `package-lock.json`.
+- Jangan menjalankan `pnpm install` untuk project ini.
+- Jangan memperbarui `pnpm-lock.yaml`.
+- Jangan menghapus `pnpm-lock.yaml` tanpa approval eksplisit owner untuk cleanup lockfile.
+- Jangan mengganti command CI, Docker, atau deployment ke package manager lain tanpa decision
+  record baru.
 
-- Tidak menambahkan field `packageManager` karena keputusan final belum dikonfirmasi.
-- Tidak menghapus `pnpm-lock.yaml`.
-- Tidak mengubah Dockerfile, workflow CI, atau lockfile.
-- Tidak mengganti package manager.
+## Remaining Follow-Up
 
-## Risiko Jika Dibiarkan Terbuka
-
-- Dependency tree npm dan pnpm dapat berbeda.
-- Developer baru dapat menjalankan package manager yang berbeda dari CI.
-- Review dependency update menjadi lebih sulit karena dua lockfile harus diperhatikan.
-
-## Rekomendasi Sementara
-
-Sampai owner memberi keputusan final:
-
-- gunakan npm untuk semua command local dan CI;
-- gunakan `npm ci` setelah clone atau saat lockfile berubah;
-- jangan memperbarui `pnpm-lock.yaml`;
-- jangan menghapus `pnpm-lock.yaml` tanpa approval eksplisit.
+- Cleanup opsional: hapus `pnpm-lock.yaml` pada task terpisah jika owner memberi approval
+  eksplisit.
+- Jika standardisasi Node/npm tim berubah, update `packageManager`, local docs, dan CI/Docker
+  secara bersamaan.

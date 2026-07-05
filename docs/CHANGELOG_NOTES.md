@@ -37,6 +37,47 @@ Notes:
 
 ## Entries
 
+### 2026-07-05 - Package manager decision and modular architecture definition
+
+Type:
+
+- Documentation
+- Infrastructure
+
+Impact:
+
+- Low
+
+Summary:
+
+- Menetapkan npm sebagai package manager resmi project dengan `packageManager: "npm@10.9.0"`.
+- Mempertahankan `package-lock.json` sebagai lockfile utama dan menandai `pnpm-lock.yaml`
+  sebagai legacy lockfile yang tidak dipakai jalur operasional aktif.
+- Melengkapi keputusan modular architecture Phase 1, termasuk trigger pembuatan `features/`,
+  module boundary, import rules, service/query layer, dan batas tanggung jawab `app/`.
+- Memperbarui status roadmap untuk `Decide official package manager` dan `Define modular
+  architecture` menjadi `DONE`.
+
+Files:
+
+- `package.json`
+- `README.md`
+- `docs/ROADMAP.md`
+- `docs/MODULE_ARCHITECTURE.md`
+- `docs/PACKAGE_MANAGER_DECISION.md`
+- `docs/SETUP_LOCAL.md`
+- `docs/TROUBLESHOOTING.md`
+- `docs/AGENT_GUIDE.md`
+- `docs/MAINTENANCE_NOTES.md`
+- `docs/CHANGELOG_NOTES.md`
+
+Notes:
+
+- Tidak ada dependency baru, lockfile dependency update, Dockerfile change, workflow CI change,
+  database migration, atau fitur commerce yang dibuat.
+- `pnpm-lock.yaml` tidak dihapus karena belum ada approval eksplisit untuk cleanup lockfile.
+- Versi npm dipin ke versi lokal yang tersedia saat keputusan dibuat, yaitu `npm@10.9.0`.
+
 ### 2026-07-03 - Performance baseline and workflow enforcement
 
 Type:

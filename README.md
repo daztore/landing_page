@@ -10,6 +10,7 @@ Landing page dan katalog premium untuk layanan mahar, seserahan, bouquet, hamper
 - Tailwind CSS `4.x`
 - Supabase JavaScript `2.108.0`
 - Node.js 20 pada Docker
+- npm `10.9.0` sebagai package manager resmi
 - Nginx reverse proxy
 
 ## Quick Start
