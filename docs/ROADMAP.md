@@ -188,7 +188,7 @@ Hasil keputusan 2026-07-05:
 - Tidak ada folder baru, schema database, route commerce, payment, shipping, checkout, atau
   customer account yang dibuat pada task ini.
 
-### [P1][TODO] Prepare product detail structure
+### [P1][DONE] Prepare product detail structure
 
 Subtask:
 
@@ -198,7 +198,19 @@ Subtask:
 - Pastikan katalog lama `/katalog` tetap berjalan.
 - Rancang metadata SEO dan image policy.
 
-### [P1][TODO] Prepare lead/inquiry module
+Hasil keputusan 2026-07-05:
+
+- Route public yang disiapkan adalah `/produk/[slug]`.
+- Product detail membaca produk aktif berdasarkan `products.slug`, mengecualikan produk
+  `source = 'feedback_request'`, dan memakai `notFound()` untuk slug invalid/tidak aktif.
+- Kontrak `ProductDetail` mencakup slug, title, category, description, harga estimasi, image,
+  badge, processing time, customizable, availability, dan inquiry default message.
+- `/katalog` tetap memakai data list existing dan tidak bergantung pada detail page.
+- Metadata SEO memakai canonical `/produk/[slug]`, OG image produk yang aman, dan sitemap hanya
+  untuk produk aktif setelah route benar-benar dibuat.
+- Tidak ada route `/produk/[slug]` yang dibuat pada task preparation ini.
+
+### [P1][DONE] Prepare lead/inquiry module
 
 Subtask:
 
@@ -209,7 +221,21 @@ Subtask:
 - Rancang anti-spam/rate limit untuk form publik.
 - Rancang notifikasi awal tanpa menyimpan secret di client.
 
-### [P1][TODO] Prepare admin module boundary
+Hasil keputusan 2026-07-05:
+
+- Tabel `leads` dan `lead_messages` dirancang di `docs/MODULE_ARCHITECTURE.md` dan
+  `docs/COMMERCE_PREPARATION.md`; migration belum dibuat.
+- Status lead resmi: `new`, `contacted`, `quoted`, `converted`, `cancelled`.
+- Form inquiry public dirancang untuk submit ke Route Handler server-side `/api/leads`, bukan
+  direct public insert Supabase.
+- Anti-spam minimal mencakup validasi body, consent, rate limit, honeypot/time-to-submit bila
+  dibutuhkan, dan error publik generik.
+- Notification awal harus server-side atau melalui admin dashboard/list; secret provider tidak
+  boleh disimpan di client atau `NEXT_PUBLIC_*`.
+- Tidak ada endpoint lead, form aktif, migration, atau notifikasi provider yang dibuat pada task
+  preparation ini.
+
+### [P1][DONE] Prepare admin module boundary
 
 Subtask:
 
@@ -218,6 +244,20 @@ Subtask:
 - Pastikan CRUD admin tetap lewat RLS dan auth server-side.
 - Hindari import data admin ke halaman publik.
 - Tambahkan audit trail untuk operasi sensitif pada fase berikutnya.
+
+Hasil keputusan 2026-07-05:
+
+- Route admin tetap berada di `/admin-daz/**` dan protected layout tetap memakai `requireAdmin()`.
+- Resource admin dipisahkan per domain: landing/content, catalog, feedback, leads, orders,
+  payments, shipping, dan customers.
+- Generic `AdminResourceManager` tetap untuk resource konten/katalog sederhana; workflow domain
+  seperti feedback, leads, orders, payments, shipping, dan customers memakai dedicated
+  service/component.
+- CRUD admin tetap melalui Supabase Auth cookie session dan RLS admin; service-role tidak boleh
+  dipakai di Client Component admin.
+- Public page tidak boleh import `lib/admin-daz/*`, komponen admin, atau data admin.
+- Audit trail future `audit_logs` dicatat sebagai requirement sebelum operasi sensitif
+  order/payment/shipping production.
 
 ## Phase 2 - Lead & Inquiry Management
 

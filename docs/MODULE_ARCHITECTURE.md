@@ -130,6 +130,212 @@ Gunakan pembagian berikut saat module dibuat:
 Route Handler publik tetap wajib memvalidasi method, path param, body, rate limit, dan error
 publik yang aman sebelum memanggil service.
 
+## Phase 1 P1 Preparation 2026-07-05
+
+Keputusan berikut menyelesaikan preparation untuk product detail, lead/inquiry, dan admin module
+boundary. Tidak ada folder, route, migration, atau fitur runtime yang dibuat pada tahap ini.
+
+### Product Detail Structure
+
+Route public yang disiapkan:
+
+```text
+app/
+  produk/
+    [slug]/
+      page.tsx
+```
+
+Keputusan:
+
+- Route final adalah `/produk/[slug]`.
+- Jangan membuat route group baru hanya untuk product detail. Route group `(marketing)` baru
+  dievaluasi jika layout marketing benar-benar perlu dipisahkan.
+- Data detail dibaca melalui `features/catalog/queries` saat module catalog mulai dibuat.
+- Query detail harus membaca produk aktif saja, mengecualikan `source = 'feedback_request'`, dan
+  memastikan kategori produk masih aktif.
+- Jika slug tidak valid, produk tidak aktif, kategori tidak aktif, atau data tidak ditemukan,
+  page harus memanggil `notFound()`.
+- `/katalog` tetap berjalan dengan `getCatalogData()` dan contract `CatalogData` yang sudah ada.
+  Product card boleh menambah link ke `/produk/[slug]` nanti, tetapi CTA WhatsApp existing tetap
+  dipertahankan sebagai fallback konsultasi.
+
+Kontrak data public yang disiapkan untuk product detail:
+
+```ts
+interface ProductDetail {
+  slug: string
+  title: string
+  category: {
+    slug: string
+    name: string
+  }
+  description: string
+  price: {
+    start: number
+    end?: number
+    label: string
+    isEstimate: true
+  }
+  image: {
+    src: string
+    alt: string
+  }
+  badge?: "bestseller" | "limited" | "loved"
+  processingTime: string
+  customizable: boolean
+  available: boolean
+  inquiry: {
+    defaultMessage: string
+  }
+}
+```
+
+Slug policy:
+
+- Gunakan `products.slug` sebagai sumber URL.
+- Slug tetap unique dan mengikuti pola existing `^[a-z0-9]+(?:-[a-z0-9]+)*$`.
+- Jangan memakai nama produk sebagai primary identifier di route.
+- Redirect slug lama hanya ditambahkan jika nanti ada kebutuhan rename slug production.
+
+SEO dan image policy:
+
+- `generateMetadata()` harus memakai title, deskripsi ringkas, canonical `/produk/[slug]`, dan OG
+  image dari gambar produk yang sudah di-resolve aman.
+- Produk detail aktif boleh masuk sitemap setelah route benar-benar dibuat.
+- Produk draft/inactive, feedback request product, dan produk tanpa kategori aktif tidak boleh
+  terindeks.
+- Gambar tetap memakai object path bucket `catalogs` atau fallback lokal; jangan menyimpan full
+  Supabase public URL sebagai source of truth.
+
+### Lead And Inquiry Module
+
+Route/API yang disiapkan untuk implementasi berikutnya:
+
+```text
+app/
+  api/
+    leads/
+      route.ts
+
+features/
+  leads/
+    queries/
+    services/
+    validation/
+    types.ts
+    index.ts
+```
+
+Keputusan:
+
+- Form inquiry public harus submit ke Route Handler server-side, bukan insert langsung dari client
+  ke Supabase.
+- Lead tidak boleh otomatis menjadi order. Konversi ke order manual dilakukan admin pada Phase 3.
+- Lead boleh menyimpan referensi produk dan snapshot produk ringkas agar perubahan produk nanti
+  tidak mengubah konteks inquiry lama.
+- Lead service menjadi satu-satunya tempat perubahan status lead.
+- Notification awal harus server-side. Jangan menaruh token WhatsApp provider, SMTP credential,
+  atau secret integrasi lain di Client Component atau `NEXT_PUBLIC_*`.
+
+Tabel yang disiapkan untuk migration khusus Phase 2:
+
+```text
+leads
+lead_messages
+```
+
+Rancangan `leads`:
+
+| Field | Catatan |
+| --- | --- |
+| `id uuid primary key` | Identifier internal. |
+| `source text` | Contoh: `product_detail`, `catalog`, `landing`, `admin_manual`. |
+| `status text` | `new`, `contacted`, `quoted`, `converted`, `cancelled`. |
+| `customer_name text` | Wajib, dibatasi panjangnya. |
+| `whatsapp_number text` | Wajib untuk follow-up awal. |
+| `email text null` | Opsional. |
+| `product_id uuid null` | Referensi produk jika inquiry berasal dari produk aktif. |
+| `product_slug text null` | Snapshot slug untuk diagnosis dan fallback. |
+| `product_snapshot jsonb not null default '{}'` | Nama, harga estimasi, kategori, dan gambar saat inquiry dibuat. |
+| `interest_category text null` | Minat umum bila tidak memilih produk spesifik. |
+| `event_date date null` | Tanggal acara bila tersedia. |
+| `budget_range text null` | Range budget non-final. |
+| `message text null` | Catatan customer. |
+| `consent_accepted boolean` | Wajib `true` untuk submit publik. |
+| `consent_text text` | Snapshot consent/privacy acknowledgement. |
+| `metadata jsonb` | User agent ringkas, source URL, atau campaign non-sensitif. |
+| `created_at timestamptz` | Waktu dibuat. |
+| `updated_at timestamptz` | Diperbarui trigger. |
+| `last_contacted_at timestamptz null` | Diisi saat admin follow-up. |
+| `assigned_admin_id uuid null` | Opsional, referensi `admin_users`. |
+
+Rancangan `lead_messages`:
+
+| Field | Catatan |
+| --- | --- |
+| `id uuid primary key` | Identifier internal. |
+| `lead_id uuid` | FK ke `leads` dengan `on delete cascade`. |
+| `message_type text` | `customer_message`, `admin_note`, `status_change`, `system`. |
+| `channel text` | `form`, `whatsapp`, `phone`, `email`, `admin`, `system`. |
+| `body text` | Isi pesan/catatan tanpa secret. |
+| `status_from text null` | Untuk event perubahan status. |
+| `status_to text null` | Untuk event perubahan status. |
+| `created_by uuid null` | Admin actor bila ada. |
+| `created_at timestamptz` | Waktu event. |
+
+RLS dan akses:
+
+- Public `anon` tidak mendapat direct insert/update ke `leads` atau `lead_messages`.
+- Route Handler public memakai validasi server-side dan memilih apakah memakai authenticated
+  server client atau service-role server-only dengan alasan yang jelas.
+- Admin read/write dibatasi ke authenticated user yang lolos `public.is_active_admin()`.
+- Data lead tidak boleh dibaca oleh halaman publik tanpa token/auth khusus.
+
+Abuse prevention minimal:
+
+- Validasi method, content type, body size, nama, nomor WhatsApp, consent, produk, dan panjang
+  pesan.
+- Rate limit berdasarkan IP dan fingerprint non-sensitif; tambahkan key nomor WhatsApp bila aman.
+- Honeypot field dan time-to-submit dapat ditambahkan sebelum form public aktif.
+- Error public harus generik dan tidak membocorkan detail database.
+- In-memory rate limit boleh untuk baseline single-instance, tetapi store terpusat diperlukan
+  jika deployment multi-instance.
+
+### Admin Module Boundary
+
+Route admin tetap berada di:
+
+```text
+/admin-daz/**
+```
+
+Rencana resource admin per domain:
+
+| Domain | Route admin | Pola implementasi |
+| --- | --- | --- |
+| Landing/content | `/admin-daz/landing/**`, `/admin-daz/settings` | Generic resource manager tetap cukup. |
+| Catalog | `/admin-daz/catalog/**` | Generic resource manager untuk kategori/produk; product detail tetap public concern. |
+| Feedback | `/admin-daz/feedback` | Dedicated service/component karena punya workflow dan private photo. |
+| Leads | `/admin-daz/leads`, `/admin-daz/leads/[id]` | Dedicated lead service/component, bukan generic CRUD murni. |
+| Orders | `/admin-daz/orders/**` | Future dedicated workflow service. |
+| Payments | `/admin-daz/payments/**` | Future read/audit workflow; provider action server-side. |
+| Shipping | `/admin-daz/shipments/**` | Future shipment workflow service. |
+| Customers | `/admin-daz/customers/**` | Future privacy-aware customer service. |
+
+Aturan:
+
+- Protected admin layout tetap memanggil `requireAdmin()`.
+- CRUD admin tetap berjalan lewat Supabase Auth cookie session dan RLS. Service-role tidak boleh
+  dipakai di Client Component admin.
+- Generic `AdminResourceManager` hanya dipakai untuk resource konten atau katalog yang
+  operasinya sederhana.
+- Domain workflow seperti feedback, leads, orders, payments, shipping, dan customers memakai
+  dedicated service agar status transition, audit, pagination, dan permission dapat dikontrol.
+- Public page tidak boleh import `lib/admin-daz/*`, komponen admin, atau data admin.
+- Audit trail untuk operasi sensitif disiapkan sebagai future `audit_logs` dan wajib dievaluasi
+  sebelum order/payment/shipping production aktif.
+
 ## Recommended Future Structure
 
 Struktur target jangka panjang:

@@ -37,6 +37,43 @@ Notes:
 
 ## Entries
 
+### 2026-07-05 - Phase 1 P1 product detail, lead, and admin preparation
+
+Type:
+
+- Documentation
+
+Impact:
+
+- Low
+
+Summary:
+
+- Merancang struktur `/produk/[slug]`, kontrak `ProductDetail`, slug/404 behavior, SEO metadata,
+  sitemap policy, dan image policy untuk product detail.
+- Merancang module lead/inquiry, termasuk tabel `leads`, `lead_messages`, status lead, admin
+  follow-up flow, public anti-spam/rate limit, dan notifikasi server-side tanpa secret client.
+- Merancang admin module boundary untuk resource landing/content, catalog, feedback, leads,
+  orders, payments, shipping, dan customers.
+- Memperbarui status roadmap Phase 1 P1 untuk `Prepare product detail structure`,
+  `Prepare lead/inquiry module`, dan `Prepare admin module boundary` menjadi `DONE`.
+
+Files:
+
+- `docs/ROADMAP.md`
+- `docs/MODULE_ARCHITECTURE.md`
+- `docs/COMMERCE_PREPARATION.md`
+- `docs/ROUTES_AND_PAGES.md`
+- `docs/API_AND_INTEGRATIONS.md`
+- `docs/CHANGELOG_NOTES.md`
+
+Notes:
+
+- Tidak ada route `/produk/[slug]`, `/api/leads`, admin leads page, migration, dependency, atau
+  fitur commerce runtime yang dibuat.
+- Implementasi product detail dan inquiry tetap berada pada Phase 2 sesuai roadmap.
+- Order, payment, shipping, cart, checkout, dan customer account tetap tidak dibuat.
+
 ### 2026-07-05 - Package manager decision and modular architecture definition
 
 Type:

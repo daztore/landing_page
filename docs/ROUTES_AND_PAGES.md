@@ -169,6 +169,21 @@ Tidak ditemukan:
 - Server Action;
 - payment/shipping webhook.
 
+## Planned Phase 1 Routes
+
+Route berikut sudah dirancang untuk Phase 1 preparation, tetapi belum aktif di code saat ini.
+
+| Planned route | Jenis | Tujuan | Catatan |
+| --- | --- | --- | --- |
+| `/produk/[slug]` | Public dynamic | Detail produk katalog aktif. | Membaca produk aktif berdasarkan `products.slug`, mengecualikan produk `feedback_request`, memakai `notFound()` untuk slug invalid/tidak aktif, dan tetap menampilkan harga sebagai estimasi. |
+| `/api/leads` | Route Handler public | Submit inquiry/consultation. | Wajib validasi server-side, rate limit, consent, dan tidak membuka direct public insert Supabase. |
+| `/admin-daz/leads` | Protected admin | List lead dengan pagination/filter status. | Tetap di bawah protected admin layout dan RLS admin. |
+| `/admin-daz/leads/[id]` | Protected admin dynamic | Detail lead, follow-up note, dan status transition. | Status hanya diubah melalui lead service, bukan query langsung dari banyak tempat. |
+
+Saat route `/produk/[slug]` sudah dibuat, sitemap boleh menambahkan URL produk aktif. Route
+admin, feedback, dan lead detail privat tetap tidak boleh masuk sitemap. Robots tetap menolak
+`/admin-daz` dan `/feedback`; route inquiry API tidak perlu diindeks.
+
 ## Middleware
 
 `proxy.ts` berjalan hanya untuk `/admin-daz/:path*` dan menyegarkan cookie Supabase Auth.
@@ -209,6 +224,5 @@ Jika Supabase gagal atau dataset kosong, data lokal digunakan.
 ## Needs Confirmation
 
 - Apakah route legal akan dibuat atau link footer harus diarahkan ke dokumen eksternal.
-- Apakah halaman detail produk direncanakan.
 - Apakah anchor paket dan testimoni akan diaktifkan/diperbaiki.
 - Apakah katalog harus tetap statis atau akan mengambil data dari backend/CMS.

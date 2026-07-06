@@ -148,6 +148,149 @@ Yang perlu disiapkan:
 - `converted`
 - `cancelled`
 
+## Phase 1 Product Detail And Lead Preparation
+
+Bagian ini menyelesaikan preparation Phase 1. Ini bukan migration plan final dan belum membuat
+fitur runtime.
+
+### Product Detail Entry Point
+
+Product detail adalah pintu masuk utama sebelum inquiry:
+
+```text
+/katalog
+  -> /produk/[slug]
+  -> inquiry / consultation
+  -> admin follow-up
+```
+
+Keputusan:
+
+- Route public yang disiapkan adalah `/produk/[slug]`.
+- Detail produk hanya membaca produk aktif dari katalog dan kategori aktif.
+- Produk yang berasal dari `feedback_request`, draft, inactive, atau tidak available untuk publik
+  tidak boleh ditampilkan sebagai detail SEO.
+- Harga di detail produk tetap ditampilkan sebagai estimasi, bukan invoice.
+- CTA utama tetap konsultasi/inquiry. Jangan membuat cart atau checkout dari halaman detail.
+- `/katalog` tetap menjadi list existing dan tidak boleh bergantung pada detail page agar fallback
+  katalog lama tetap aman.
+
+Kontrak minimal product detail:
+
+| Field | Tujuan |
+| --- | --- |
+| `slug` | URL public dan identifier stabil. |
+| `title` | Nama produk. |
+| `category` | Slug dan nama kategori aktif. |
+| `description` | Deskripsi detail. |
+| `price.start`, `price.end`, `price.label` | Estimasi harga, bukan total final. |
+| `image.src`, `image.alt` | Gambar aman dari bucket `catalogs` atau fallback lokal. |
+| `processingTime` | Estimasi pengerjaan. |
+| `customizable` | Indikator bisa custom. |
+| `available` | Sinyal ketersediaan untuk CTA. |
+| `inquiry.defaultMessage` | Pesan awal untuk inquiry/konsultasi. |
+
+### Lead Data Model Preparation
+
+Tabel yang dirancang untuk Phase 2:
+
+- `leads`
+- `lead_messages`
+
+Rancangan awal `leads`:
+
+| Field | Tujuan |
+| --- | --- |
+| `id` | UUID internal. |
+| `source` | Sumber lead: `product_detail`, `catalog`, `landing`, atau `admin_manual`. |
+| `status` | Status lead dari daftar resmi. |
+| `customer_name` | Nama customer. |
+| `whatsapp_number` | Kontak follow-up utama. |
+| `email` | Opsional. |
+| `product_id` | Referensi produk bila lead berasal dari produk aktif. |
+| `product_slug` | Snapshot slug untuk fallback diagnosis. |
+| `product_snapshot` | Snapshot nama, kategori, harga estimasi, dan gambar produk saat inquiry dibuat. |
+| `interest_category` | Minat umum jika belum memilih produk tertentu. |
+| `event_date` | Tanggal acara bila customer mengisi. |
+| `budget_range` | Range budget non-final. |
+| `message` | Catatan customer. |
+| `consent_accepted` | Wajib untuk submit public. |
+| `consent_text` | Snapshot teks consent/privacy acknowledgement. |
+| `metadata` | Source URL, campaign non-sensitif, atau user agent ringkas. |
+| `created_at`, `updated_at` | Audit waktu dasar. |
+| `last_contacted_at` | Diisi saat follow-up. |
+| `assigned_admin_id` | Opsional untuk assignment admin. |
+
+Rancangan awal `lead_messages`:
+
+| Field | Tujuan |
+| --- | --- |
+| `id` | UUID internal. |
+| `lead_id` | Relasi ke `leads`. |
+| `message_type` | `customer_message`, `admin_note`, `status_change`, atau `system`. |
+| `channel` | `form`, `whatsapp`, `phone`, `email`, `admin`, atau `system`. |
+| `body` | Isi pesan atau catatan follow-up. |
+| `status_from`, `status_to` | Diisi untuk event perubahan status. |
+| `created_by` | Admin actor bila ada. |
+| `created_at` | Waktu pesan/event. |
+
+Status lead resmi:
+
+| Status | Arti |
+| --- | --- |
+| `new` | Lead baru masuk dan belum difollow-up. |
+| `contacted` | Admin sudah menghubungi customer. |
+| `quoted` | Admin sudah memberi estimasi/penawaran. |
+| `converted` | Lead berubah menjadi order manual pada fase order. |
+| `cancelled` | Lead dibatalkan atau tidak dilanjutkan. |
+
+### Admin Lead Flow Preparation
+
+Flow admin yang disiapkan:
+
+```text
+lead masuk
+  -> admin lihat list lead dengan pagination
+  -> admin buka detail lead
+  -> admin tambah note/follow-up
+  -> admin ubah status melalui lead service
+  -> bila cocok, admin convert ke manual order pada Phase 3
+```
+
+Aturan:
+
+- Route admin lead yang disiapkan: `/admin-daz/leads` dan `/admin-daz/leads/[id]`.
+- Lead list harus mendukung pagination, filter status, dan pencarian nama/WhatsApp/produk.
+- Detail lead menampilkan snapshot produk agar konteks lama tidak berubah saat produk diedit.
+- Status lead tidak boleh diubah langsung dari banyak tempat; gunakan lead service.
+- Convert ke order tidak dibuat pada Phase 1 dan tidak boleh otomatis dari form public.
+
+### Public Inquiry Abuse Prevention
+
+Sebelum inquiry public aktif:
+
+- submit harus lewat Route Handler server-side;
+- direct public insert ke Supabase untuk `leads` dan `lead_messages` tidak dibuka;
+- validasi wajib: nama, WhatsApp, source, product slug bila ada, consent, panjang pesan, dan body
+  size;
+- rate limit minimal berdasarkan IP dan source route;
+- tambahkan honeypot dan time-to-submit jika spam mulai terlihat;
+- error public harus generik;
+- log server tidak boleh memuat data pribadi berlebihan;
+- untuk multi-instance, ganti rate limit in-memory dengan store terpusat.
+
+### Notification Preparation
+
+Notifikasi awal tidak boleh menyimpan secret di client.
+
+Opsi aman:
+
+- tampilkan lead baru di admin dashboard/list sebagai baseline tanpa provider eksternal;
+- gunakan WhatsApp deeplink public hanya sebagai CTA customer, bukan sebagai provider notification;
+- jika email/WhatsApp provider dipakai nanti, panggil dari server-side notification service dengan
+  secret runtime server-only;
+- catat hasil notifikasi pada `lead_messages` atau metadata event tanpa menyimpan token/secret.
+
 ### Order Status
 
 - `draft`

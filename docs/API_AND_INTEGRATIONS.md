@@ -73,6 +73,89 @@ Bucket `feedback_customer_photos` bersifat private setelah migration `005`. Foto
 
 Tidak ada route payment, order, shipping, checkout, atau webhook provider.
 
+## Planned Phase 1 API Contracts
+
+Bagian ini adalah rancangan, belum route aktif.
+
+### Product Detail Query
+
+Rencana public product detail:
+
+```text
+GET /produk/[slug]
+  -> Server Component
+  -> features/catalog/queries/getProductDetailBySlug()
+  -> Supabase public read query
+  -> ProductDetail props
+```
+
+Aturan query:
+
+- filter `products.slug = slug`;
+- hanya produk `is_active = true`;
+- kategori terkait harus `is_active = true`;
+- produk dengan `source = 'feedback_request'` tidak tampil sebagai detail publik;
+- pilih kolom yang diperlukan saja;
+- resolve image via bucket `catalogs` dengan fallback lokal;
+- panggil `notFound()` bila data tidak memenuhi syarat.
+
+### Lead/Inquiry Submit
+
+Rencana Route Handler:
+
+| Route | Method | Akses | Tujuan |
+| --- | --- | --- | --- |
+| `/api/leads` | `POST` | Public | Menyimpan inquiry/consultation setelah validasi server-side. |
+
+Request body minimal yang dirancang:
+
+| Field | Wajib | Catatan |
+| --- | --- | --- |
+| `name` | Ya | Nama customer, panjang dibatasi. |
+| `whatsappNumber` | Ya | Dinormalisasi server-side. |
+| `email` | Tidak | Validasi format bila diisi. |
+| `productSlug` | Tidak | Harus mengarah ke produk aktif bila ada. |
+| `interestCategory` | Tidak | Untuk inquiry umum tanpa produk spesifik. |
+| `eventDate` | Tidak | Tanggal acara. |
+| `budgetRange` | Tidak | Estimasi non-final. |
+| `message` | Tidak | Panjang dibatasi. |
+| `consentAccepted` | Ya | Harus `true`. |
+| `source` | Ya | Contoh: `product_detail`, `catalog`, `landing`. |
+
+Validasi dan security:
+
+- hanya menerima method `POST`;
+- batasi content type dan ukuran body;
+- validasi field dengan schema server-side;
+- rate limit sebelum operasi database;
+- gunakan error publik generik;
+- jangan log payload penuh atau data pribadi berlebihan;
+- jangan membuka direct public insert Supabase untuk tabel `leads`;
+- service-role hanya boleh dipakai server-side jika RLS design membutuhkan, dengan alasan
+  terdokumentasi pada migration task.
+
+Response yang dirancang:
+
+```json
+{
+  "ok": true,
+  "leadId": "public-or-redacted-id",
+  "message": "Inquiry berhasil diterima."
+}
+```
+
+Jangan mengembalikan data internal seperti full row lead, admin assignment, atau detail error
+database.
+
+### Lead Notification
+
+Notifikasi awal harus diproses server-side:
+
+- baseline: lead tampil di admin list/dashboard tanpa provider eksternal;
+- email/WhatsApp provider future harus memakai secret runtime server-only;
+- hasil notifikasi dicatat sebagai event/catatan lead tanpa menyimpan secret;
+- client hanya boleh menerima status submit dan CTA lanjutan yang aman.
+
 ## WhatsApp
 
 Integrasi utama adalah link `https://wa.me/...` dengan nomor:
