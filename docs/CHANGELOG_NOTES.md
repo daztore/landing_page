@@ -37,6 +37,64 @@ Notes:
 
 ## Entries
 
+### 2026-07-06 - Phase 2 lead and inquiry management
+
+Type:
+
+- Feature
+- Database
+- Security
+- Documentation
+
+Impact:
+
+- High
+
+Summary:
+
+- Membuat migration `006_create_leads_feature.sql` untuk tabel `leads`, `lead_messages`, index,
+  trigger `updated_at`, RLS admin-only, dan RPC `public.change_lead_status()`.
+- Menambahkan Route Handler public `/api/leads` dengan validasi server-side, body limit, honeypot,
+  time-to-submit ringan, dan rate limit in-memory per IP/nomor WhatsApp.
+- Menambahkan form inquiry aktif pada `/produk/[slug]` yang menyimpan lead server-side dan tetap
+  memberi opsi lanjut chat WhatsApp setelah submit.
+- Menambahkan admin lead management di `/admin-daz/leads` dan `/admin-daz/leads/[id]` dengan
+  pagination, filter status, pencarian, detail, catatan follow-up, dan status workflow.
+- Memperbarui dashboard dan navigasi admin agar Leads bisa diakses.
+- Memperbarui status roadmap Phase 2 untuk `Inquiry form`, `Admin lead management`, dan
+  `Lead status workflow` menjadi `DONE`.
+
+Files:
+
+- `supabase/migrations/006_create_leads_feature.sql`
+- `app/api/leads/route.ts`
+- `app/produk/[slug]/page.tsx`
+- `app/admin-daz/(protected)/leads/**`
+- `app/admin-daz/(protected)/dashboard/page.tsx`
+- `components/admin-daz/admin-bottom-nav.tsx`
+- `features/leads/**`
+- `features/catalog/components/product-detail-view.tsx`
+- `README.md`
+- `docs/ROADMAP.md`
+- `docs/CHANGELOG_NOTES.md`
+- `docs/MODULE_ARCHITECTURE.md`
+- `docs/COMMERCE_PREPARATION.md`
+- `docs/SECURITY_AND_PERFORMANCE.md`
+- `docs/ROUTES_AND_PAGES.md`
+- `docs/API_AND_INTEGRATIONS.md`
+- `docs/SUPABASE_MIGRATION.md`
+- `docs/ENVIRONMENT_VARIABLES.md`
+- `docs/COMPONENTS.md`
+
+Notes:
+
+- Public direct insert/read Supabase untuk `leads` dan `lead_messages` tidak dibuka; public submit
+  diproses melalui Route Handler server-side dan service-role server-only.
+- Rate limit lead masih in-memory per proses dan perlu store terpusat bila deployment menjadi
+  multi-instance.
+- Tidak ada order, payment, shipping, cart, checkout, customer account, payment provider, atau
+  auto-create order dari lead yang dibuat.
+
 ### 2026-07-06 - Phase 2 product detail page
 
 Type:

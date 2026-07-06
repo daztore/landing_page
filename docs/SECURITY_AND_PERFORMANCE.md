@@ -126,6 +126,34 @@ Sebelum payment/order/shipping/checkout dibuat:
 - [ ] Test plan minimal tersedia.
 - [ ] Rate limit dan abuse scenario dipikirkan.
 
+## Phase 2 Lead Security 2026-07-06
+
+Implementasi lead/inquiry menambahkan public write endpoint `/api/leads` dan tabel privat
+`leads`/`lead_messages`.
+
+Guardrail yang sudah diterapkan:
+
+- Public direct insert/read Supabase untuk `leads` dan `lead_messages` tidak dibuka.
+- Route Handler `/api/leads` memvalidasi `Content-Type`, `Content-Length`, JSON body, nama,
+  WhatsApp, email, product slug, minat produk, event date, budget range, panjang catatan, consent,
+  honeypot, dan time-to-submit ringan.
+- Rate limit in-memory diterapkan per IP dan nomor WhatsApp.
+- Error publik dibuat generik dan log server tidak mencetak payload lengkap customer.
+- Public submit memakai service-role server-only melalui `lib/supabase/service-role.ts` karena RLS
+  public write ditutup.
+- Admin read/write lead memakai Supabase Auth cookie session, allowlist `admin_users`, dan RLS
+  `public.is_active_admin()`.
+- Perubahan status lead dicatat via RPC `public.change_lead_status()` ke `lead_messages` dengan
+  actor dan timestamp.
+
+Risiko tersisa:
+
+- Rate limit lead masih in-memory per proses; deployment multi-instance membutuhkan store
+  terpusat.
+- Privacy/legal page masih placeholder, sementara lead menyimpan kontak customer dan consent
+  snapshot.
+- Belum ada CAPTCHA/provider anti-spam eksternal; baseline saat ini sengaja tanpa dependency baru.
+
 ## Performance Principles
 
 - Landing page harus tetap cepat.
@@ -221,9 +249,10 @@ Checklist manual:
 
 ## Current Baseline To Preserve
 
-- Route `/` dan `/katalog` memakai data Supabase dengan fallback lokal.
+- Route `/`, `/katalog`, dan `/produk/[slug]` memakai data Supabase dengan fallback lokal.
 - Public content dapat memakai `revalidate`.
 - Admin berada di route `/admin-daz/**`.
+- Public inquiry submit memakai Route Handler server-side `/api/leads`.
 - Feedback submit memakai Route Handler server-side.
 - Service-role client berada di file `server-only`.
 - Docker production harus memakai image siap jalan, bukan build di server.

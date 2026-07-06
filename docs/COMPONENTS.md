@@ -95,8 +95,24 @@ Tanggung jawab:
 - menampilkan harga sebagai estimasi, bukan invoice final;
 - menampilkan gambar produk dengan `next/image` dan safe image fallback;
 - menampilkan kategori, waktu pengerjaan, status availability, dan informasi kustomisasi;
-- menyediakan CTA konsultasi WhatsApp dan link kembali ke katalog;
+- menyediakan anchor ke form inquiry dan link kembali ke katalog;
 - menjaga tampilan mobile-first dengan sticky CTA bawah pada layar kecil.
+
+`ProductDetailView` menerima slot `inquiryContent` dari route agar module catalog tidak import
+module leads secara langsung.
+
+### `LeadInquiryForm`
+
+Lokasi: `features/leads/components/lead-inquiry-form.tsx`
+
+Tanggung jawab:
+
+- mengumpulkan nama, WhatsApp, email opsional, tanggal acara opsional, budget opsional, catatan,
+  dan consent;
+- mengirim JSON ke `/api/leads`;
+- menyertakan product slug, interest category, source URL, honeypot, dan timestamp mulai form;
+- menampilkan error publik yang aman;
+- menampilkan state sukses dan opsi lanjut chat WhatsApp setelah lead tersimpan.
 
 ### `KatalogHeader`
 
@@ -136,6 +152,17 @@ Komponen admin terisolasi di `components/admin-daz/`.
 
 Form admin menggunakan layout satu kolom dan sticky action pada layar kecil. Data admin
 tidak diimpor oleh komponen landing page atau katalog publik.
+
+### `AdminLeadActions`
+
+Lokasi: `features/leads/components/admin-lead-actions.tsx`
+
+Tanggung jawab:
+
+- mengubah status lead melalui `/admin-daz/leads/[id]/actions`;
+- menambah catatan follow-up admin;
+- menampilkan feedback sukses/gagal;
+- memanggil `router.refresh()` agar detail lead server-rendered memuat timeline terbaru.
 
 ## Komponen Pendukung
 
@@ -196,7 +223,7 @@ Section aktif menerima object typed dari `lib/data/types.ts`. Default prop beras
 | Komponen | Kondisi |
 | --- | --- |
 | `Packages` | Render masih dikomentari sebagai Coming Soon; data tersedia di `package_tiers` dan fallback lokal. |
-| `InquiryForm` | Tidak diimpor oleh route aktif; submit membuka WhatsApp. |
+| `InquiryForm` | Tidak diimpor oleh route aktif; submit membuka WhatsApp. Form lead aktif memakai `LeadInquiryForm`. |
 | `Testimonials` | Carousel testimonial alternatif, tidak dipakai. |
 | `ThemeProvider` | Wrapper `next-themes`, tidak dipasang di root layout. |
 | Toast/Toaster | Implementasi tersedia, tetapi tidak dipasang di layout aktif. |

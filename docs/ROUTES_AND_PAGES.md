@@ -10,7 +10,8 @@ Project menggunakan Next.js App Router karena route didefinisikan melalui folder
 | --- | --- | --- | --- |
 | `/` | `app/page.tsx` | Halaman utama | Landing page pemasaran dan kontak. |
 | `/katalog` | `app/katalog/page.tsx` | Halaman katalog | Pencarian, filter, sorting, dan CTA produk. |
-| `/produk/[slug]` | `app/produk/[slug]/page.tsx` | Publik dynamic | Detail produk katalog aktif, harga estimasi, dan CTA konsultasi. |
+| `/produk/[slug]` | `app/produk/[slug]/page.tsx` | Publik dynamic | Detail produk katalog aktif, harga estimasi, dan form inquiry. |
+| `/api/leads` | `app/api/leads/route.ts` | Route Handler publik | Submit inquiry produk melalui `POST`. |
 | `/feedback/[id]` | `app/feedback/[id]/page.tsx` | Publik dynamic | Form feedback pelanggan berbasis UUID, `force-dynamic`, dan `noindex`. |
 | `/feedback/[id]/submit` | `app/feedback/[id]/submit/route.ts` | Route Handler publik | Submit feedback pelanggan melalui `POST`. |
 | `/admin-daz` | `app/admin-daz/page.tsx` | Redirect | Redirect ke `/admin-daz/dashboard`. |
@@ -19,6 +20,9 @@ Project menggunakan Next.js App Router karena route didefinisikan melalui folder
 | `/admin-daz/dashboard` | `app/admin-daz/(protected)/dashboard/page.tsx` | Protected | Ringkasan dan shortcut admin. |
 | `/admin-daz/landing/**` | `app/admin-daz/(protected)/landing/` | Protected | CRUD konten landing page. |
 | `/admin-daz/catalog/**` | `app/admin-daz/(protected)/catalog/` | Protected | CRUD kategori dan produk. |
+| `/admin-daz/leads` | `app/admin-daz/(protected)/leads/page.tsx` | Protected | List lead dengan pagination, filter status, dan pencarian. |
+| `/admin-daz/leads/[id]` | `app/admin-daz/(protected)/leads/[id]/page.tsx` | Protected dynamic | Detail lead, catatan follow-up, dan timeline status. |
+| `/admin-daz/leads/[id]/actions` | `app/admin-daz/(protected)/leads/[id]/actions/route.ts` | Route Handler admin | `POST` update status/catatan lead. |
 | `/admin-daz/feedback` | `app/admin-daz/(protected)/feedback/page.tsx` | Protected | Kelola feedback request dan submission. |
 | `/admin-daz/feedback/requests` | `app/admin-daz/(protected)/feedback/requests/route.ts` | Route Handler admin | `GET`/`POST` request feedback admin. |
 | `/admin-daz/media` | `app/admin-daz/(protected)/media/page.tsx` | Protected | Shortcut pengelolaan media. |
@@ -118,7 +122,8 @@ Pilihan `newest` tidak melakukan sorting tambahan karena data tidak memiliki tan
   kategori tidak aktif;
 - metadata SEO dengan canonical `/produk/[slug]` dan Open Graph image produk;
 - harga sebagai estimasi, bukan invoice final;
-- CTA konsultasi WhatsApp tanpa cart, checkout, order, payment, atau shipping.
+- form inquiry lead tanpa cart, checkout, order, payment, atau shipping;
+- opsi lanjut WhatsApp setelah inquiry berhasil terkirim.
 
 Jika Supabase tidak tersedia atau query error, halaman memakai fallback lokal untuk produk yang
 ada di `lib/katalog-data.ts`. Jika Supabase berhasil tetapi produk tidak ditemukan/tidak aktif,
@@ -161,6 +166,23 @@ Validasi yang dilakukan:
 Route ini memakai `SUPABASE_SERVICE_ROLE_KEY` server-only melalui `lib/supabase/service-role.ts` karena public direct insert/read untuk tabel feedback sudah di-hardening oleh migration `005`.
 Jika rate limit terlampaui, route mengembalikan HTTP `429` dengan header `Retry-After`.
 
+## Route `/api/leads`
+
+`app/api/leads/route.ts` menerima `POST` JSON untuk inquiry produk publik.
+
+Validasi yang dilakukan:
+
+- content type `application/json`;
+- ukuran body maksimal 16 KB;
+- rate limit in-memory per IP dan nomor WhatsApp;
+- nama, WhatsApp, email opsional, product slug atau minat produk, tanggal acara, budget, catatan,
+  consent, honeypot, dan time-to-submit ringan;
+- validasi produk aktif server-side sebelum menyimpan `product_id` dan `product_snapshot`.
+
+Route ini memakai `SUPABASE_SERVICE_ROLE_KEY` server-only melalui `lib/supabase/service-role.ts`
+karena direct public insert/read untuk tabel `leads` dan `lead_messages` tidak dibuka.
+Response public tidak mengembalikan full row lead.
+
 ## Layout `/katalog`
 
 `app/katalog/layout.tsx` mengambil navigation/contact dari Supabase. Deteksi viewport dipindahkan ke `KatalogLayoutShell`, sebuah Client Component:
@@ -177,26 +199,17 @@ Route Handler aktif:
 
 | File | Method | Akses | Fungsi |
 | --- | --- | --- | --- |
+| `app/api/leads/route.ts` | `POST` | Public | Submit inquiry produk dengan validasi dan rate limit. |
 | `app/feedback/[id]/submit/route.ts` | `POST` | Public via link UUID | Submit feedback pelanggan dengan rate limit dasar dan upload foto ke bucket private. |
 | `app/admin-daz/(protected)/feedback/requests/route.ts` | `GET` | Admin | List feedback request. |
 | `app/admin-daz/(protected)/feedback/requests/route.ts` | `POST` | Admin | Membuat feedback request dari panel admin. |
+| `app/admin-daz/(protected)/leads/[id]/actions/route.ts` | `POST` | Admin | Tambah catatan follow-up atau update status lead. |
 
 Tidak ditemukan:
 
-- folder `app/api/**`;
 - Pages Router API route;
 - Server Action;
 - payment/shipping webhook.
-
-## Remaining Planned Phase 2 Routes
-
-Route berikut sudah dirancang untuk Phase 2, tetapi belum aktif di code saat ini.
-
-| Planned route | Jenis | Tujuan | Catatan |
-| --- | --- | --- | --- |
-| `/api/leads` | Route Handler public | Submit inquiry/consultation. | Wajib validasi server-side, rate limit, consent, dan tidak membuka direct public insert Supabase. |
-| `/admin-daz/leads` | Protected admin | List lead dengan pagination/filter status. | Tetap di bawah protected admin layout dan RLS admin. |
-| `/admin-daz/leads/[id]` | Protected admin dynamic | Detail lead, follow-up note, dan status transition. | Status hanya diubah melalui lead service, bukan query langsung dari banyak tempat. |
 
 Route admin, feedback, dan lead detail privat tetap tidak boleh masuk sitemap. Robots tetap
 menolak `/admin-daz` dan `/feedback`; route inquiry API tidak perlu diindeks.
@@ -232,9 +245,9 @@ Next.js tetap memakai perilaku default framework untuk error dan not found.
 
 ## Rendering dan Caching
 
-Halaman utama, katalog, product detail, dan layout katalog menetapkan `revalidate = 300`. Konten Supabase diambil pada server dan dapat diperbarui melalui ISR, sedangkan interaksi katalog dan section tertentu di-hydrate sebagai Client Component.
+Halaman utama, katalog, product detail, dan layout katalog menetapkan `revalidate = 300`. Konten Supabase diambil pada server dan dapat diperbarui melalui ISR, sedangkan interaksi katalog, inquiry form, dan section tertentu di-hydrate sebagai Client Component.
 
-Route feedback dan protected admin bersifat dynamic karena bergantung pada request/session dan data privat.
+Route feedback, `/api/leads`, dan protected admin bersifat dynamic karena bergantung pada request/session dan data privat.
 
 Jika Supabase gagal atau dataset kosong, data lokal digunakan.
 

@@ -10,7 +10,9 @@ SDK yang digunakan:
 @supabase/supabase-js 2.108.0
 ```
 
-Query publik konten/katalog memakai publishable key dan dibatasi Row Level Security. `SUPABASE_SERVICE_ROLE_KEY` digunakan server-side untuk flow feedback publik karena migration `005` menutup direct public read/insert pada tabel feedback.
+Query publik konten/katalog memakai publishable key dan dibatasi Row Level Security.
+`SUPABASE_SERVICE_ROLE_KEY` digunakan server-side untuk flow feedback dan lead publik karena direct
+public read/insert pada tabel privat ditutup.
 
 ## File Implementasi
 
@@ -21,14 +23,17 @@ Query publik konten/katalog memakai publishable key dan dibatasi Row Level Secur
 | `supabase/migrations/003_create_admin_access.sql` | Membuat allowlist admin serta policy CRUD database dan Storage. |
 | `supabase/migrations/004_create_feedback_feature.sql` | Membuat tabel feedback, trigger submission, policy awal, dan bucket foto feedback. |
 | `supabase/migrations/005_harden_feedback_privacy_and_catalog_cleanup.sql` | Menutup akses public langsung ke feedback dan menjadikan bucket foto pelanggan private. |
+| `supabase/migrations/006_create_leads_feature.sql` | Membuat tabel leads, lead messages, RLS admin-only, dan RPC status workflow. |
 | `supabase/seed.sql` | Mengisi data lokal saat ini secara idempotent. |
 | `lib/supabase/client.ts` | Membuat Supabase client dari environment variable. |
-| `lib/supabase/service-role.ts` | Membuat Supabase service-role client server-only untuk feedback. |
+| `lib/supabase/service-role.ts` | Membuat Supabase service-role client server-only untuk feedback dan lead publik. |
 | `lib/supabase/storage.ts` | Mengubah object path Storage menjadi public URL dengan fallback aman. |
 | `lib/data/landing-page.ts` | Data access layer dan fallback handling. |
 | `lib/data/fallback.ts` | Salinan lokal yang dipakai bila env/query/data belum tersedia. |
 | `lib/data/types.ts` | Kontrak data antara server dan komponen. |
 | `lib/feedback/*` | Kontrak, data access, validasi, dan upload feedback. |
+| `features/leads/*` | Kontrak, validasi, service, form inquiry, query admin, dan status workflow lead. |
+| `app/api/leads/route.ts` | Route Handler public untuk submit inquiry lead. |
 | `app/feedback/[id]/*` | Halaman dan Route Handler feedback publik. |
 
 ## Tabel
@@ -46,6 +51,8 @@ Query publik konten/katalog memakai publishable key dan dibatasi Row Level Secur
 | `products` | Produk, harga, gambar, badge, dan availability. |
 | `package_tiers` | Paket Silver, Gold, dan Exclusive yang saat ini belum dirender. |
 | `admin_users` | Allowlist admin aktif untuk panel `/admin-daz`. |
+| `leads` | Inquiry/konsultasi awal sebelum order manual. |
+| `lead_messages` | Riwayat pesan, catatan follow-up, dan perubahan status lead. |
 | `feedback_requests` | Request feedback pelanggan yang dibuat admin. |
 | `feedback_submissions` | Submission rating, kritik/saran, testimoni, rekomendasi, dan foto pelanggan. |
 
@@ -75,6 +82,12 @@ Migration admin menambahkan policy `INSERT`, `UPDATE`, dan `DELETE` khusus user
 
 Setelah migration `005`, tabel `feedback_requests` dan `feedback_submissions` tidak lagi dibaca/ditulis langsung oleh public `anon`. Route feedback publik memakai service-role server-side untuk membaca request, memvalidasi status, menyimpan submission, dan membersihkan upload bila insert gagal.
 
+Migration `006` membuat `leads` dan `lead_messages` dengan RLS aktif. Public `anon` tidak diberi
+hak direct insert/read/update/delete. Submit publik hanya melalui `/api/leads`, yang memakai
+service-role server-only setelah validasi dan rate limit. Admin read/write dibatasi oleh
+`public.is_active_admin()`. RPC `public.change_lead_status()` mencatat status change dan actor
+admin dalam satu transaksi database.
+
 Storage tambahan:
 
 | Bucket | Konten | Akses |
@@ -91,7 +104,7 @@ Admin harus memenuhi dua syarat:
 Route admin memakai session cookie Supabase SSR. Pemeriksaan route dilakukan di server,
 sedangkan RLS tetap menjadi batas izin final untuk CRUD database dan Storage.
 
-Tidak ada public registration. Admin browser tidak memakai service-role key; service-role hanya untuk route/server code feedback.
+Tidak ada public registration. Admin browser tidak memakai service-role key; service-role hanya untuk route/server code feedback dan lead publik.
 
 ## Setup Manual
 
@@ -127,15 +140,21 @@ supabase/migrations/004_create_feedback_feature.sql
 supabase/migrations/005_harden_feedback_privacy_and_catalog_cleanup.sql
 ```
 
-8. Upload file gambar sesuai daftar object path di bawah.
+8. Jalankan migration lead/inquiry:
 
-9. Setelah migration dan upload berhasil, jalankan:
+```text
+supabase/migrations/006_create_leads_feature.sql
+```
+
+9. Upload file gambar sesuai daftar object path di bawah.
+
+10. Setelah migration dan upload berhasil, jalankan:
 
 ```text
 supabase/seed.sql
 ```
 
-10. Buat `.env.local`:
+11. Buat `.env.local`:
 
 ```dotenv
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
@@ -144,14 +163,14 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_your_service_role_key
 ```
 
-11. Restart development server:
+12. Restart development server:
 
 ```bash
 npm run dev
 ```
 
-12. Buat admin pertama menggunakan langkah berikut.
-13. Verifikasi `/`, `/katalog`, `/admin-daz/login`, dan flow feedback bila data request tersedia.
+13. Buat admin pertama menggunakan langkah berikut.
+14. Verifikasi `/`, `/katalog`, `/produk/mahar-1`, `/admin-daz/login`, `/admin-daz/leads`, dan flow feedback bila data request tersedia.
 
 Migration dan seed tidak dijalankan otomatis oleh aplikasi.
 
@@ -277,6 +296,8 @@ select count(*) from public.testimonials where is_active;
 select count(*) from public.faqs where is_active;
 select count(*) from public.product_categories where is_active;
 select count(*) from public.products where is_active;
+select count(*) from public.leads;
+select count(*) from public.lead_messages;
 select count(*) from public.feedback_requests;
 select count(*) from public.feedback_submissions;
 select id, name, public from storage.buckets where id in ('landing_page', 'catalogs', 'feedback_customer_photos');
@@ -295,6 +316,8 @@ Expected seed:
 | Product categories | 6 |
 | Products | 10 |
 | Package tiers | 3 |
+| Leads | 0 atau sesuai inquiry yang masuk |
+| Lead messages | 0 atau sesuai inquiry/catatan yang masuk |
 | Feedback requests | 0 atau sesuai data admin |
 | Feedback submissions | 0 atau sesuai data pelanggan |
 
@@ -339,7 +362,8 @@ Rollback aplikasi tidak memerlukan penghapusan tabel:
 
 1. deploy image commit sebelumnya;
 2. local fallback lama tetap tersedia;
-3. nonaktifkan row bermasalah dengan `is_active = false` jika diperlukan.
+3. nonaktifkan row konten publik bermasalah dengan `is_active = false` jika diperlukan;
+4. untuk lead bermasalah, ubah status ke `cancelled` atau batasi akses admin; jangan hapus massal.
 
 Jangan menjalankan `drop table`, truncate, atau delete massal untuk rollback aplikasi.
 

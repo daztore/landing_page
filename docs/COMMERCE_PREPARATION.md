@@ -206,6 +206,17 @@ Tabel yang dirancang untuk Phase 2:
 - `leads`
 - `lead_messages`
 
+Implementasi Phase 2 pada 2026-07-06:
+
+- Tabel `leads` dan `lead_messages` sudah dibuat melalui migration
+  `supabase/migrations/006_create_leads_feature.sql`.
+- Public submit memakai `/api/leads`, validasi server-side, rate limit in-memory, honeypot, dan
+  service-role server-only.
+- Direct public insert/read Supabase untuk lead tidak dibuka.
+- Admin lead management aktif di `/admin-daz/leads` dan `/admin-daz/leads/[id]`.
+- Perubahan status disimpan di `lead_messages` melalui RPC `public.change_lead_status()`.
+- Convert ke order tetap belum dibuat; Phase 3 manual order harus diminta terpisah.
+
 Rancangan awal `leads`:
 
 | Field | Tujuan |
@@ -339,8 +350,8 @@ Seluruh tabel di bawah berstatus `PLANNED` dan belum boleh dibuat tanpa task imp
 | --- | --- | --- |
 | `customers` | PLANNED | Data profil customer minimal seperti nama, WhatsApp, email opsional, dan consent metadata. |
 | `customer_addresses` | PLANNED | Alamat customer untuk pengiriman, dengan kota/kecamatan dan catatan alamat. |
-| `leads` | PLANNED | Inquiry/konsultasi awal sebelum menjadi order. |
-| `lead_messages` | PLANNED | Riwayat pesan/catatan follow-up lead. |
+| `leads` | ACTIVE PHASE 2 | Inquiry/konsultasi awal sebelum menjadi order. |
+| `lead_messages` | ACTIVE PHASE 2 | Riwayat pesan/catatan follow-up lead dan status change. |
 | `orders` | PLANNED | Header order, nomor order, customer, total, status, dan metadata invoice. |
 | `order_items` | PLANNED | Item order dengan snapshot produk, harga, opsi custom, dan quantity. |
 | `order_status_histories` | PLANNED | Riwayat perubahan status order beserta actor, timestamp, dan catatan. |

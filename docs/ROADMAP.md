@@ -9,8 +9,9 @@ Roadmap ini tidak memberi izin untuk langsung membangun payment, order, shipping
 - Framework: Next.js App Router.
 - Package manager resmi: npm `10.9.0` melalui `packageManager` di `package.json`; `package-lock.json` adalah lockfile utama, sedangkan `pnpm-lock.yaml` masih legacy dan tidak dipakai jalur operasional aktif.
 - Database/CMS: Supabase untuk konten publik, admin CMS, feedback, Storage, Auth, dan RLS.
-- Route publik aktif: `/`, `/katalog`, `/feedback/[id]`.
-- Route admin aktif: `/admin-daz/**`.
+- Route publik aktif: `/`, `/katalog`, `/produk/[slug]`, `/feedback/[id]`.
+- Route API aktif: `/api/leads`, `/feedback/[id]/submit`.
+- Route admin aktif: `/admin-daz/**`, termasuk `/admin-daz/leads`.
 - Deployment: Docker multi-stage, GHCR image build, dan Compose production berbasis image.
 
 ## Status Legend
@@ -282,9 +283,10 @@ Hasil implementasi 2026-07-06:
 - Harga ditampilkan sebagai estimasi dan CTA konsultasi memakai WhatsApp, bukan cart/checkout.
 - Kartu katalog menambahkan link detail tanpa menghapus CTA WhatsApp existing.
 - Sitemap menambahkan URL produk aktif setelah route detail tersedia.
-- Inquiry form, admin lead management, dan lead status workflow tetap belum dibuat pada task ini.
+- Inquiry form, admin lead management, dan lead status workflow diselesaikan sebagai item Phase 2
+  terpisah di bawah.
 
-### [P1][TODO] Inquiry form
+### [P1][DONE] Inquiry form
 
 Subtask:
 
@@ -295,7 +297,22 @@ Subtask:
 - Simpan consent/privacy acknowledgement bila diwajibkan.
 - Utamakan tampilan untuk mobile
 
-### [P1][TODO] Admin lead management
+Hasil implementasi 2026-07-06:
+
+- Form inquiry aktif dipasang di `/produk/[slug]` melalui module `features/leads`.
+- Field minimal tersedia: nama, WhatsApp, produk/minat, catatan, dan consent; field opsional
+  email, tanggal acara, dan range budget juga disediakan.
+- Submit public memakai Route Handler server-side `/api/leads`, bukan direct insert Supabase dari
+  client.
+- Validasi server-side mencakup content type, ukuran body, nama, WhatsApp, email, product slug,
+  interest category, event date, budget range, message length, consent, honeypot, dan
+  time-to-submit ringan.
+- Rate limit in-memory diterapkan per IP dan nomor WhatsApp; untuk multi-instance tetap perlu
+  store terpusat.
+- Data yang disimpan dibatasi ke kontak follow-up, minat produk, catatan, consent snapshot,
+  product snapshot, source URL, dan user agent ringkas.
+
+### [P1][DONE] Admin lead management
 
 Subtask:
 
@@ -306,7 +323,19 @@ Subtask:
 - Batasi akses hanya untuk admin aktif.
 - Utamakan tampilan untuk mobile
 
-### [P1][TODO] Lead status workflow
+Hasil implementasi 2026-07-06:
+
+- Tabel `leads` dan `lead_messages` dibuat melalui migration
+  `supabase/migrations/006_create_leads_feature.sql`.
+- Route admin `/admin-daz/leads` menampilkan list lead dengan pagination, filter status, dan
+  pencarian nama/WhatsApp/produk/minat.
+- Route admin `/admin-daz/leads/[id]` menampilkan detail lead, snapshot produk, catatan customer,
+  consent, dan timeline follow-up.
+- Admin dapat menambah catatan follow-up melalui dedicated lead service/action route.
+- Akses admin tetap memakai protected layout, Supabase Auth cookie session, allowlist
+  `admin_users`, dan RLS `public.is_active_admin()`.
+
+### [P1][DONE] Lead status workflow
 
 Subtask:
 
@@ -314,6 +343,18 @@ Subtask:
 - Simpan perubahan status dengan actor dan timestamp.
 - Pastikan status tidak berubah dari banyak tempat tanpa service yang jelas.
 - Tambahkan validasi transisi bila flow bisnis sudah final.
+
+Hasil implementasi 2026-07-06:
+
+- Status lead resmi tetap `new`, `contacted`, `quoted`, `converted`, dan `cancelled`.
+- Lead baru dari form public otomatis dibuat dengan status `new`.
+- Perubahan status admin dilakukan melalui service lead dan RPC database
+  `public.change_lead_status()`, yang mencatat actor `auth.uid()`, timestamp, status asal,
+  status tujuan, dan catatan opsional di `lead_messages`.
+- Validasi saat ini membatasi status ke daftar resmi; transition matrix belum dipersempit karena
+  flow bisnis final order/manual conversion berada pada Phase 3.
+- Tidak ada order, payment, shipping, cart, checkout, customer account, atau auto-create order yang
+  dibuat.
 
 Status lead:
 

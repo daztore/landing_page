@@ -331,6 +331,63 @@ Abuse prevention minimal:
 - In-memory rate limit boleh untuk baseline single-instance, tetapi store terpusat diperlukan
   jika deployment multi-instance.
 
+### Phase 2 Lead Implementation 2026-07-06
+
+Implementasi `features/leads` dibuat untuk roadmap Phase 2 `Inquiry form`, `Admin lead
+management`, dan `Lead status workflow`.
+
+Struktur aktif:
+
+```text
+features/
+  leads/
+    components/
+      admin-lead-actions.tsx
+      lead-inquiry-form.tsx
+    queries/
+      admin-leads.ts
+    services/
+      admin-leads.ts
+      create-lead.ts
+    validation/
+      lead-request.ts
+    types.ts
+    index.ts
+    server.ts
+```
+
+Route aktif:
+
+```text
+app/
+  api/
+    leads/
+      route.ts
+  admin-daz/
+    (protected)/
+      leads/
+        page.tsx
+        [id]/
+          page.tsx
+          actions/
+            route.ts
+```
+
+Keputusan implementasi:
+
+- Form inquiry public berada di `features/leads/components/lead-inquiry-form.tsx` dan dipasang
+  oleh route `/produk/[slug]`.
+- Route Handler `/api/leads` menjadi satu-satunya public write entry point untuk inquiry.
+- Public direct insert/read Supabase ke `leads` dan `lead_messages` tidak dibuka.
+- Public lead insert memakai service-role server-only melalui `features/leads/services/create-lead.ts`
+  karena RLS public write ditutup.
+- Admin lead list/detail memakai Supabase Auth cookie session dan RLS admin, bukan service-role.
+- Perubahan status admin melewati service lead dan RPC `public.change_lead_status()` agar status
+  change dan history tersimpan bersama.
+- `features/leads` boleh membaca produk aktif untuk snapshot lead, tetapi tidak membuat order.
+- Tidak ada dependency dari `features/leads` ke orders, payments, shipping, cart, checkout, atau
+  customers.
+
 ### Admin Module Boundary
 
 Route admin tetap berada di:

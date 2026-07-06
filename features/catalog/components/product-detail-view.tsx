@@ -19,6 +19,7 @@ import type { ProductDetail } from "@/features/catalog/types"
 interface ProductDetailViewProps {
   product: ProductDetail
   contact: SiteContact
+  inquiryContent?: ReactNode
 }
 
 const badgeLabel: Record<NonNullable<ProductDetail["badge"]>, string> = {
@@ -49,9 +50,14 @@ function ProductFact({
   )
 }
 
-export function ProductDetailView({ product, contact }: ProductDetailViewProps) {
+export function ProductDetailView({
+  product,
+  contact,
+  inquiryContent,
+}: ProductDetailViewProps) {
   const productImage = getSafeImageSrc(product.image.src) || "/gallery-1.jpg"
   const whatsappUrl = buildWhatsAppUrl(contact.whatsappNumber, product.inquiry.defaultMessage)
+  const consultationHref = inquiryContent ? "#inquiry" : whatsappUrl
   const availabilityLabel = product.available
     ? "Tersedia untuk konsultasi"
     : "Slot atau stok terbatas"
@@ -78,9 +84,9 @@ export function ProductDetailView({ product, contact }: ProductDetailViewProps) 
           </Link>
 
           <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noreferrer"
+            href={consultationHref}
+            target={inquiryContent ? undefined : "_blank"}
+            rel={inquiryContent ? undefined : "noreferrer"}
             className="inline-flex items-center gap-2 rounded-full bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 sm:px-4"
           >
             <MessageCircle className="h-4 w-4" />
@@ -165,13 +171,13 @@ export function ProductDetailView({ product, contact }: ProductDetailViewProps) 
 
             <div className="hidden gap-3 pt-6 sm:flex">
               <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noreferrer"
+                href={consultationHref}
+                target={inquiryContent ? undefined : "_blank"}
+                rel={inquiryContent ? undefined : "noreferrer"}
                 className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 <MessageCircle className="h-4 w-4" />
-                Konsultasi via WhatsApp
+                Isi form inquiry
               </a>
               <Link
                 href="/katalog"
@@ -180,19 +186,41 @@ export function ProductDetailView({ product, contact }: ProductDetailViewProps) 
                 Lihat katalog lain
               </Link>
             </div>
+
+            <div id="inquiry" className="scroll-mt-24 pt-6">
+              {inquiryContent ?? (
+                <div className="rounded-lg border border-border/60 bg-card p-4">
+                  <p className="font-serif text-xl font-semibold text-foreground">
+                    Konsultasi produk
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    Hubungi admin untuk memastikan detail custom dan estimasi.
+                  </p>
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Konsultasi via WhatsApp
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
         </section>
       </main>
 
       <div className="sticky bottom-0 z-30 border-t border-border/60 bg-background/95 p-4 backdrop-blur sm:hidden">
         <a
-          href={whatsappUrl}
-          target="_blank"
-          rel="noreferrer"
+          href={consultationHref}
+          target={inquiryContent ? undefined : "_blank"}
+          rel={inquiryContent ? undefined : "noreferrer"}
           className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
         >
           <MessageCircle className="h-4 w-4" />
-          Konsultasi via WhatsApp
+          Isi form inquiry
         </a>
       </div>
     </div>

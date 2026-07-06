@@ -2,7 +2,7 @@
 
 ## Ringkasan
 
-Project menggunakan Supabase PostgREST melalui SDK resmi untuk membaca konten publik, menjalankan admin CMS, dan memproses feedback pelanggan. Route Handler internal aktif terbatas pada feedback dan admin feedback request.
+Project menggunakan Supabase PostgREST melalui SDK resmi untuk membaca konten publik, menjalankan admin CMS, memproses lead/inquiry, dan memproses feedback pelanggan.
 
 Tidak ditemukan:
 
@@ -19,6 +19,7 @@ Ditemukan:
 - Supabase SSR cookie session;
 - Supabase Storage public/private;
 - Server Component product detail `/produk/[slug]`;
+- Route Handler `POST` untuk submit inquiry lead;
 - Route Handler `POST` untuk submit feedback;
 - Route Handler `GET`/`POST` admin untuk feedback request.
 
@@ -49,7 +50,7 @@ Query dilakukan oleh data access layer, bukan langsung dari komponen UI. Query:
 - menggunakan RLS public read-only;
 - kembali ke fallback lokal saat gagal atau kosong.
 
-Modul `/admin-daz` menggunakan Supabase Auth email/password dan RLS admin untuk CRUD serta upload. `SUPABASE_SERVICE_ROLE_KEY` hanya digunakan server-side untuk flow feedback publik yang sudah di-hardening agar data privat tidak dibaca/ditulis langsung oleh client.
+Modul `/admin-daz` menggunakan Supabase Auth email/password dan RLS admin untuk CRUD serta upload. `SUPABASE_SERVICE_ROLE_KEY` hanya digunakan server-side untuk flow feedback dan lead publik yang sudah di-hardening agar data privat tidak dibaca/ditulis langsung oleh client.
 
 ### Supabase Storage
 
@@ -69,9 +70,11 @@ Bucket `feedback_customer_photos` bersifat private setelah migration `005`. Foto
 
 | Route | File | Method | Akses | Catatan |
 | --- | --- | --- | --- | --- |
+| `/api/leads` | `app/api/leads/route.ts` | `POST` | Public | Submit inquiry produk dengan validasi, rate limit, honeypot, dan insert server-side. |
 | `/feedback/[id]/submit` | `app/feedback/[id]/submit/route.ts` | `POST` | Public via UUID link | Validasi input, rate limit dasar, upload foto, dan insert feedback memakai service-role server-only. |
 | `/admin-daz/feedback/requests` | `app/admin-daz/(protected)/feedback/requests/route.ts` | `GET` | Admin | List feedback request melalui session admin dan RLS. |
 | `/admin-daz/feedback/requests` | `app/admin-daz/(protected)/feedback/requests/route.ts` | `POST` | Admin | Membuat feedback request dan asset terkait dari panel admin. |
+| `/admin-daz/leads/[id]/actions` | `app/admin-daz/(protected)/leads/[id]/actions/route.ts` | `POST` | Admin | Menambah catatan follow-up atau mengubah status lead lewat service/RPC. |
 
 Tidak ada route payment, order, shipping, checkout, atau webhook provider.
 
@@ -104,19 +107,18 @@ Jika Supabase tidak tersedia atau query error, query memakai fallback lokal. Jik
 tetapi produk tidak ditemukan/tidak aktif, halaman tidak memakai fallback agar produk inactive tidak
 muncul ulang.
 
-## Planned Phase 2 API Contracts
+## Lead/Inquiry Submit
 
-Bagian ini adalah rancangan, belum route aktif.
+Route Handler `/api/leads` sudah aktif untuk menyimpan inquiry/consultation setelah validasi
+server-side.
 
-### Lead/Inquiry Submit
-
-Rencana Route Handler:
+Kontrak route:
 
 | Route | Method | Akses | Tujuan |
 | --- | --- | --- | --- |
 | `/api/leads` | `POST` | Public | Menyimpan inquiry/consultation setelah validasi server-side. |
 
-Request body minimal yang dirancang:
+Request body:
 
 | Field | Wajib | Catatan |
 | --- | --- | --- |
@@ -134,22 +136,21 @@ Request body minimal yang dirancang:
 Validasi dan security:
 
 - hanya menerima method `POST`;
-- batasi content type dan ukuran body;
-- validasi field dengan schema server-side;
-- rate limit sebelum operasi database;
+- membatasi content type `application/json` dan ukuran body 16 KB;
+- validasi field server-side;
+- rate limit in-memory per IP dan nomor WhatsApp sebelum operasi database;
+- honeypot dan time-to-submit ringan;
 - gunakan error publik generik;
 - jangan log payload penuh atau data pribadi berlebihan;
 - jangan membuka direct public insert Supabase untuk tabel `leads`;
-- service-role hanya boleh dipakai server-side jika RLS design membutuhkan, dengan alasan
-  terdokumentasi pada migration task.
+- service-role hanya dipakai server-side karena RLS public write ditutup.
 
-Response yang dirancang:
+Response sukses:
 
 ```json
 {
   "ok": true,
-  "leadId": "public-or-redacted-id",
-  "message": "Inquiry berhasil diterima."
+  "message": "Inquiry berhasil diterima. Tim daztore.id akan menghubungi Anda."
 }
 ```
 
@@ -199,15 +200,19 @@ Tidak ada data yang dikirim ke server project.
 
 ### Inquiry form
 
-`InquiryForm` yang belum aktif mengumpulkan:
+`LeadInquiryForm` aktif di `/produk/[slug]` dan mengirim data ke `/api/leads`.
+Form mengumpulkan:
 
 - nama;
 - nomor WhatsApp;
-- tanggal pernikahan;
-- budget;
-- pesan.
+- email opsional;
+- tanggal acara opsional;
+- budget opsional;
+- catatan kebutuhan;
+- consent penggunaan data.
 
-Saat submit, komponen membentuk pesan dan memanggil `window.open`. Nomor WhatsApp pengunjung disimpan di state, tetapi tidak dimasukkan ke draft pesan.
+Saat submit berhasil, data tersimpan sebagai lead dan user diberi opsi lanjut chat WhatsApp.
+Komponen lama `components/inquiry-form.tsx` masih tersedia tetapi tidak dipakai route aktif.
 
 ## Email
 

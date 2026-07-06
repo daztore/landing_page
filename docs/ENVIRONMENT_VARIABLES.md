@@ -8,7 +8,7 @@
 | `NEXT_PUBLIC_SITE_URL` | `https://daztore.web.id` | `lib/site-url.ts`, `next.config.mjs`, `lib/security/safe-image-src.ts` | Public, build/runtime | Tidak |
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://project-ref.supabase.co` | Public Supabase client, admin SSR/browser client, service-role URL, remote image allowlist | Public, build/runtime | Tidak |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_example` | Public Supabase client dan admin SSR/browser client | Public client-side, build/runtime | Tidak rahasia |
-| `SUPABASE_SERVICE_ROLE_KEY` | `sb_secret_example` | `lib/supabase/service-role.ts`, dipakai oleh feedback server code | Server-only runtime | Ya |
+| `SUPABASE_SERVICE_ROLE_KEY` | `sb_secret_example` | `lib/supabase/service-role.ts`, dipakai oleh feedback dan lead public server code | Server-only runtime | Ya |
 
 ## Audit 2026-07-03
 
@@ -19,7 +19,8 @@ Hasil:
 - Tidak ada `SUPABASE_SERVICE_ROLE_KEY` dengan prefix `NEXT_PUBLIC_*`.
 - `SUPABASE_SERVICE_ROLE_KEY` hanya dibaca oleh `lib/supabase/service-role.ts`.
 - `lib/supabase/service-role.ts` memakai import `server-only`, sehingga module tersebut tidak boleh masuk client bundle.
-- Import service-role hanya ditemukan pada `lib/feedback/data.ts` dan `app/feedback/[id]/submit/route.ts`.
+- Import service-role hanya boleh berada pada server-only flow seperti `lib/feedback/data.ts`,
+  `app/feedback/[id]/submit/route.ts`, dan service lead public server-side.
 - Client/browser Supabase hanya memakai `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 - `Dockerfile` hanya menerima build argument `NEXT_PUBLIC_*`; service-role tidak masuk build argument.
 - Workflow GitHub Actions aktif hanya memakai env public untuk verify/build image dan tidak memakai `SUPABASE_SERVICE_ROLE_KEY`.
@@ -30,7 +31,7 @@ Hasil:
 Catatan gap:
 
 - Belum ada schema validasi env terpusat. Saat ini module Supabase memakai fallback/null handling, tetapi fitur commerce nanti sebaiknya punya validasi env server-side yang fail-fast untuk credential wajib.
-- `docker-compose.yml` lokal memakai fallback kosong untuk env. Ini nyaman untuk development dengan fallback data lokal, tetapi route feedback akan gagal aman jika `SUPABASE_SERVICE_ROLE_KEY` belum tersedia.
+- `docker-compose.yml` lokal memakai fallback kosong untuk env. Ini nyaman untuk development dengan fallback data lokal, tetapi route feedback dan `/api/leads` akan gagal aman jika `SUPABASE_SERVICE_ROLE_KEY` belum tersedia.
 - Provider commerce seperti payment, shipping, SMTP, dan anti-spam belum memiliki env aktif. Jangan menambahkan nama credential baru ke `.env.example` sebelum implementasi/provider diputuskan.
 
 ## Local Development
@@ -75,8 +76,8 @@ Jangan mengganti publishable key dengan:
 
 Service-role key melewati RLS dan tidak boleh menggunakan prefix `NEXT_PUBLIC_`.
 Key ini hanya dipakai oleh Server Component/Route Handler untuk membaca feedback request privat,
-upload foto pelanggan ke bucket private, dan menyimpan submission. Jangan kirim key ini ke client,
-Docker build argument, atau source code.
+upload foto pelanggan ke bucket private, menyimpan submission feedback, dan menyimpan lead publik
+setelah validasi server-side. Jangan kirim key ini ke client, Docker build argument, atau source code.
 
 ## Fallback Ketika Env Tidak Tersedia
 
@@ -166,7 +167,7 @@ NEXT_PUBLIC_SITE_URL
 
 `NEXT_PUBLIC_SITE_URL` dapat disimpan sebagai Actions variable. Kedua Supabase public variable
 tetap dapat disimpan sebagai Actions secrets untuk pengelolaan environment yang konsisten.
-`SUPABASE_SERVICE_ROLE_KEY` tidak dipakai oleh workflow build saat ini. Key ini wajib ada di environment runtime server untuk feedback, bukan build argument.
+`SUPABASE_SERVICE_ROLE_KEY` tidak dipakai oleh workflow build saat ini. Key ini wajib ada di environment runtime server untuk feedback dan lead public submit, bukan build argument.
 
 ## Rotation
 

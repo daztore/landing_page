@@ -3,6 +3,7 @@ import {
   ClipboardList,
   Images,
   LayoutTemplate,
+  MessagesSquare,
   MessageSquareQuote,
   PackageSearch,
   Settings,
@@ -43,6 +44,12 @@ const links = [
     title: "Feedback Pelanggan",
     description: "Request feedback dan hasil pelanggan",
     icon: ClipboardList,
+  },
+  {
+    href: "/admin-daz/leads",
+    title: "Leads",
+    description: "Inquiry dan follow-up calon customer",
+    icon: MessagesSquare,
   },
   {
     href: "/admin-daz/landing/faqs",

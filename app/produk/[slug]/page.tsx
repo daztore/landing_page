@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 
 import { ProductDetailView, getProductDetailBySlug } from "@/features/catalog"
+import { LeadInquiryForm } from "@/features/leads/components/lead-inquiry-form"
 import { getSiteChromeData } from "@/lib/data/landing-page"
 
 export const revalidate = 300
@@ -70,5 +71,20 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound()
   }
 
-  return <ProductDetailView product={product} contact={chrome.contact} />
+  return (
+    <ProductDetailView
+      product={product}
+      contact={chrome.contact}
+      inquiryContent={
+        <LeadInquiryForm
+          productSlug={product.slug}
+          productTitle={product.title}
+          productCategoryName={product.category.name}
+          defaultMessage={product.inquiry.defaultMessage}
+          whatsappNumber={chrome.contact.whatsappNumber}
+          privacyUrl={chrome.contact.privacyUrl}
+        />
+      }
+    />
+  )
 }

@@ -21,7 +21,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Isi `.env.local` dengan URL, publishable key Supabase, site URL, dan service-role key server-only untuk fitur feedback. Jika database belum siap, aplikasi tetap memakai fallback lokal.
+Isi `.env.local` dengan URL, publishable key Supabase, site URL, dan service-role key server-only untuk fitur feedback serta inquiry lead. Jika database belum siap, aplikasi tetap memakai fallback lokal untuk konten publik.
 
 Buka:
 
@@ -66,10 +66,11 @@ Route aktif:
 | `/` | Landing page utama dan CTA kontak. |
 | `/katalog` | Katalog Supabase dengan pencarian, filter, dan sorting client-side. |
 | `/produk/[slug]` | Detail produk aktif dengan harga estimasi dan CTA konsultasi. |
+| `/api/leads` | Route Handler `POST` untuk inquiry produk publik. |
 | `/feedback/[id]` | Form feedback pelanggan berbasis link UUID dan tidak diindex. |
 | `/feedback/[id]/submit` | Route Handler `POST` untuk submission feedback dan upload foto pelanggan. |
 | `/admin-daz` | Redirect ke dashboard admin terproteksi. |
-| `/admin-daz/**` | Panel admin terproteksi untuk konten, katalog, feedback, settings, dan gambar. |
+| `/admin-daz/**` | Panel admin terproteksi untuk konten, katalog, leads, feedback, settings, dan gambar. |
 
 ## Supabase
 
@@ -80,11 +81,12 @@ Setup ringkas:
 3. Jalankan `supabase/migrations/003_create_admin_access.sql`.
 4. Jalankan `supabase/migrations/004_create_feedback_feature.sql`.
 5. Jalankan `supabase/migrations/005_harden_feedback_privacy_and_catalog_cleanup.sql`.
-6. Upload asset landing page ke bucket `landing_page` dan asset produk ke bucket `catalogs`.
-7. Jalankan `supabase/seed.sql`.
-8. Buat user email/password melalui Supabase Auth, lalu tambahkan user tersebut ke `public.admin_users`.
-9. Isi `.env.local`.
-10. Restart development server.
+6. Jalankan `supabase/migrations/006_create_leads_feature.sql`.
+7. Upload asset landing page ke bucket `landing_page` dan asset produk ke bucket `catalogs`.
+8. Jalankan `supabase/seed.sql`.
+9. Buat user email/password melalui Supabase Auth, lalu tambahkan user tersebut ke `public.admin_users`.
+10. Isi `.env.local`.
+11. Restart development server.
 
 Nilai gambar pada database disimpan sebagai object path portabel, bukan full public URL.
 File di `public/` tetap dipertahankan sebagai fallback lokal. Daftar object path yang perlu
@@ -163,7 +165,7 @@ Dokumentasi teknis dan operasional existing:
 - Gambar aktif dibaca dari bucket publik `landing_page` dan `catalogs`.
 - `lib/katalog-data.ts` dan `lib/data/fallback.ts` dipertahankan sebagai fallback.
 - CTA utama membuka WhatsApp, email, atau Instagram.
-- Supabase public content memakai publishable key; feedback publik memakai service-role key server-only melalui route Next.js.
+- Supabase public content memakai publishable key; feedback dan inquiry lead publik memakai service-role key server-only melalui route Next.js.
 - Admin memakai Supabase Auth cookie session dan allowlist `admin_users`.
 - Write database/Storage hanya diizinkan RLS untuk admin aktif.
 - `feedback_customer_photos` adalah bucket private; public feedback submit diproses server-side.
