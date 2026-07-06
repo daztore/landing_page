@@ -80,9 +80,23 @@ Tanggung jawab:
 - badge produk;
 - processing time dan status custom;
 - favorite state sementara;
+- link detail ke `/produk/[slug]`;
 - CTA WhatsApp dengan judul produk.
 
 Favorite tidak dipersist ke local storage atau backend.
+
+### `ProductDetailView`
+
+Lokasi: `features/catalog/components/product-detail-view.tsx`
+
+Tanggung jawab:
+
+- menampilkan detail produk aktif dari kontrak `ProductDetail`;
+- menampilkan harga sebagai estimasi, bukan invoice final;
+- menampilkan gambar produk dengan `next/image` dan safe image fallback;
+- menampilkan kategori, waktu pengerjaan, status availability, dan informasi kustomisasi;
+- menyediakan CTA konsultasi WhatsApp dan link kembali ke katalog;
+- menjaga tampilan mobile-first dengan sticky CTA bawah pada layar kecil.
 
 ### `KatalogHeader`
 

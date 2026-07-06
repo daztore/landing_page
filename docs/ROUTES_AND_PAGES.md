@@ -10,6 +10,7 @@ Project menggunakan Next.js App Router karena route didefinisikan melalui folder
 | --- | --- | --- | --- |
 | `/` | `app/page.tsx` | Halaman utama | Landing page pemasaran dan kontak. |
 | `/katalog` | `app/katalog/page.tsx` | Halaman katalog | Pencarian, filter, sorting, dan CTA produk. |
+| `/produk/[slug]` | `app/produk/[slug]/page.tsx` | Publik dynamic | Detail produk katalog aktif, harga estimasi, dan CTA konsultasi. |
 | `/feedback/[id]` | `app/feedback/[id]/page.tsx` | Publik dynamic | Form feedback pelanggan berbasis UUID, `force-dynamic`, dan `noindex`. |
 | `/feedback/[id]/submit` | `app/feedback/[id]/submit/route.ts` | Route Handler publik | Submit feedback pelanggan melalui `POST`. |
 | `/admin-daz` | `app/admin-daz/page.tsx` | Redirect | Redirect ke `/admin-daz/dashboard`. |
@@ -23,9 +24,9 @@ Project menggunakan Next.js App Router karena route didefinisikan melalui folder
 | `/admin-daz/media` | `app/admin-daz/(protected)/media/page.tsx` | Protected | Shortcut pengelolaan media. |
 | `/admin-daz/settings` | `app/admin-daz/(protected)/settings/page.tsx` | Protected | CRUD site settings. |
 | `/robots.txt` | `app/robots.ts` | Metadata route | Robots policy; menolak `/admin-daz` dan `/feedback`. |
-| `/sitemap.xml` | `app/sitemap.ts` | Metadata route | Sitemap untuk `/` dan `/katalog`. |
+| `/sitemap.xml` | `app/sitemap.ts` | Metadata route | Sitemap untuk `/`, `/katalog`, dan produk aktif `/produk/[slug]`. |
 
-Dynamic route aktif saat ini adalah `/feedback/[id]`. Route group aktif adalah `app/admin-daz/(protected)`. Tidak ada catch-all route, parallel route, atau intercepting route.
+Dynamic route aktif saat ini adalah `/produk/[slug]` dan `/feedback/[id]`. Route group aktif adalah `app/admin-daz/(protected)`. Tidak ada catch-all route, parallel route, atau intercepting route.
 
 ## Root Layout
 
@@ -101,9 +102,27 @@ Fitur route:
 - sorting terbaru, populer, harga, dan premium;
 - tampilan filter overlay pada mobile;
 - favorite toggle lokal;
+- link detail ke `/produk/[slug]`;
 - CTA WhatsApp per produk.
 
 Pilihan `newest` tidak melakukan sorting tambahan karena data tidak memiliki tanggal. Urutan yang tampil adalah urutan array source.
+
+## Route `/produk/[slug]`
+
+`app/produk/[slug]/page.tsx` adalah halaman detail produk public dengan:
+
+- `revalidate = 300`;
+- validasi slug sesuai pola katalog;
+- data detail dari `features/catalog/queries/getProductDetailBySlug()`;
+- `notFound()` untuk slug invalid, produk tidak aktif, produk `source = 'feedback_request'`, atau
+  kategori tidak aktif;
+- metadata SEO dengan canonical `/produk/[slug]` dan Open Graph image produk;
+- harga sebagai estimasi, bukan invoice final;
+- CTA konsultasi WhatsApp tanpa cart, checkout, order, payment, atau shipping.
+
+Jika Supabase tidak tersedia atau query error, halaman memakai fallback lokal untuk produk yang
+ada di `lib/katalog-data.ts`. Jika Supabase berhasil tetapi produk tidak ditemukan/tidak aktif,
+fallback tidak dipakai agar produk inactive tidak muncul ulang.
 
 ## Route `/feedback/[id]`
 
@@ -169,20 +188,18 @@ Tidak ditemukan:
 - Server Action;
 - payment/shipping webhook.
 
-## Planned Phase 1 Routes
+## Remaining Planned Phase 2 Routes
 
-Route berikut sudah dirancang untuk Phase 1 preparation, tetapi belum aktif di code saat ini.
+Route berikut sudah dirancang untuk Phase 2, tetapi belum aktif di code saat ini.
 
 | Planned route | Jenis | Tujuan | Catatan |
 | --- | --- | --- | --- |
-| `/produk/[slug]` | Public dynamic | Detail produk katalog aktif. | Membaca produk aktif berdasarkan `products.slug`, mengecualikan produk `feedback_request`, memakai `notFound()` untuk slug invalid/tidak aktif, dan tetap menampilkan harga sebagai estimasi. |
 | `/api/leads` | Route Handler public | Submit inquiry/consultation. | Wajib validasi server-side, rate limit, consent, dan tidak membuka direct public insert Supabase. |
 | `/admin-daz/leads` | Protected admin | List lead dengan pagination/filter status. | Tetap di bawah protected admin layout dan RLS admin. |
 | `/admin-daz/leads/[id]` | Protected admin dynamic | Detail lead, follow-up note, dan status transition. | Status hanya diubah melalui lead service, bukan query langsung dari banyak tempat. |
 
-Saat route `/produk/[slug]` sudah dibuat, sitemap boleh menambahkan URL produk aktif. Route
-admin, feedback, dan lead detail privat tetap tidak boleh masuk sitemap. Robots tetap menolak
-`/admin-daz` dan `/feedback`; route inquiry API tidak perlu diindeks.
+Route admin, feedback, dan lead detail privat tetap tidak boleh masuk sitemap. Robots tetap
+menolak `/admin-daz` dan `/feedback`; route inquiry API tidak perlu diindeks.
 
 ## Middleware
 
@@ -215,7 +232,7 @@ Next.js tetap memakai perilaku default framework untuk error dan not found.
 
 ## Rendering dan Caching
 
-Halaman utama, katalog, dan layout katalog menetapkan `revalidate = 300`. Konten Supabase diambil pada server dan dapat diperbarui melalui ISR, sedangkan interaksi katalog dan section tertentu di-hydrate sebagai Client Component.
+Halaman utama, katalog, product detail, dan layout katalog menetapkan `revalidate = 300`. Konten Supabase diambil pada server dan dapat diperbarui melalui ISR, sedangkan interaksi katalog dan section tertentu di-hydrate sebagai Client Component.
 
 Route feedback dan protected admin bersifat dynamic karena bergantung pada request/session dan data privat.
 

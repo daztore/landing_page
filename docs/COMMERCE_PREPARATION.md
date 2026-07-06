@@ -175,6 +175,15 @@ Keputusan:
 - `/katalog` tetap menjadi list existing dan tidak boleh bergantung pada detail page agar fallback
   katalog lama tetap aman.
 
+Implementasi Phase 2 pada 2026-07-06:
+
+- Route `/produk/[slug]` sudah aktif untuk produk katalog aktif.
+- Detail produk dibaca melalui `features/catalog` dengan cache `revalidate = 300`.
+- Harga tetap estimasi dan CTA utama memakai konsultasi WhatsApp.
+- Sitemap menambahkan URL produk aktif.
+- Form inquiry tersimpan database, admin lead management, manual order, payment, shipping, cart,
+  checkout, dan customer account belum dibuat.
+
 Kontrak minimal product detail:
 
 | Field | Tujuan |

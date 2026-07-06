@@ -263,7 +263,7 @@ Hasil keputusan 2026-07-05:
 
 Tujuan bisnis: menangkap calon customer sebelum masuk order/payment.
 
-### [P1][TODO] Product detail page
+### [P1][DONE] Product detail page
 
 Subtask:
 
@@ -272,6 +272,17 @@ Subtask:
 - Tambahkan CTA inquiry/konsultasi.
 - Pastikan halaman tetap cepat dan cache-friendly.
 - Pastikan fallback produk lama tidak rusak.
+- Utamakan tampilan untuk mobile
+
+Hasil implementasi 2026-07-06:
+
+- Route public `/produk/[slug]` dibuat sebagai Server Component dengan `revalidate = 300`.
+- Data detail dibaca melalui module `features/catalog` dan hanya menampilkan produk aktif,
+  bukan produk `source = 'feedback_request'`; slug invalid/tidak ditemukan memanggil `notFound()`.
+- Harga ditampilkan sebagai estimasi dan CTA konsultasi memakai WhatsApp, bukan cart/checkout.
+- Kartu katalog menambahkan link detail tanpa menghapus CTA WhatsApp existing.
+- Sitemap menambahkan URL produk aktif setelah route detail tersedia.
+- Inquiry form, admin lead management, dan lead status workflow tetap belum dibuat pada task ini.
 
 ### [P1][TODO] Inquiry form
 
@@ -282,6 +293,7 @@ Subtask:
 - Tambahkan rate limit dan spam protection.
 - Jangan simpan data sensitif yang tidak dibutuhkan.
 - Simpan consent/privacy acknowledgement bila diwajibkan.
+- Utamakan tampilan untuk mobile
 
 ### [P1][TODO] Admin lead management
 
@@ -292,6 +304,7 @@ Subtask:
 - Tambahkan filter status.
 - Tambahkan catatan follow-up admin.
 - Batasi akses hanya untuk admin aktif.
+- Utamakan tampilan untuk mobile
 
 ### [P1][TODO] Lead status workflow
 

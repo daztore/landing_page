@@ -37,6 +37,48 @@ Notes:
 
 ## Entries
 
+### 2026-07-06 - Phase 2 product detail page
+
+Type:
+
+- Feature
+- Documentation
+
+Impact:
+
+- Medium
+
+Summary:
+
+- Membuat route public `/produk/[slug]` untuk detail produk aktif dengan harga estimasi,
+  CTA konsultasi WhatsApp, metadata SEO, dan fallback lokal saat Supabase tidak tersedia.
+- Membuat module `features/catalog` untuk kontrak `ProductDetail`, query detail produk,
+  dan sitemap produk aktif.
+- Menambahkan link detail dari kartu katalog tanpa menghapus CTA WhatsApp existing.
+- Menambahkan URL produk aktif ke `/sitemap.xml`.
+- Memperbarui status roadmap Phase 2 `Product detail page` menjadi `DONE`.
+
+Files:
+
+- `app/produk/[slug]/page.tsx`
+- `app/sitemap.ts`
+- `components/katalog/product-card.tsx`
+- `features/catalog/**`
+- `README.md`
+- `docs/ROADMAP.md`
+- `docs/MODULE_ARCHITECTURE.md`
+- `docs/COMMERCE_PREPARATION.md`
+- `docs/ROUTES_AND_PAGES.md`
+- `docs/API_AND_INTEGRATIONS.md`
+- `docs/COMPONENTS.md`
+- `docs/CHANGELOG_NOTES.md`
+
+Notes:
+
+- Tidak ada migration, endpoint `/api/leads`, admin leads page, order, payment, shipping, cart,
+  checkout, atau customer account yang dibuat.
+- Inquiry form, admin lead management, dan lead status workflow tetap berada pada Phase 2 berikutnya.
+
 ### 2026-07-05 - Phase 1 P1 product detail, lead, and admin preparation
 
 Type:

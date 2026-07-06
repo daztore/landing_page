@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import Link from "next/link"
 import { Heart, Clock, Palette } from "lucide-react"
 import { memo, useState } from "react"
 import { cn } from "@/lib/utils"
@@ -95,7 +96,9 @@ function ProductCardComponent({
       {/* Content */}
       <div className="p-4 sm:p-5">
         <h3 className="font-serif text-sm sm:text-base font-semibold text-foreground line-clamp-2 mb-2">
-          {product.title}
+          <Link href={`/produk/${product.id}`} className="transition-colors hover:text-primary">
+            {product.title}
+          </Link>
         </h3>
 
         <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mb-3">
@@ -132,6 +135,15 @@ function ProductCardComponent({
             Terbatas
           </div>
         )}
+
+        <div className="mt-4">
+          <Link
+            href={`/produk/${product.id}`}
+            className="inline-flex w-full items-center justify-center rounded-lg border border-border/70 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary/70"
+          >
+            Lihat detail
+          </Link>
+        </div>
       </div>
     </div>
   )

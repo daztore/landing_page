@@ -208,6 +208,35 @@ SEO dan image policy:
 - Gambar tetap memakai object path bucket `catalogs` atau fallback lokal; jangan menyimpan full
   Supabase public URL sebagai source of truth.
 
+### Phase 2 Product Detail Implementation 2026-07-06
+
+Implementasi pertama `features/catalog` dibuat untuk roadmap Phase 2 `Product detail page`.
+
+Struktur aktif:
+
+```text
+features/
+  catalog/
+    components/
+      product-detail-view.tsx
+    queries/
+      product-detail.ts
+    types.ts
+    index.ts
+```
+
+Keputusan implementasi:
+
+- `app/produk/[slug]/page.tsx` menjadi route orchestration dan presentation entry point.
+- Query detail produk berada di `features/catalog/queries/getProductDetailBySlug()`.
+- Kontrak `ProductDetail` berada di `features/catalog/types.ts` dan diexport melalui
+  `features/catalog/index.ts`.
+- Product detail memakai public Supabase read/RLS dan tidak memakai service-role.
+- Product detail fallback lokal hanya dipakai saat Supabase tidak tersedia atau query error.
+- Tidak ada dependency dari `features/catalog` ke leads, orders, payments, shipping, atau admin.
+- Tidak ada migration, endpoint lead, cart, checkout, order, payment, atau shipping yang dibuat
+  pada implementasi ini.
+
 ### Lead And Inquiry Module
 
 Route/API yang disiapkan untuk implementasi berikutnya:

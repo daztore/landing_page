@@ -28,6 +28,7 @@ Buka:
 ```text
 http://localhost:3000
 http://localhost:3000/katalog
+http://localhost:3000/produk/mahar-1
 http://localhost:3000/admin-daz/login
 ```
 
@@ -64,6 +65,7 @@ Route aktif:
 | --- | --- |
 | `/` | Landing page utama dan CTA kontak. |
 | `/katalog` | Katalog Supabase dengan pencarian, filter, dan sorting client-side. |
+| `/produk/[slug]` | Detail produk aktif dengan harga estimasi dan CTA konsultasi. |
 | `/feedback/[id]` | Form feedback pelanggan berbasis link UUID dan tidak diindex. |
 | `/feedback/[id]/submit` | Route Handler `POST` untuk submission feedback dan upload foto pelanggan. |
 | `/admin-daz` | Redirect ke dashboard admin terproteksi. |

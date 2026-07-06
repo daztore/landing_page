@@ -18,10 +18,12 @@ Ditemukan:
 - Supabase Auth untuk admin;
 - Supabase SSR cookie session;
 - Supabase Storage public/private;
+- Server Component product detail `/produk/[slug]`;
 - Route Handler `POST` untuk submit feedback;
 - Route Handler `GET`/`POST` admin untuk feedback request.
 
-Data produk dan konten pemasaran dibaca pada server melalui `lib/data/landing-page.ts`. Source code lokal tetap menjadi fallback.
+Data produk dan konten pemasaran dibaca pada server melalui `lib/data/landing-page.ts` dan
+`features/catalog/queries`. Source code lokal tetap menjadi fallback.
 
 ## Supabase
 
@@ -73,13 +75,12 @@ Bucket `feedback_customer_photos` bersifat private setelah migration `005`. Foto
 
 Tidak ada route payment, order, shipping, checkout, atau webhook provider.
 
-## Planned Phase 1 API Contracts
+## Product Detail Query
 
-Bagian ini adalah rancangan, belum route aktif.
+Route `/produk/[slug]` sudah aktif dan membaca detail produk melalui Server Component, bukan
+Route Handler publik.
 
-### Product Detail Query
-
-Rencana public product detail:
+Alur public product detail:
 
 ```text
 GET /produk/[slug]
@@ -98,6 +99,14 @@ Aturan query:
 - pilih kolom yang diperlukan saja;
 - resolve image via bucket `catalogs` dengan fallback lokal;
 - panggil `notFound()` bila data tidak memenuhi syarat.
+
+Jika Supabase tidak tersedia atau query error, query memakai fallback lokal. Jika Supabase berhasil
+tetapi produk tidak ditemukan/tidak aktif, halaman tidak memakai fallback agar produk inactive tidak
+muncul ulang.
+
+## Planned Phase 2 API Contracts
+
+Bagian ini adalah rancangan, belum route aktif.
 
 ### Lead/Inquiry Submit
 
@@ -173,6 +182,8 @@ Lokasi penggunaan:
 - `components/whatsapp-button.tsx`;
 - `components/site-navigation.tsx`;
 - `components/katalog/product-card.tsx`;
+- `app/produk/[slug]/page.tsx`;
+- `features/catalog/components/product-detail-view.tsx`;
 - `components/packages.tsx`, belum aktif;
 - `components/inquiry-form.tsx`, belum aktif.
 
@@ -247,7 +258,7 @@ Model `Product`:
 
 | Field | Type | Fungsi |
 | --- | --- | --- |
-| `id` | `string` | Identifier lokal. |
+| `id` | `string` | Identifier lokal dan slug URL detail `/produk/[slug]`. |
 | `title` | `string` | Nama produk. |
 | `category` | `Category` | Filter kategori. |
 | `description` | `string` | Deskripsi kartu. |
