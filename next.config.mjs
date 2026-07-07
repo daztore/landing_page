@@ -42,6 +42,9 @@ const remotePatterns = [supabaseRemotePattern, siteRemotePattern].filter(
 const nextConfig = {
   images: {
     remotePatterns,
+    qualities: [75],
+    formats: ["image/webp"],
+    minimumCacheTTL: 3600,
   },
 }
 
