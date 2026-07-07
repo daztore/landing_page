@@ -4,14 +4,14 @@ Dokumen ini mencatat status keputusan package manager resmi project.
 
 ## Status
 
-Status per 2026-07-05: `DONE`.
+Status per 2026-07-07: `DONE`.
 
 Keputusan resmi: gunakan npm sebagai package manager project dengan pin
 `packageManager: "npm@10.9.0"` di `package.json`.
 
-`package-lock.json` adalah lockfile utama. `pnpm-lock.yaml` masih dipertahankan sebagai
-legacy lockfile yang tidak dipakai oleh jalur operasional aktif dan tidak boleh diperbarui.
-Penghapusan `pnpm-lock.yaml` membutuhkan approval cleanup terpisah.
+`package-lock.json` adalah satu-satunya lockfile yang boleh di-commit. Cleanup security
+2026-07-07 menghapus `pnpm-lock.yaml` karena project resmi sudah npm-only dan lockfile pnpm
+ikut memicu Dependabot alerts yang tidak merepresentasikan jalur CI/Docker/deployment aktif.
 
 ## Audit 2026-07-03
 
@@ -40,12 +40,14 @@ terpisah.
 ## Implementation
 
 - `package.json` memiliki field `packageManager: "npm@10.9.0"`.
-- `package-lock.json` dipertahankan sebagai lockfile utama.
+- `package-lock.json` dipertahankan sebagai satu-satunya lockfile resmi.
 - Dockerfile tetap memakai `COPY package.json package-lock.json ./` dan `npm ci`.
 - Workflow `.github/workflows/ci-cd.yml` tetap memakai `actions/setup-node` dengan cache npm,
   lalu `npm ci`, `npm run lint`, `npm run typecheck`, dan `npm run build`.
 - README, setup lokal, troubleshooting, dan maintenance notes diarahkan ke npm.
-- `pnpm-lock.yaml` tidak dihapus karena belum ada approval eksplisit untuk cleanup lockfile.
+- `pnpm-lock.yaml` sudah dihapus pada cleanup Dependabot 2026-07-07.
+- `.gitignore` menolak `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`, dan `bun.lockb` agar lockfile
+  package manager lain tidak masuk lagi tanpa decision record baru.
 
 ## Operational Rules
 
@@ -53,14 +55,12 @@ terpisah.
 - Gunakan `npm install` hanya di development branch ketika memang mengubah dependency dan perlu
   memperbarui `package-lock.json`.
 - Jangan menjalankan `pnpm install` untuk project ini.
-- Jangan memperbarui `pnpm-lock.yaml`.
-- Jangan menghapus `pnpm-lock.yaml` tanpa approval eksplisit owner untuk cleanup lockfile.
+- Jangan menambahkan kembali `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`, atau lockfile package
+  manager lain tanpa decision record baru.
 - Jangan mengganti command CI, Docker, atau deployment ke package manager lain tanpa decision
   record baru.
 
 ## Remaining Follow-Up
 
-- Cleanup opsional: hapus `pnpm-lock.yaml` pada task terpisah jika owner memberi approval
-  eksplisit.
 - Jika standardisasi Node/npm tim berubah, update `packageManager`, local docs, dan CI/Docker
   secara bersamaan.

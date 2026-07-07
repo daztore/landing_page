@@ -12,9 +12,9 @@ checkout, customer account, SMTP, atau backend terpisah.
 
 | Area | Implementasi |
 | --- | --- |
-| Framework | Next.js `16.2.7` |
+| Framework | Next.js `16.2.10` |
 | Router | App Router, menggunakan folder `app/` |
-| UI runtime | React `19.2.4` dan React DOM `19.2.4` |
+| UI runtime | React `19.2.7` dan React DOM `19.2.7` |
 | Bahasa | TypeScript `5.7.3` |
 | Styling | Tailwind CSS `4.x`, PostCSS, CSS variables |
 | Komponen UI | Radix UI, pola shadcn/ui, Lucide icons |

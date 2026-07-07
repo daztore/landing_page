@@ -5,8 +5,6 @@
 | Prioritas | Area | Risiko |
 | --- | --- | --- |
 | Sedang | Lint baseline | ESLint berjalan, tetapi masih melaporkan warning existing non-blocking. |
-| Rendah | Dependency management | npm sudah resmi, tetapi `pnpm-lock.yaml` masih ada sebagai legacy lockfile sampai cleanup disetujui. |
-| Sedang | Dependency advisory | Audit masih melaporkan PostCSS internal Next.js; npm belum menawarkan patch kompatibel selain downgrade yang tidak layak. |
 | Sedang | Navigasi | Anchor `#packages` dan `#testimonials` tidak memiliki target aktif. |
 | Sedang | Konfigurasi kontak | Kontak memiliki fallback lokal yang harus dijaga tetap sinkron dengan Supabase. |
 | Sedang | Image performance | Asset aktif dilayani dari Supabase Storage dan perlu audit ukuran berkala. |
@@ -53,29 +51,31 @@ Target perbaikan lanjutan:
 - selesaikan warning secara bertahap lalu naikkan kembali severity;
 - pertimbangkan `noUnusedLocals` setelah baseline bersih.
 
-Next.js telah dinaikkan dari `16.2.4` ke `16.2.7` untuk menutup advisory high yang terdeteksi saat implementasi Supabase.
+Next.js telah dinaikkan bertahap sampai `16.2.10`; cleanup dependency 2026-07-07 juga
+menyinkronkan `eslint-config-next` ke `16.2.10`.
 
 Import `Packages` pada `app/page.tsx` tetap ada walaupun render dikomentari. Quality gate akan membantu mendeteksi pola seperti ini.
 
 ## Package Manager
 
-npm sudah menjadi package manager resmi project per 2026-07-05. Decision record tersedia di
+npm sudah menjadi package manager resmi project per 2026-07-05. Cleanup Dependabot 2026-07-07
+menghapus lockfile non-npm. Decision record tersedia di
 `docs/PACKAGE_MANAGER_DECISION.md`.
 
 Status:
 
 - `package.json` memiliki `packageManager: "npm@10.9.0"`;
-- `package-lock.json` adalah lockfile utama;
+- `package-lock.json` adalah satu-satunya lockfile resmi;
 - CI dan Docker tetap memakai `npm ci`;
-- `pnpm-lock.yaml` masih ada sebagai legacy lockfile dan tidak dipakai jalur operasional aktif.
+- `pnpm-lock.yaml` sudah dihapus dan tidak boleh ditambahkan kembali tanpa decision record baru.
 
 Aturan maintenance:
 
 - gunakan `npm ci` untuk install bersih;
 - gunakan `npm install` hanya saat memperbarui dependency pada branch development;
 - jangan menjalankan `pnpm install`;
-- jangan memperbarui `pnpm-lock.yaml`;
-- jangan menghapus `pnpm-lock.yaml` sebelum owner menyetujui cleanup lockfile terpisah.
+- jangan menambahkan `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`, atau lockfile package manager
+  lain.
 
 ## Dependency Surface
 
@@ -209,7 +209,8 @@ Hasil utama:
 - env service-role tetap server-only dan tidak masuk Docker build argument atau workflow build image;
 - RLS public/admin/feedback dan allowlist admin sudah sesuai baseline saat ini;
 - feedback route publik sudah validasi input, upload, dan rate limit in-memory per IP;
-- `npm audit` masih melaporkan moderate advisory pada PostCSS internal Next.js, sementara top-level `postcss` sudah berada di `8.5.14`;
+- dependency advisory PostCSS internal Next.js sudah dibersihkan pada 2026-07-07; `postcss`
+  resolved ke `8.5.16` dan `npm audit --audit-level=low` bersih pada saat cleanup;
 - CodeQL aktif, tetapi hasil alert di GitHub tetap perlu dipantau oleh maintainer.
 
 ### Admin

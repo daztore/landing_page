@@ -53,12 +53,12 @@ npm ci
 
 Lakukan langkah pembaruan lockfile hanya di development branch dan review diff.
 
-### Dua lockfile menghasilkan dependency berbeda
+### Lockfile non-npm muncul
 
-Package manager resmi project adalah npm. `package-lock.json` adalah lockfile utama untuk
-local, CI, dan Docker. `pnpm-lock.yaml` masih ada sebagai legacy lockfile yang tidak dipakai
-jalur operasional aktif. Jangan menjalankan `pnpm install`, jangan memperbarui
-`pnpm-lock.yaml`, dan jangan mengganti deployment ke pnpm tanpa decision record baru.
+Package manager resmi project adalah npm. `package-lock.json` adalah satu-satunya lockfile untuk
+local, CI, dan Docker. Jangan menjalankan `pnpm install`, jangan menambahkan `pnpm-lock.yaml`,
+`yarn.lock`, `bun.lock`, atau lockfile package manager lain, dan jangan mengganti deployment ke
+package manager lain tanpa decision record baru.
 
 ### Lint gagal
 

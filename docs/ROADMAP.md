@@ -7,7 +7,7 @@ Roadmap ini tidak memberi izin untuk langsung membangun payment, order, shipping
 ## Current Baseline
 
 - Framework: Next.js App Router.
-- Package manager resmi: npm `10.9.0` melalui `packageManager` di `package.json`; `package-lock.json` adalah lockfile utama, sedangkan `pnpm-lock.yaml` masih legacy dan tidak dipakai jalur operasional aktif.
+- Package manager resmi: npm `10.9.0` melalui `packageManager` di `package.json`; `package-lock.json` adalah satu-satunya lockfile resmi.
 - Database/CMS: Supabase untuk konten publik, admin CMS, feedback, Storage, Auth, dan RLS.
 - Route publik aktif: `/`, `/katalog`, `/produk/[slug]`, `/order/[orderNumber]`, `/feedback/[id]`.
 - Route API aktif: `/api/leads`, `/feedback/[id]/submit`.
@@ -102,7 +102,15 @@ Hasil keputusan 2026-07-05:
 - `package.json` menambahkan `packageManager: "npm@10.9.0"`.
 - `package-lock.json` tetap menjadi lockfile utama.
 - Local docs, CI, dan Docker tetap memakai `npm ci`.
-- `pnpm-lock.yaml` tidak dihapus karena belum ada approval eksplisit untuk cleanup lockfile; file tersebut diperlakukan sebagai legacy lockfile yang tidak boleh diperbarui.
+- `pnpm-lock.yaml` awalnya diperlakukan sebagai legacy lockfile yang tidak boleh diperbarui.
+
+Hasil cleanup 2026-07-07:
+
+- `pnpm-lock.yaml` dihapus melalui task cleanup Dependabot karena npm sudah menjadi package
+  manager resmi.
+- `package-lock.json` menjadi satu-satunya lockfile yang boleh di-commit.
+- `.gitignore` menolak lockfile package manager lain seperti `pnpm-lock.yaml`, `yarn.lock`,
+  `bun.lock`, dan `bun.lockb`.
 
 ### [P0][DONE] Security check before commerce work
 
@@ -122,7 +130,7 @@ Hasil audit 2026-07-03:
 - Feedback public route sudah validasi UUID, body, rating, rekomendasi, jumlah file, MIME/extension/size, path, rate limit in-memory per IP, dan cleanup upload jika database insert gagal.
 - Error publik dibuat generik; detail teknis hanya dilog server-side.
 - CodeQL aktif untuk JavaScript/TypeScript dengan `security-extended`.
-- Gap sebelum commerce: rate limit feedback masih in-memory per proses dan perlu store terpusat bila deployment multi-instance, upload belum validasi magic byte/content scanning, CSP/HSTS belum ditentukan, dan `npm audit` masih melaporkan moderate advisory pada PostCSS internal Next.js tanpa patch upgrade yang kompatibel.
+- Gap sebelum commerce: rate limit feedback masih in-memory per proses dan perlu store terpusat bila deployment multi-instance, upload belum validasi magic byte/content scanning, dan CSP/HSTS belum ditentukan. Advisory PostCSS internal Next.js sudah dibersihkan pada 2026-07-07 melalui dependency update dan npm override yang tervalidasi.
 
 ### [P0][DONE] Performance baseline
 

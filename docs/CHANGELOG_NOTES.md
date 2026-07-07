@@ -37,6 +37,58 @@ Notes:
 
 ## Entries
 
+### 2026-07-07 - Dependabot dependency alert cleanup
+
+Type:
+
+- Security
+- Infrastructure
+- Documentation
+
+Impact:
+
+- Medium
+
+Summary:
+
+- Menghapus `pnpm-lock.yaml` karena npm sudah menjadi package manager resmi dan
+  `package-lock.json` menjadi satu-satunya lockfile yang boleh di-commit.
+- Memperbarui `next` dan `eslint-config-next` ke `16.2.10`, `react` dan `react-dom` ke
+  `19.2.7`, serta toolchain Tailwind/PostCSS ke versi patched.
+- Menambahkan npm override scoped untuk `next -> postcss` agar nested PostCSS vulnerable tidak
+  dipakai, dan override lodash agar resolusi transitive tetap patched.
+- Menambahkan guard `.gitignore` untuk mencegah lockfile package manager non-npm masuk kembali.
+- Memperbarui dokumentasi package manager, security, roadmap, maintenance, setup, troubleshooting,
+  dan stack project.
+
+Files:
+
+- `package.json`
+- `package-lock.json`
+- `pnpm-lock.yaml`
+- `.gitignore`
+- `README.md`
+- `docs/PACKAGE_MANAGER_DECISION.md`
+- `docs/SECURITY_AND_PERFORMANCE.md`
+- `docs/ROADMAP.md`
+- `docs/MAINTENANCE_NOTES.md`
+- `docs/SETUP_LOCAL.md`
+- `docs/TROUBLESHOOTING.md`
+- `docs/AGENT_GUIDE.md`
+- `docs/PROJECT_OVERVIEW.md`
+- `docs/CHANGELOG_NOTES.md`
+
+Notes:
+
+- `npm ci`, `npm run lint`, `npm run typecheck`, `npm run build`,
+  `npm audit --audit-level=low`, `npm audit --audit-level=moderate`, dan dependency tree check
+  berhasil.
+- `npm audit` melaporkan 0 vulnerability setelah cleanup.
+- `docker build` dengan dummy public env sudah dicoba, tetapi tidak dapat berjalan di mesin lokal
+  karena Docker Desktop/Linux engine tidak aktif.
+- Tidak ada perubahan route, UI, database schema, env secret, payment, shipping, checkout, atau
+  customer account.
+
 ### 2026-07-06 - Phase 3 manual order management
 
 Type:
@@ -275,7 +327,8 @@ Notes:
 
 - Tidak ada dependency baru, lockfile dependency update, Dockerfile change, workflow CI change,
   database migration, atau fitur commerce yang dibuat.
-- `pnpm-lock.yaml` tidak dihapus karena belum ada approval eksplisit untuk cleanup lockfile.
+- Saat entry ini dibuat, `pnpm-lock.yaml` belum dihapus karena belum ada approval eksplisit.
+  Status ini sudah digantikan oleh cleanup Dependabot 2026-07-07.
 - Versi npm dipin ke versi lokal yang tersedia saat keputusan dibuat, yaitu `npm@10.9.0`.
 
 ### 2026-07-03 - Performance baseline and workflow enforcement
@@ -355,7 +408,8 @@ Notes:
 - Logic aplikasi yang diubah hanya guard rate limit pada Route Handler feedback publik.
 - Tidak ada migration database yang dibuat.
 - Rate limit feedback masih in-memory per proses; endpoint commerce publik nanti tetap membutuhkan abuse prevention yang sesuai skala.
-- Magic-byte/content validation upload, CSP/HSTS, dan advisory PostCSS internal Next.js tetap menjadi gap sebelum commerce publik.
+- Magic-byte/content validation upload dan CSP/HSTS tetap menjadi gap sebelum commerce publik.
+  Advisory PostCSS internal Next.js sudah dibersihkan pada cleanup Dependabot 2026-07-07.
 
 ### 2026-07-03 - Sync README and documentation with current code
 

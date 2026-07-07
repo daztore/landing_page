@@ -4,13 +4,13 @@ Landing page dan katalog premium untuk layanan mahar, seserahan, bouquet, hamper
 
 ## Stack
 
-- Next.js `16.2.7`
-- React `19.2.4`
+- Next.js `16.2.10`
+- React `19.2.7`
 - TypeScript `5.7.3`
 - Tailwind CSS `4.x`
 - Supabase JavaScript `2.108.0`
 - Node.js 20 pada Docker
-- npm `10.9.0` sebagai package manager resmi
+- npm `10.9.0` sebagai package manager resmi dengan `package-lock.json` sebagai satu-satunya lockfile
 - Nginx reverse proxy
 
 ## Quick Start

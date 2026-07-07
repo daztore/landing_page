@@ -100,8 +100,40 @@ payment, shipping, cart, checkout, atau customer account yang dibuat.
 | Upload validation | Perlu tindak lanjut | Validasi MIME, ukuran, jumlah file, extension/path, dan cleanup gagal sudah ada; magic-byte/content sniffing dan malware scan belum tersedia. |
 | Error handling | OK | Route publik mengembalikan error generik dan log teknis server-side. |
 | Security headers | Perlu tindak lanjut | Nginx sudah mengirim frame policy, nosniff, referrer policy, permissions policy; CSP dan HSTS belum ditentukan. |
-| Dependency advisory | Perlu tindak lanjut | `npm audit` masih melaporkan moderate advisory pada PostCSS internal Next.js; fix otomatis mengarah ke downgrade tidak layak. Monitor patch Next.js yang kompatibel. |
+| Dependency advisory | OK | Cleanup 2026-07-07 memperbarui dependency rentan dan membersihkan advisory PostCSS internal Next.js melalui npm override yang tervalidasi. |
 | CodeQL | OK | Workflow CodeQL JavaScript/TypeScript dengan `security-extended` aktif untuk push, PR, dan jadwal mingguan. |
+
+## Dependency Security Cleanup 2026-07-07
+
+Cleanup ini khusus membersihkan Dependabot/npm advisory tanpa mengubah logic aplikasi.
+
+Hasil:
+
+- `pnpm-lock.yaml` dihapus karena project resmi npm-only dan lockfile tersebut tidak dipakai
+  CI/Docker/deployment aktif.
+- `next` dan `eslint-config-next` diperbarui ke `16.2.10`.
+- `react` dan `react-dom` diperbarui ke `19.2.7`.
+- `postcss` resolved ke `8.5.16`; nested `next/node_modules/postcss` tidak lagi muncul.
+- `lodash` resolved ke `4.18.1`.
+- `package.json` menambahkan npm override scoped untuk `next -> postcss` dan override lodash
+  agar resolusi transitive tetap berada pada versi patched.
+
+Validasi yang dijalankan pada cleanup:
+
+```bash
+npm ci
+npm run lint
+npm run typecheck
+npm run build
+npm ls next react react-dom lodash postcss eslint-config-next --all
+npm audit --audit-level=low
+npm audit --audit-level=moderate
+```
+
+Catatan Docker:
+
+- `docker build` dengan dummy `NEXT_PUBLIC_*` env sudah dicoba, tetapi tidak dapat dijalankan di
+  mesin lokal karena Docker Desktop/Linux engine tidak aktif.
 
 Keputusan sebelum commerce:
 
