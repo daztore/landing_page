@@ -2,7 +2,8 @@
 
 ## Ringkasan
 
-Project menggunakan Supabase PostgREST melalui SDK resmi untuk membaca konten publik, menjalankan admin CMS, memproses lead/inquiry, dan memproses feedback pelanggan.
+Project menggunakan Supabase PostgREST melalui SDK resmi untuk membaca konten publik, menjalankan
+admin CMS, memproses lead/inquiry, memproses order manual, dan memproses feedback pelanggan.
 
 Tidak ditemukan:
 
@@ -19,8 +20,10 @@ Ditemukan:
 - Supabase SSR cookie session;
 - Supabase Storage public/private;
 - Server Component product detail `/produk/[slug]`;
+- Server Component public order detail `/order/[orderNumber]`;
 - Route Handler `POST` untuk submit inquiry lead;
 - Route Handler `POST` untuk submit feedback;
+- Route Handler admin untuk membuat dan mengubah status order;
 - Route Handler `GET`/`POST` admin untuk feedback request.
 
 Data produk dan konten pemasaran dibaca pada server melalui `lib/data/landing-page.ts` dan
@@ -50,7 +53,10 @@ Query dilakukan oleh data access layer, bukan langsung dari komponen UI. Query:
 - menggunakan RLS public read-only;
 - kembali ke fallback lokal saat gagal atau kosong.
 
-Modul `/admin-daz` menggunakan Supabase Auth email/password dan RLS admin untuk CRUD serta upload. `SUPABASE_SERVICE_ROLE_KEY` hanya digunakan server-side untuk flow feedback dan lead publik yang sudah di-hardening agar data privat tidak dibaca/ditulis langsung oleh client.
+Modul `/admin-daz` menggunakan Supabase Auth email/password dan RLS admin untuk CRUD serta upload.
+`SUPABASE_SERVICE_ROLE_KEY` hanya digunakan server-side untuk flow feedback, lead publik, dan
+public order lookup yang sudah di-hardening agar data privat tidak dibaca/ditulis langsung oleh
+client.
 
 ### Supabase Storage
 
@@ -75,8 +81,10 @@ Bucket `feedback_customer_photos` bersifat private setelah migration `005`. Foto
 | `/admin-daz/feedback/requests` | `app/admin-daz/(protected)/feedback/requests/route.ts` | `GET` | Admin | List feedback request melalui session admin dan RLS. |
 | `/admin-daz/feedback/requests` | `app/admin-daz/(protected)/feedback/requests/route.ts` | `POST` | Admin | Membuat feedback request dan asset terkait dari panel admin. |
 | `/admin-daz/leads/[id]/actions` | `app/admin-daz/(protected)/leads/[id]/actions/route.ts` | `POST` | Admin | Menambah catatan follow-up atau mengubah status lead lewat service/RPC. |
+| `/admin-daz/orders/actions` | `app/admin-daz/(protected)/orders/actions/route.ts` | `POST` | Admin | Membuat order manual draft dari JSON tervalidasi. |
+| `/admin-daz/orders/[id]/actions` | `app/admin-daz/(protected)/orders/[id]/actions/route.ts` | `POST` | Admin | Mengubah status order atau membuat ulang link publik order. |
 
-Tidak ada route payment, order, shipping, checkout, atau webhook provider.
+Tidak ada route payment, shipping, checkout, atau webhook provider.
 
 ## Product Detail Query
 
@@ -165,6 +173,71 @@ Notifikasi awal harus diproses server-side:
 - email/WhatsApp provider future harus memakai secret runtime server-only;
 - hasil notifikasi dicatat sebagai event/catatan lead tanpa menyimpan secret;
 - client hanya boleh menerima status submit dan CTA lanjutan yang aman.
+
+## Manual Order
+
+Order manual Phase 3 aktif untuk admin dan belum terhubung ke payment/shipping provider.
+
+Alur admin:
+
+```text
+GET /admin-daz/orders
+  -> list order via features/orders/queries/listAdminOrders()
+
+GET /admin-daz/orders/new
+  -> form create order
+  -> optional leadId untuk prefill dari lead
+
+POST /admin-daz/orders/actions
+  -> validasi JSON server-side
+  -> createAdminOrder()
+  -> insert orders, order_items, order_status_histories
+  -> optional lead status converted
+```
+
+Request create order admin:
+
+| Field | Wajib | Catatan |
+| --- | --- | --- |
+| `leadId` | Tidak | UUID lead jika order dibuat dari lead. |
+| `customerName` | Ya | Nama customer, dibatasi panjangnya. |
+| `whatsappNumber` | Ya | Dinormalisasi server-side. |
+| `email` | Tidak | Validasi format bila diisi. |
+| `eventDate` | Tidak | Tanggal acara. |
+| `dueDate` | Tidak | Target selesai. |
+| `discountAmount` | Ya | Angka Rupiah, tidak boleh melebihi subtotal. |
+| `adminNote` | Tidak | Catatan internal order. |
+| `items` | Ya | 1 sampai 20 item manual/katalog. |
+
+Setiap item berisi `productSlug` opsional, `itemName`, `quantity`, `unitPrice`, opsi custom, dan
+catatan admin. Jika `productSlug` diisi, server memvalidasi produk aktif dan menyimpan snapshot.
+Total order dihitung ulang server-side.
+
+Status order diubah melalui:
+
+```text
+POST /admin-daz/orders/[id]/actions
+  action=update_status
+```
+
+Link publik order dibuat ulang melalui action yang sama dengan `action=regenerate_public_link`.
+
+## Public Order Detail
+
+Route publik:
+
+| Route | Method | Akses | Tujuan |
+| --- | --- | --- | --- |
+| `/order/[orderNumber]?token=...` | `GET` | Public via token | Menampilkan ringkasan order terbatas. |
+
+Aturan security:
+
+- order number harus mengikuti format `DZT-YYYYMMDD-xxxxx`;
+- token publik diverifikasi server-side terhadap hash di database;
+- database tidak menyimpan raw token publik;
+- halaman publik tidak menampilkan WhatsApp, email, catatan admin, atau full customer profile;
+- metadata route memakai `noindex,nofollow`;
+- public direct read Supabase untuk tabel order tidak dibuka.
 
 ## WhatsApp
 

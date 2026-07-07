@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarDays, MessageCircle, UserRound } from "lucide-react"
+import { ArrowLeft, CalendarDays, MessageCircle, PackagePlus, UserRound } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
@@ -105,15 +105,24 @@ export default async function AdminLeadDetailPage({
                   {leadSourceLabels[lead.source]} - {dateFormatter.format(new Date(lead.createdAt))}
                 </p>
               </div>
-              <a
-                href={`https://wa.me/${lead.whatsappNumber}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-800"
-              >
-                <MessageCircle className="size-4" />
-                WhatsApp
-              </a>
+              <div className="flex flex-col gap-2 sm:items-end">
+                <Link
+                  href={`/admin-daz/orders/new?leadId=${lead.id}`}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-amber-800"
+                >
+                  <PackagePlus className="size-4" />
+                  Buat order
+                </Link>
+                <a
+                  href={`https://wa.me/${lead.whatsappNumber}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-300 bg-white px-4 py-3 text-sm font-semibold text-amber-900 transition hover:bg-amber-50"
+                >
+                  <MessageCircle className="size-4" />
+                  WhatsApp
+                </a>
+              </div>
             </div>
 
             <div className="mt-5 grid gap-4 sm:grid-cols-2">

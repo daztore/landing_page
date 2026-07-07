@@ -154,6 +154,37 @@ Risiko tersisa:
   snapshot.
 - Belum ada CAPTCHA/provider anti-spam eksternal; baseline saat ini sengaja tanpa dependency baru.
 
+## Phase 3 Order Security 2026-07-06
+
+Implementasi manual order menambahkan tabel privat `orders`, `order_items`, dan
+`order_status_histories`, route admin order, serta route publik tokenized `/order/[orderNumber]`.
+
+Guardrail yang sudah diterapkan:
+
+- Public direct read/write Supabase untuk tabel order tidak dibuka.
+- Admin read/write order memakai Supabase Auth cookie session, allowlist `admin_users`, dan RLS
+  `public.is_active_admin()`.
+- Order baru selalu dibuat sebagai `draft` dan total dihitung ulang server-side dari item serta
+  diskon.
+- Item katalog divalidasi ulang server-side dan menyimpan snapshot produk agar perubahan katalog
+  tidak mengubah order lama.
+- Perubahan status hanya lewat order service dan RPC `public.change_order_status()`, lalu dicatat
+  ke `order_status_histories`.
+- Public order detail memerlukan order number dan token; database hanya menyimpan hash token,
+  bukan raw token.
+- Halaman publik order membatasi data customer dan tidak menampilkan WhatsApp, email, catatan
+  admin, atau token hint.
+- Route `/order/[orderNumber]` memakai metadata `noindex,nofollow`, dan `/order` ditambahkan ke
+  `robots.txt` disallow.
+
+Risiko tersisa:
+
+- Status `paid`, `ready_to_ship`, dan `shipped` masih input manual admin sampai Phase 4/5.
+- Token publik harus diperlakukan seperti link rahasia; jika bocor, admin perlu membuat ulang link
+  dari detail order.
+- Belum ada audit log umum lintas resource selain history status order.
+- Belum ada payment transaction/webhook security karena Phase 4 belum dibuat.
+
 ## Performance Principles
 
 - Landing page harus tetap cepat.
@@ -253,6 +284,7 @@ Checklist manual:
 - Public content dapat memakai `revalidate`.
 - Admin berada di route `/admin-daz/**`.
 - Public inquiry submit memakai Route Handler server-side `/api/leads`.
+- Public order detail memakai token lookup server-side dan tidak membuka tabel order ke public RLS.
 - Feedback submit memakai Route Handler server-side.
 - Service-role client berada di file `server-only`.
 - Docker production harus memakai image siap jalan, bukan build di server.

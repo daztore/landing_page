@@ -11,6 +11,7 @@ Project menggunakan Next.js App Router karena route didefinisikan melalui folder
 | `/` | `app/page.tsx` | Halaman utama | Landing page pemasaran dan kontak. |
 | `/katalog` | `app/katalog/page.tsx` | Halaman katalog | Pencarian, filter, sorting, dan CTA produk. |
 | `/produk/[slug]` | `app/produk/[slug]/page.tsx` | Publik dynamic | Detail produk katalog aktif, harga estimasi, dan form inquiry. |
+| `/order/[orderNumber]` | `app/order/[orderNumber]/page.tsx` | Publik dynamic via token | Ringkasan order publik terbatas dengan metadata `noindex`. |
 | `/api/leads` | `app/api/leads/route.ts` | Route Handler publik | Submit inquiry produk melalui `POST`. |
 | `/feedback/[id]` | `app/feedback/[id]/page.tsx` | Publik dynamic | Form feedback pelanggan berbasis UUID, `force-dynamic`, dan `noindex`. |
 | `/feedback/[id]/submit` | `app/feedback/[id]/submit/route.ts` | Route Handler publik | Submit feedback pelanggan melalui `POST`. |
@@ -23,6 +24,11 @@ Project menggunakan Next.js App Router karena route didefinisikan melalui folder
 | `/admin-daz/leads` | `app/admin-daz/(protected)/leads/page.tsx` | Protected | List lead dengan pagination, filter status, dan pencarian. |
 | `/admin-daz/leads/[id]` | `app/admin-daz/(protected)/leads/[id]/page.tsx` | Protected dynamic | Detail lead, catatan follow-up, dan timeline status. |
 | `/admin-daz/leads/[id]/actions` | `app/admin-daz/(protected)/leads/[id]/actions/route.ts` | Route Handler admin | `POST` update status/catatan lead. |
+| `/admin-daz/orders` | `app/admin-daz/(protected)/orders/page.tsx` | Protected | List order dengan pagination, filter status, dan pencarian. |
+| `/admin-daz/orders/new` | `app/admin-daz/(protected)/orders/new/page.tsx` | Protected | Form admin membuat order manual dari lead atau customer. |
+| `/admin-daz/orders/actions` | `app/admin-daz/(protected)/orders/actions/route.ts` | Route Handler admin | `POST` membuat order manual draft. |
+| `/admin-daz/orders/[id]` | `app/admin-daz/(protected)/orders/[id]/page.tsx` | Protected dynamic | Detail order, item, total, history, dan action status. |
+| `/admin-daz/orders/[id]/actions` | `app/admin-daz/(protected)/orders/[id]/actions/route.ts` | Route Handler admin | `POST` update status order atau regenerasi link publik. |
 | `/admin-daz/feedback` | `app/admin-daz/(protected)/feedback/page.tsx` | Protected | Kelola feedback request dan submission. |
 | `/admin-daz/feedback/requests` | `app/admin-daz/(protected)/feedback/requests/route.ts` | Route Handler admin | `GET`/`POST` request feedback admin. |
 | `/admin-daz/media` | `app/admin-daz/(protected)/media/page.tsx` | Protected | Shortcut pengelolaan media. |
@@ -30,7 +36,9 @@ Project menggunakan Next.js App Router karena route didefinisikan melalui folder
 | `/robots.txt` | `app/robots.ts` | Metadata route | Robots policy; menolak `/admin-daz` dan `/feedback`. |
 | `/sitemap.xml` | `app/sitemap.ts` | Metadata route | Sitemap untuk `/`, `/katalog`, dan produk aktif `/produk/[slug]`. |
 
-Dynamic route aktif saat ini adalah `/produk/[slug]` dan `/feedback/[id]`. Route group aktif adalah `app/admin-daz/(protected)`. Tidak ada catch-all route, parallel route, atau intercepting route.
+Dynamic route aktif saat ini adalah `/produk/[slug]`, `/order/[orderNumber]`, dan `/feedback/[id]`.
+Route group aktif adalah `app/admin-daz/(protected)`. Tidak ada catch-all route, parallel route,
+atau intercepting route.
 
 ## Root Layout
 
@@ -183,6 +191,23 @@ Route ini memakai `SUPABASE_SERVICE_ROLE_KEY` server-only melalui `lib/supabase/
 karena direct public insert/read untuk tabel `leads` dan `lead_messages` tidak dibuka.
 Response public tidak mengembalikan full row lead.
 
+## Route `/order/[orderNumber]`
+
+`app/order/[orderNumber]/page.tsx` adalah halaman ringkasan order publik berbasis token dengan:
+
+- `dynamic = "force-dynamic"`;
+- query string wajib `?token=...`;
+- validasi format order number `DZT-YYYYMMDD-xxxxx`;
+- lookup server-side melalui `features/orders/queries/getPublicOrderDetail()`;
+- verifikasi token terhadap hash di database;
+- metadata `robots` noindex/nofollow;
+- tampilan data terbatas: status, nama depan customer, tanggal relevan, item, total, dan timeline
+  status;
+- tanpa WhatsApp, email, catatan admin, token hint, atau data admin.
+
+Jika order number/token invalid, service-role belum tersedia, atau hash token tidak cocok, halaman
+memanggil `notFound()`. Route `/order` juga ditambahkan ke `robots.txt` disallow.
+
 ## Layout `/katalog`
 
 `app/katalog/layout.tsx` mengambil navigation/contact dari Supabase. Deteksi viewport dipindahkan ke `KatalogLayoutShell`, sebuah Client Component:
@@ -204,6 +229,8 @@ Route Handler aktif:
 | `app/admin-daz/(protected)/feedback/requests/route.ts` | `GET` | Admin | List feedback request. |
 | `app/admin-daz/(protected)/feedback/requests/route.ts` | `POST` | Admin | Membuat feedback request dari panel admin. |
 | `app/admin-daz/(protected)/leads/[id]/actions/route.ts` | `POST` | Admin | Tambah catatan follow-up atau update status lead. |
+| `app/admin-daz/(protected)/orders/actions/route.ts` | `POST` | Admin | Membuat order manual draft dari JSON tervalidasi. |
+| `app/admin-daz/(protected)/orders/[id]/actions/route.ts` | `POST` | Admin | Update status order atau regenerasi link publik. |
 
 Tidak ditemukan:
 
@@ -211,8 +238,8 @@ Tidak ditemukan:
 - Server Action;
 - payment/shipping webhook.
 
-Route admin, feedback, dan lead detail privat tetap tidak boleh masuk sitemap. Robots tetap
-menolak `/admin-daz` dan `/feedback`; route inquiry API tidak perlu diindeks.
+Route admin, feedback, lead detail privat, dan order tokenized tetap tidak boleh masuk sitemap.
+Robots menolak `/admin-daz`, `/feedback`, dan `/order`; route inquiry API tidak perlu diindeks.
 
 ## Middleware
 
@@ -247,7 +274,8 @@ Next.js tetap memakai perilaku default framework untuk error dan not found.
 
 Halaman utama, katalog, product detail, dan layout katalog menetapkan `revalidate = 300`. Konten Supabase diambil pada server dan dapat diperbarui melalui ISR, sedangkan interaksi katalog, inquiry form, dan section tertentu di-hydrate sebagai Client Component.
 
-Route feedback, `/api/leads`, dan protected admin bersifat dynamic karena bergantung pada request/session dan data privat.
+Route feedback, `/api/leads`, `/order/[orderNumber]`, dan protected admin bersifat dynamic karena
+bergantung pada request/session, token, dan data privat.
 
 Jika Supabase gagal atau dataset kosong, data lokal digunakan.
 

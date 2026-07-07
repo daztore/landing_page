@@ -37,6 +37,69 @@ Notes:
 
 ## Entries
 
+### 2026-07-06 - Phase 3 manual order management
+
+Type:
+
+- Feature
+- Database
+- Security
+- Documentation
+
+Impact:
+
+- High
+
+Summary:
+
+- Membuat migration `007_create_orders_feature.sql` untuk tabel `orders`, `order_items`,
+  `order_status_histories`, sequence nomor order, RLS admin-only, dan RPC
+  `public.change_order_status()`.
+- Menambahkan module `features/orders` untuk kontrak status, validasi create order, query
+  admin/public, service create order, status workflow, dan token publik.
+- Menambahkan admin order management di `/admin-daz/orders`, `/admin-daz/orders/new`, dan
+  `/admin-daz/orders/[id]` dengan create draft order, item manual/katalog, status update,
+  history, dan regenerasi link publik.
+- Menambahkan route publik `/order/[orderNumber]?token=...` dengan token hash di database,
+  service-role lookup server-only, metadata `noindex`, dan data customer yang dibatasi.
+- Menambahkan shortcut dari detail lead ke create order dan menandai lead sebagai `converted`
+  saat order dibuat dari lead.
+- Memperbarui status roadmap Phase 3 untuk `Order data model`, `Admin create order`,
+  `Public order detail page`, dan `Order status workflow` menjadi `DONE`.
+
+Files:
+
+- `supabase/migrations/007_create_orders_feature.sql`
+- `features/orders/**`
+- `features/catalog/queries/order-product-snapshot.ts`
+- `features/catalog/server.ts`
+- `app/admin-daz/(protected)/orders/**`
+- `app/order/[orderNumber]/page.tsx`
+- `app/admin-daz/(protected)/leads/[id]/page.tsx`
+- `app/admin-daz/(protected)/dashboard/page.tsx`
+- `components/admin-daz/admin-bottom-nav.tsx`
+- `app/robots.ts`
+- `README.md`
+- `docs/ROADMAP.md`
+- `docs/CHANGELOG_NOTES.md`
+- `docs/MODULE_ARCHITECTURE.md`
+- `docs/COMMERCE_PREPARATION.md`
+- `docs/SECURITY_AND_PERFORMANCE.md`
+- `docs/ROUTES_AND_PAGES.md`
+- `docs/API_AND_INTEGRATIONS.md`
+- `docs/SUPABASE_MIGRATION.md`
+- `docs/ENVIRONMENT_VARIABLES.md`
+- `docs/COMPONENTS.md`
+- `docs/PROJECT_OVERVIEW.md`
+
+Notes:
+
+- Order baru selalu dimulai sebagai `draft` dan belum dianggap transaksi final.
+- Public direct read/write Supabase untuk tabel order tidak dibuka; halaman publik order memakai
+  nomor order dan token yang diverifikasi server-side terhadap hash di database.
+- Payment provider, payment transaction table, webhook payment, shipping, tracking, cart,
+  checkout, dan customer account tetap belum dibuat.
+
 ### 2026-07-06 - Phase 2 lead and inquiry management
 
 Type:

@@ -4,7 +4,9 @@
 
 `daztore.id` adalah landing page, katalog produk, admin CMS, dan flow feedback pelanggan untuk layanan wedding atelier yang menawarkan mahar, seserahan, bouquet, hampers, wedding gift box, dan paket custom. Aplikasi menampilkan informasi pemasaran, galeri, testimoni, FAQ, katalog, form feedback berbasis link, serta beberapa CTA yang mengarahkan pengunjung ke WhatsApp atau email.
 
-Repository ini menggunakan Next.js dan Supabase untuk konten publik, admin CMS, feedback, Storage, Auth, dan RLS. Belum ada integrasi order, payment gateway, shipping, cart, checkout, customer account, SMTP, atau backend terpisah.
+Repository ini menggunakan Next.js dan Supabase untuk konten publik, admin CMS, feedback, lead,
+manual order, Storage, Auth, dan RLS. Belum ada integrasi payment gateway, shipping, cart,
+checkout, customer account, SMTP, atau backend terpisah.
 
 ## Teknologi Utama
 
@@ -29,9 +31,11 @@ Aplikasi memiliki tiga tujuan utama:
 
 1. Menjadi landing page pemasaran yang menjelaskan positioning, proses layanan, galeri, testimoni, FAQ, dan jalur kontak.
 2. Menjadi katalog statis yang memungkinkan pengunjung mencari, memfilter, mengurutkan, dan menghubungi bisnis terkait produk tertentu.
-3. Menjadi admin CMS dan feedback collection tool untuk konten, katalog, request feedback, submission feedback, dan upload gambar.
+3. Menjadi admin CMS, lead/order manual, dan feedback collection tool untuk konten, katalog,
+   request feedback, submission feedback, dan upload gambar.
 
-Seluruh CTA transaksi saat ini berakhir di kanal komunikasi eksternal. Tidak ada checkout atau pemesanan yang diproses oleh aplikasi.
+CTA publik tetap berawal dari konsultasi/inquiry. Order hanya dibuat manual oleh admin dari hasil
+konsultasi; belum ada checkout publik atau payment gateway aktif.
 
 ## Struktur Repository
 
@@ -90,13 +94,18 @@ docker-compose.production.yml Compose production berbasis image GHCR
 | --- | --- |
 | `/` | Landing page utama dengan navigasi, hero, cerita, proses, keunggulan, galeri, testimoni, FAQ, urgency CTA, kontak, footer, dan tombol WhatsApp mengambang. |
 | `/katalog` | Katalog produk statis dengan pencarian, filter kategori, sorting, kartu produk, favorite state lokal, dan CTA WhatsApp. |
+| `/produk/[slug]` | Detail produk aktif dengan harga estimasi dan form inquiry. |
+| `/order/[orderNumber]` | Ringkasan order publik berbasis token aman dan `noindex`. |
 | `/feedback/[id]` | Halaman feedback pelanggan berbasis UUID, `force-dynamic`, dan `noindex`. |
 | `/feedback/[id]/submit` | Route Handler `POST` untuk submit rating, kritik/saran, testimoni, rekomendasi, dan foto pelanggan. |
 | `/admin-daz` | Redirect ke `/admin-daz/dashboard`. |
 | `/admin-daz/login` | Login email/password admin melalui Supabase Auth. |
-| `/admin-daz/**` | Admin CMS terproteksi untuk dashboard, landing content, katalog, feedback, media, dan settings. |
+| `/admin-daz/**` | Admin CMS terproteksi untuk dashboard, landing content, katalog, leads, orders, feedback, media, dan settings. |
 
-Route dynamic aktif adalah `/feedback/[id]`. Route Handler aktif berada pada feedback submit dan admin feedback requests. `proxy.ts` berjalan untuk `/admin-daz/:path*` guna refresh cookie Supabase Auth. Custom loading tersedia; custom `error.tsx`, `global-error.tsx`, dan `not-found.tsx` belum tersedia.
+Route dynamic aktif adalah `/produk/[slug]`, `/order/[orderNumber]`, dan `/feedback/[id]`. Route
+Handler aktif berada pada lead submit, order admin actions, feedback submit, dan admin feedback
+requests. `proxy.ts` berjalan untuk `/admin-daz/:path*` guna refresh cookie Supabase Auth. Custom
+loading tersedia; custom `error.tsx`, `global-error.tsx`, dan `not-found.tsx` belum tersedia.
 
 Detail route tersedia di [ROUTES_AND_PAGES.md](./ROUTES_AND_PAGES.md).
 
@@ -195,7 +204,9 @@ Lihat [DOCKER_AND_DEPLOYMENT.md](./DOCKER_AND_DEPLOYMENT.md) untuk batasan konfi
 | Supabase Storage | Asset publik, katalog, dan foto feedback pelanggan private. |
 | Google Fonts | `Inter` dan `Playfair Display` dimuat melalui `next/font/google`. |
 
-Tidak ditemukan Axios client, Pages Router API route, Server Action, GraphQL client, maps, SMTP, active analytics package, payment gateway, shipping provider, cart, checkout, atau customer account.
+Tidak ditemukan Axios client, Pages Router API route, Server Action, GraphQL client, maps, SMTP,
+active analytics package, payment gateway, shipping provider, cart, checkout, atau customer
+account.
 
 ## Needs Confirmation
 

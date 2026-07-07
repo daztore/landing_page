@@ -388,6 +388,69 @@ Keputusan implementasi:
 - Tidak ada dependency dari `features/leads` ke orders, payments, shipping, cart, checkout, atau
   customers.
 
+### Phase 3 Manual Order Implementation 2026-07-06
+
+Implementasi `features/orders` dibuat untuk roadmap Phase 3 `Manual Order Management`.
+
+Struktur aktif:
+
+```text
+features/
+  orders/
+    components/
+      admin-order-actions.tsx
+      admin-order-form.tsx
+    queries/
+      admin-orders.ts
+      public-order.ts
+    services/
+      admin-orders.ts
+      public-token.ts
+    validation/
+      order-request.ts
+    types.ts
+    index.ts
+    server.ts
+```
+
+Route aktif:
+
+```text
+app/
+  order/
+    [orderNumber]/
+      page.tsx
+  admin-daz/
+    (protected)/
+      orders/
+        page.tsx
+        new/
+          page.tsx
+        actions/
+          route.ts
+        [id]/
+          page.tsx
+          actions/
+            route.ts
+```
+
+Keputusan implementasi:
+
+- `features/orders` menjadi boundary untuk order manual, order item snapshot, token publik,
+  status workflow, dan history.
+- Order dapat dibuat admin dari lead lewat `/admin-daz/orders/new?leadId=...` atau dari customer
+  manual tanpa customer account.
+- `features/orders` membaca produk aktif melalui API server `features/catalog/server.ts` untuk
+  membuat snapshot item katalog.
+- `features/orders` memakai API server `features/leads/server.ts` untuk validasi lead dan
+  menandai lead sebagai `converted` saat order dibuat dari lead.
+- Public order detail memakai `/order/[orderNumber]?token=...`; raw token tidak disimpan di
+  database, hanya hash dan hint.
+- Public direct read/write Supabase untuk `orders`, `order_items`, dan `order_status_histories`
+  tidak dibuka. Admin memakai Supabase Auth cookie session dan RLS admin.
+- Tidak ada dependency dari `features/orders` ke payments, shipping, cart, checkout, atau customer
+  account.
+
 ### Admin Module Boundary
 
 Route admin tetap berada di:
@@ -404,7 +467,7 @@ Rencana resource admin per domain:
 | Catalog | `/admin-daz/catalog/**` | Generic resource manager untuk kategori/produk; product detail tetap public concern. |
 | Feedback | `/admin-daz/feedback` | Dedicated service/component karena punya workflow dan private photo. |
 | Leads | `/admin-daz/leads`, `/admin-daz/leads/[id]` | Dedicated lead service/component, bukan generic CRUD murni. |
-| Orders | `/admin-daz/orders/**` | Future dedicated workflow service. |
+| Orders | `/admin-daz/orders/**` | Dedicated order workflow service aktif Phase 3. |
 | Payments | `/admin-daz/payments/**` | Future read/audit workflow; provider action server-side. |
 | Shipping | `/admin-daz/shipments/**` | Future shipment workflow service. |
 | Customers | `/admin-daz/customers/**` | Future privacy-aware customer service. |

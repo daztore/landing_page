@@ -323,6 +323,37 @@ Opsi aman:
 - `completed`
 - `cancelled`
 
+## Phase 3 Manual Order Implementation
+
+Implementasi Phase 3 pada 2026-07-06:
+
+- Tabel `orders`, `order_items`, dan `order_status_histories` sudah dibuat melalui migration
+  `supabase/migrations/007_create_orders_feature.sql`.
+- Admin dapat membuat order manual dari lead atau input customer manual melalui
+  `/admin-daz/orders/new`.
+- Detail lead menyediakan shortcut ke create order. Jika order dibuat dari lead, lead ditandai
+  `converted` melalui service/RPC lead existing.
+- Order baru selalu berstatus `draft`; status ini bukan transaksi final dan belum berarti payment
+  atau produksi dimulai.
+- Item order menyimpan snapshot produk katalog saat order dibuat, termasuk nama, kategori, harga
+  estimasi, dan metadata produk yang aman.
+- Item manual didukung untuk kebutuhan custom yang tidak berasal dari katalog.
+- Total order dihitung ulang server-side dari item dan diskon manual.
+- Public order detail tersedia di `/order/[orderNumber]?token=...` dengan token publik yang
+  disimpan sebagai hash di database.
+- Halaman publik order menampilkan data terbatas: status, nama depan customer, tanggal relevan,
+  item, total, dan timeline status tanpa WhatsApp/email/catatan admin.
+- Payment provider, payment transaction, webhook payment, shipping/tracking, cart, checkout, dan
+  customer account belum dibuat.
+
+Aturan operasional Phase 3:
+
+- Jangan mengubah status order langsung dari UI/route selain melalui order service.
+- Status `paid`, `ready_to_ship`, dan `shipped` pada Phase 3 bersifat catatan manual admin, bukan
+  hasil integrasi provider.
+- Jika perlu membagikan order ke customer, gunakan link publik yang dibuat saat create order atau
+  regenerasi link dari detail order.
+
 ### Payment Status
 
 - `pending`
@@ -344,7 +375,8 @@ Opsi aman:
 
 ## Database Candidate
 
-Seluruh tabel di bawah berstatus `PLANNED` dan belum boleh dibuat tanpa task implementasi/migration khusus.
+Tabel berstatus `ACTIVE` sudah memiliki migration sesuai phase. Tabel `PLANNED` belum boleh dibuat
+tanpa task implementasi/migration khusus.
 
 | Table | Status | Deskripsi singkat |
 | --- | --- | --- |
@@ -352,9 +384,9 @@ Seluruh tabel di bawah berstatus `PLANNED` dan belum boleh dibuat tanpa task imp
 | `customer_addresses` | PLANNED | Alamat customer untuk pengiriman, dengan kota/kecamatan dan catatan alamat. |
 | `leads` | ACTIVE PHASE 2 | Inquiry/konsultasi awal sebelum menjadi order. |
 | `lead_messages` | ACTIVE PHASE 2 | Riwayat pesan/catatan follow-up lead dan status change. |
-| `orders` | PLANNED | Header order, nomor order, customer, total, status, dan metadata invoice. |
-| `order_items` | PLANNED | Item order dengan snapshot produk, harga, opsi custom, dan quantity. |
-| `order_status_histories` | PLANNED | Riwayat perubahan status order beserta actor, timestamp, dan catatan. |
+| `orders` | ACTIVE PHASE 3 | Header order manual, nomor order, customer, total, token publik hash, dan status. |
+| `order_items` | ACTIVE PHASE 3 | Item order dengan snapshot produk, harga, opsi custom, catatan, dan quantity. |
+| `order_status_histories` | ACTIVE PHASE 3 | Riwayat perubahan status order beserta actor, timestamp, dan catatan. |
 | `payment_transactions` | PLANNED | Data transaksi payment provider, provider reference, amount, currency, dan status. |
 | `payment_webhook_events` | PLANNED | Raw event webhook payment untuk idempotency, audit, dan diagnosis. |
 | `shipments` | PLANNED | Data pengiriman, courier, service, resi, alamat ringkas, dan status. |

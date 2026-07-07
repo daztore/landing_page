@@ -7,6 +7,7 @@ import {
   MessageSquareQuote,
   PackageSearch,
   Settings,
+  ShoppingBag,
   Tags,
 } from "lucide-react"
 
@@ -50,6 +51,12 @@ const links = [
     title: "Leads",
     description: "Inquiry dan follow-up calon customer",
     icon: MessagesSquare,
+  },
+  {
+    href: "/admin-daz/orders",
+    title: "Orders",
+    description: "Order manual dan status produksi",
+    icon: ShoppingBag,
   },
   {
     href: "/admin-daz/landing/faqs",

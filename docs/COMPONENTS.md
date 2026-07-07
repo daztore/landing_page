@@ -164,6 +164,29 @@ Tanggung jawab:
 - menampilkan feedback sukses/gagal;
 - memanggil `router.refresh()` agar detail lead server-rendered memuat timeline terbaru.
 
+### `AdminOrderForm`
+
+Lokasi: `features/orders/components/admin-order-form.tsx`
+
+Tanggung jawab:
+
+- membuat order manual draft dari lead atau input customer manual;
+- memilih item dari katalog aktif atau menambah item manual;
+- mengumpulkan quantity, harga satuan, opsi custom, catatan item, diskon, dan catatan order;
+- mengirim JSON ke `/admin-daz/orders/actions`;
+- menampilkan link detail order admin dan link publik order setelah create berhasil.
+
+### `AdminOrderActions`
+
+Lokasi: `features/orders/components/admin-order-actions.tsx`
+
+Tanggung jawab:
+
+- mengubah status order melalui `/admin-daz/orders/[id]/actions`;
+- membuat ulang link publik order tanpa menyimpan raw token di database;
+- menampilkan feedback sukses/gagal;
+- memanggil `router.refresh()` agar detail order server-rendered memuat status/history terbaru.
+
 ## Komponen Pendukung
 
 ### `Reveal`

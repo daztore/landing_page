@@ -9,9 +9,9 @@ Roadmap ini tidak memberi izin untuk langsung membangun payment, order, shipping
 - Framework: Next.js App Router.
 - Package manager resmi: npm `10.9.0` melalui `packageManager` di `package.json`; `package-lock.json` adalah lockfile utama, sedangkan `pnpm-lock.yaml` masih legacy dan tidak dipakai jalur operasional aktif.
 - Database/CMS: Supabase untuk konten publik, admin CMS, feedback, Storage, Auth, dan RLS.
-- Route publik aktif: `/`, `/katalog`, `/produk/[slug]`, `/feedback/[id]`.
+- Route publik aktif: `/`, `/katalog`, `/produk/[slug]`, `/order/[orderNumber]`, `/feedback/[id]`.
 - Route API aktif: `/api/leads`, `/feedback/[id]/submit`.
-- Route admin aktif: `/admin-daz/**`, termasuk `/admin-daz/leads`.
+- Route admin aktif: `/admin-daz/**`, termasuk `/admin-daz/leads` dan `/admin-daz/orders`.
 - Deployment: Docker multi-stage, GHCR image build, dan Compose production berbasis image.
 
 ## Status Legend
@@ -368,7 +368,7 @@ Status lead:
 
 Tujuan: admin bisa membuat order dari hasil konsultasi. Ini menjadi fondasi sebelum payment online.
 
-### [P1][TODO] Order data model
+### [P1][DONE] Order data model
 
 Subtask:
 
@@ -379,7 +379,20 @@ Subtask:
 - Rancang nomor order yang stabil dan mudah dilacak.
 - Rancang constraint untuk status, total, dan customer reference.
 
-### [P1][TODO] Admin create order
+Hasil implementasi 2026-07-06:
+
+- Migration `supabase/migrations/007_create_orders_feature.sql` membuat tabel `orders`,
+  `order_items`, dan `order_status_histories`.
+- Nomor order dibuat dengan format stabil `DZT-YYYYMMDD-xxxxx` melalui sequence dan function
+  `public.generate_order_number()`.
+- Order item menyimpan `product_snapshot`, nama item, harga satuan, quantity, line total,
+  opsi custom, dan catatan admin.
+- Constraint database membatasi status resmi, format nomor order, format WhatsApp, token hash
+  publik, nilai total, dan shape JSON snapshot/metadata.
+- Public direct read/write ke tabel order tidak dibuka; admin dibatasi RLS
+  `public.is_active_admin()`.
+
+### [P1][DONE] Admin create order
 
 Subtask:
 
@@ -389,7 +402,20 @@ Subtask:
 - Validasi total server-side.
 - Pastikan order draft tidak dianggap transaksi final.
 
-### [P1][TODO] Public order detail page
+Hasil implementasi 2026-07-06:
+
+- Admin dapat membuat order manual melalui `/admin-daz/orders/new`.
+- Detail lead memiliki shortcut `Buat order` ke `/admin-daz/orders/new?leadId=...` untuk prefill
+  customer dan item awal dari lead.
+- Form order mendukung item manual dan item dari katalog aktif; item katalog divalidasi ulang
+  server-side sebelum snapshot disimpan.
+- Total order dihitung ulang oleh service server-side dan order baru selalu dibuat dengan status
+  `draft`.
+- Pembuatan order dari lead menandai lead sebagai `converted` melalui RPC lead existing.
+- Tidak ada payment provider, invoice payment, shipping, cart, checkout, atau customer account
+  yang dibuat.
+
+### [P1][DONE] Public order detail page
 
 Subtask:
 
@@ -398,7 +424,18 @@ Subtask:
 - Batasi data customer yang terlihat.
 - Tambahkan metadata noindex jika halaman tidak untuk SEO.
 
-### [P1][TODO] Order status workflow
+Hasil implementasi 2026-07-06:
+
+- Route publik `/order/[orderNumber]?token=...` dibuat untuk melihat ringkasan order berbasis
+  nomor order dan token aman.
+- Database hanya menyimpan hash token publik; raw token hanya diberikan ke admin saat order dibuat
+  atau link publik dibuat ulang.
+- Halaman publik hanya menampilkan nomor order, nama depan customer, tanggal relevan, status,
+  item, total, dan timeline status tanpa WhatsApp/email/catatan admin.
+- Metadata halaman order diset `noindex,nofollow`, dan `/order` ditambahkan ke `robots.txt`
+  disallow.
+
+### [P1][DONE] Order status workflow
 
 Subtask:
 
@@ -406,6 +443,18 @@ Subtask:
 - Simpan seluruh perubahan status pada history.
 - Batasi perubahan status melalui order service.
 - Tambahkan catatan cancellation dan refund bila relevan.
+
+Hasil implementasi 2026-07-06:
+
+- Status order resmi tetap `draft`, `confirmed`, `waiting_payment`, `paid`, `in_production`,
+  `ready_to_ship`, `shipped`, `completed`, dan `cancelled`.
+- Perubahan status admin dilakukan melalui order service dan RPC `public.change_order_status()`.
+- Semua perubahan status dicatat pada `order_status_histories` dengan status asal, status tujuan,
+  catatan opsional, actor admin, dan timestamp.
+- Validasi transisi saat ini membatasi status ke daftar resmi; matrix transisi bisnis yang lebih
+  ketat dapat ditambahkan setelah proses operasional final.
+- Status `paid`, `ready_to_ship`, dan `shipped` masih dicatat manual oleh admin; Phase 4 payment
+  dan Phase 5 shipping belum dibuat.
 
 Status order:
 

@@ -8,7 +8,7 @@
 | `NEXT_PUBLIC_SITE_URL` | `https://daztore.web.id` | `lib/site-url.ts`, `next.config.mjs`, `lib/security/safe-image-src.ts` | Public, build/runtime | Tidak |
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://project-ref.supabase.co` | Public Supabase client, admin SSR/browser client, service-role URL, remote image allowlist | Public, build/runtime | Tidak |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_example` | Public Supabase client dan admin SSR/browser client | Public client-side, build/runtime | Tidak rahasia |
-| `SUPABASE_SERVICE_ROLE_KEY` | `sb_secret_example` | `lib/supabase/service-role.ts`, dipakai oleh feedback dan lead public server code | Server-only runtime | Ya |
+| `SUPABASE_SERVICE_ROLE_KEY` | `sb_secret_example` | `lib/supabase/service-role.ts`, dipakai oleh feedback, lead public, dan public order lookup server code | Server-only runtime | Ya |
 
 ## Audit 2026-07-03
 
@@ -20,7 +20,7 @@ Hasil:
 - `SUPABASE_SERVICE_ROLE_KEY` hanya dibaca oleh `lib/supabase/service-role.ts`.
 - `lib/supabase/service-role.ts` memakai import `server-only`, sehingga module tersebut tidak boleh masuk client bundle.
 - Import service-role hanya boleh berada pada server-only flow seperti `lib/feedback/data.ts`,
-  `app/feedback/[id]/submit/route.ts`, dan service lead public server-side.
+  `app/feedback/[id]/submit/route.ts`, service lead public server-side, dan public order lookup.
 - Client/browser Supabase hanya memakai `NEXT_PUBLIC_SUPABASE_URL` dan `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 - `Dockerfile` hanya menerima build argument `NEXT_PUBLIC_*`; service-role tidak masuk build argument.
 - Workflow GitHub Actions aktif hanya memakai env public untuk verify/build image dan tidak memakai `SUPABASE_SERVICE_ROLE_KEY`.
@@ -76,8 +76,9 @@ Jangan mengganti publishable key dengan:
 
 Service-role key melewati RLS dan tidak boleh menggunakan prefix `NEXT_PUBLIC_`.
 Key ini hanya dipakai oleh Server Component/Route Handler untuk membaca feedback request privat,
-upload foto pelanggan ke bucket private, menyimpan submission feedback, dan menyimpan lead publik
-setelah validasi server-side. Jangan kirim key ini ke client, Docker build argument, atau source code.
+upload foto pelanggan ke bucket private, menyimpan submission feedback, menyimpan lead publik
+setelah validasi server-side, dan memverifikasi public order detail berbasis token. Jangan kirim
+key ini ke client, Docker build argument, atau source code.
 
 ## Fallback Ketika Env Tidak Tersedia
 
@@ -93,6 +94,8 @@ Resolver Storage juga mengembalikan path gambar fallback lokal dalam kondisi ter
 
 Bucket publik `landing_page` dan `catalogs` tetap dibaca dengan publishable key. Bucket
 `feedback_customer_photos` private dan hanya diakses server-side atau admin melalui signed URL.
+Tabel order juga tidak memiliki public read policy; public order detail memakai service-role
+server-only setelah token order diverifikasi.
 
 Route admin menggunakan variable publik yang sama untuk Supabase Auth, database, dan Storage.
 Hak tulis admin berasal dari JWT user yang login dan policy RLS. Service-role key tidak dipakai
@@ -167,7 +170,9 @@ NEXT_PUBLIC_SITE_URL
 
 `NEXT_PUBLIC_SITE_URL` dapat disimpan sebagai Actions variable. Kedua Supabase public variable
 tetap dapat disimpan sebagai Actions secrets untuk pengelolaan environment yang konsisten.
-`SUPABASE_SERVICE_ROLE_KEY` tidak dipakai oleh workflow build saat ini. Key ini wajib ada di environment runtime server untuk feedback dan lead public submit, bukan build argument.
+`SUPABASE_SERVICE_ROLE_KEY` tidak dipakai oleh workflow build saat ini. Key ini wajib ada di
+environment runtime server untuk feedback, lead public submit, dan public order lookup, bukan build
+argument.
 
 ## Rotation
 
