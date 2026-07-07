@@ -10,6 +10,10 @@ import {
   getFeedbackImageValidationError,
   uploadFeedbackImage,
 } from "@/lib/feedback/storage"
+import {
+  checkInMemoryRateLimit,
+  getRequestClientIp,
+} from "@/lib/security/rate-limit"
 import { getSupabaseServiceRoleClient } from "@/lib/supabase/service-role"
 
 interface FeedbackRouteContext {
@@ -42,6 +46,24 @@ export async function POST(
     return NextResponse.json(
       { error: "Link feedback tidak valid." },
       { status: 404 },
+    )
+  }
+
+  const rateLimit = checkInMemoryRateLimit({
+    key: `feedback-submit:${getRequestClientIp(request)}`,
+    limit: 10,
+    windowMs: 60 * 60 * 1000,
+  })
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Terlalu banyak percobaan. Silakan coba lagi nanti." },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(rateLimit.retryAfterSeconds),
+        },
+      },
     )
   }
 

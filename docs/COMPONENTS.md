@@ -12,8 +12,9 @@ Tanggung jawab:
 - font global;
 - stylesheet global;
 - bahasa dokumen;
-- route transition loading provider;
-- Vercel Analytics pada production.
+- route transition loading provider.
+
+Catatan: Vercel Analytics belum aktif; import dan render analytics masih dikomentari di `app/layout.tsx`.
 
 ### `KatalogLayout`
 
@@ -79,15 +80,62 @@ Tanggung jawab:
 - badge produk;
 - processing time dan status custom;
 - favorite state sementara;
+- link detail ke `/produk/[slug]`;
 - CTA WhatsApp dengan judul produk.
 
 Favorite tidak dipersist ke local storage atau backend.
+
+### `ProductDetailView`
+
+Lokasi: `features/catalog/components/product-detail-view.tsx`
+
+Tanggung jawab:
+
+- menampilkan detail produk aktif dari kontrak `ProductDetail`;
+- menampilkan harga sebagai estimasi, bukan invoice final;
+- menampilkan gambar produk dengan `next/image` dan safe image fallback;
+- menampilkan kategori, waktu pengerjaan, status availability, dan informasi kustomisasi;
+- menyediakan anchor ke form inquiry dan link kembali ke katalog;
+- menjaga tampilan mobile-first dengan sticky CTA bawah pada layar kecil.
+
+`ProductDetailView` menerima slot `inquiryContent` dari route agar module catalog tidak import
+module leads secara langsung.
+
+### `LeadInquiryForm`
+
+Lokasi: `features/leads/components/lead-inquiry-form.tsx`
+
+Tanggung jawab:
+
+- mengumpulkan nama, WhatsApp, email opsional, tanggal acara opsional, budget opsional, catatan,
+  dan consent;
+- mengirim JSON ke `/api/leads`;
+- menyertakan product slug, interest category, source URL, honeypot, dan timestamp mulai form;
+- menampilkan error publik yang aman;
+- menampilkan state sukses dan opsi lanjut chat WhatsApp setelah lead tersimpan.
 
 ### `KatalogHeader`
 
 Lokasi: `components/katalog/katalog-header.tsx`
 
 Header mobile menyediakan tombol kembali dan tombol search visual. Tombol search belum memiliki handler.
+
+## Komponen Feedback
+
+### `FeedbackSubmissionForm`
+
+Lokasi: `components/feedback/feedback-submission-form.tsx`
+
+Tanggung jawab:
+
+- menampilkan form rating pelanggan;
+- menerima kritik/saran dan testimoni;
+- memilih rekomendasi dari daftar yang diizinkan;
+- upload foto pelanggan;
+- mengirim `FormData` ke `/feedback/[id]/submit`;
+- menampilkan state berhasil/gagal di sisi client.
+
+Data request feedback dibaca server-side oleh `app/feedback/[id]/page.tsx`. Submission diproses oleh Route Handler dengan service-role key server-only.
 
 ## Komponen Admin
 
@@ -104,6 +152,40 @@ Komponen admin terisolasi di `components/admin-daz/`.
 
 Form admin menggunakan layout satu kolom dan sticky action pada layar kecil. Data admin
 tidak diimpor oleh komponen landing page atau katalog publik.
+
+### `AdminLeadActions`
+
+Lokasi: `features/leads/components/admin-lead-actions.tsx`
+
+Tanggung jawab:
+
+- mengubah status lead melalui `/admin-daz/leads/[id]/actions`;
+- menambah catatan follow-up admin;
+- menampilkan feedback sukses/gagal;
+- memanggil `router.refresh()` agar detail lead server-rendered memuat timeline terbaru.
+
+### `AdminOrderForm`
+
+Lokasi: `features/orders/components/admin-order-form.tsx`
+
+Tanggung jawab:
+
+- membuat order manual draft dari lead atau input customer manual;
+- memilih item dari katalog aktif atau menambah item manual;
+- mengumpulkan quantity, harga satuan, opsi custom, catatan item, diskon, dan catatan order;
+- mengirim JSON ke `/admin-daz/orders/actions`;
+- menampilkan link detail order admin dan link publik order setelah create berhasil.
+
+### `AdminOrderActions`
+
+Lokasi: `features/orders/components/admin-order-actions.tsx`
+
+Tanggung jawab:
+
+- mengubah status order melalui `/admin-daz/orders/[id]/actions`;
+- membuat ulang link publik order tanpa menyimpan raw token di database;
+- menampilkan feedback sukses/gagal;
+- memanggil `router.refresh()` agar detail order server-rendered memuat status/history terbaru.
 
 ## Komponen Pendukung
 
@@ -164,7 +246,7 @@ Section aktif menerima object typed dari `lib/data/types.ts`. Default prop beras
 | Komponen | Kondisi |
 | --- | --- |
 | `Packages` | Render masih dikomentari sebagai Coming Soon; data tersedia di `package_tiers` dan fallback lokal. |
-| `InquiryForm` | Tidak diimpor oleh route aktif; submit membuka WhatsApp. |
+| `InquiryForm` | Tidak diimpor oleh route aktif; submit membuka WhatsApp. Form lead aktif memakai `LeadInquiryForm`. |
 | `Testimonials` | Carousel testimonial alternatif, tidak dipakai. |
 | `ThemeProvider` | Wrapper `next-themes`, tidak dipasang di root layout. |
 | Toast/Toaster | Implementasi tersedia, tetapi tidak dipasang di layout aktif. |

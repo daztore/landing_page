@@ -55,7 +55,10 @@ Lakukan langkah pembaruan lockfile hanya di development branch dan review diff.
 
 ### Dua lockfile menghasilkan dependency berbeda
 
-Repository memiliki `package-lock.json` dan `pnpm-lock.yaml`. Docker memakai npm. Jangan menjalankan pnpm untuk deployment kecuali tim resmi mengganti package manager dan Dockerfile.
+Package manager resmi project adalah npm. `package-lock.json` adalah lockfile utama untuk
+local, CI, dan Docker. `pnpm-lock.yaml` masih ada sebagai legacy lockfile yang tidak dipakai
+jalur operasional aktif. Jangan menjalankan `pnpm install`, jangan memperbarui
+`pnpm-lock.yaml`, dan jangan mengganti deployment ke pnpm tanpa decision record baru.
 
 ### Lint gagal
 
@@ -182,9 +185,9 @@ docker compose logs --tail=200 app web
 Jika app belum ready, Nginx lokal dapat gagal proxy. Production Compose menunggu healthcheck
 service app sebelum menjalankan Nginx.
 
-### Port `8002` sudah dipakai
+### Port Compose sudah dipakai
 
-Periksa listener host dan ubah mapping hanya melalui override yang sesuai environment.
+Compose lokal menggunakan port host `8002`. Compose production saat ini menggunakan port host `8003`. Periksa listener host dan ubah mapping hanya melalui override yang sesuai environment.
 
 ```bash
 docker compose config
@@ -214,13 +217,9 @@ Link `mailto:` memerlukan email client yang terkonfigurasi pada device pengguna.
 
 ### Analytics tidak muncul
 
-`Analytics` hanya dirender saat:
+Analytics belum aktif pada code saat ini. Import dan render `@vercel/analytics/next` masih dikomentari di `app/layout.tsx`, dan package `@vercel/analytics` tidak terdaftar di `package.json`.
 
-```text
-NODE_ENV=production
-```
-
-Periksa ad blocker, browser privacy settings, dan apakah deployment mendukung Vercel Analytics.
+Jika analytics diaktifkan kembali pada pekerjaan terpisah, periksa dependency, render condition, ad blocker, browser privacy settings, consent/privacy requirement, dan dukungan deployment.
 
 ## Cache dan Static Asset
 

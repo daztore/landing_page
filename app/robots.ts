@@ -10,7 +10,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin-daz", "/feedback"],
+        disallow: ["/admin-daz", "/feedback", "/order"],
       },
     ],
     sitemap: new URL("/sitemap.xml", siteUrl).toString(),

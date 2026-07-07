@@ -5,7 +5,7 @@
 | Prioritas | Area | Risiko |
 | --- | --- | --- |
 | Sedang | Lint baseline | ESLint berjalan, tetapi masih melaporkan warning existing non-blocking. |
-| Sedang | Dependency management | `package-lock.json` dan `pnpm-lock.yaml` dipelihara bersamaan. |
+| Rendah | Dependency management | npm sudah resmi, tetapi `pnpm-lock.yaml` masih ada sebagai legacy lockfile sampai cleanup disetujui. |
 | Sedang | Dependency advisory | Audit masih melaporkan PostCSS internal Next.js; npm belum menawarkan patch kompatibel selain downgrade yang tidak layak. |
 | Sedang | Navigasi | Anchor `#packages` dan `#testimonials` tidak memiliki target aktif. |
 | Sedang | Konfigurasi kontak | Kontak memiliki fallback lokal yang harus dijaga tetap sinkron dengan Supabase. |
@@ -13,12 +13,20 @@
 | Sedang | Legacy files | File PHP/Supervisor tidak terhubung ke aplikasi saat ini. |
 | Sedang | Quality assurance | Tidak ada unit, integration, atau end-to-end test. |
 | Sedang | Admin operations | CRUD dan upload masih memerlukan uji manual terhadap project Supabase target. |
+| Sedang | Feedback privacy | Flow feedback memakai service-role server-only, bucket private, dan rate limit dasar per IP. |
+| Tinggi | Public endpoint abuse | Rate limit feedback masih in-memory per proses; endpoint inquiry/checkout/payment nanti wajib punya abuse prevention yang sesuai skala. |
+| Sedang | Upload content validation | Upload sudah validasi MIME/ukuran/path, tetapi belum validasi magic byte atau malware scanning. |
+| Sedang | Security headers | CSP dan HSTS belum ditentukan; header dasar tersedia di Nginx. |
+| Sedang | CI/CD deploy | Workflow aktif hanya verify/build/push GHCR; SSH deploy otomatis belum aktif. |
 
 ## Docker dan Deployment
 
 `docker-compose.production.yml` sekarang berbasis registry image, tidak memiliki bind mount,
-dan memiliki healthcheck. Compose lokal tetap memakai bind mount dan tidak boleh digunakan
+dan memiliki healthcheck. Compose production saat ini mengekspos host port `8003`.
+Compose lokal tetap memakai bind mount dan host port `8002`; jangan gunakan Compose lokal
 untuk production.
+
+Workflow CI/CD aktif hanya sampai build dan push image GHCR. Deploy server masih manual/operasional.
 
 Prioritas lanjutan:
 
@@ -47,20 +55,27 @@ Target perbaikan lanjutan:
 
 Next.js telah dinaikkan dari `16.2.4` ke `16.2.7` untuk menutup advisory high yang terdeteksi saat implementasi Supabase.
 
-Import `Packages` pada `app/page.tsx` tetap ada walaupun render dikomentari. `KatalogPage` juga mengimpor `useEffect` tetapi tidak memakainya. Quality gate akan membantu mendeteksi pola seperti ini.
+Import `Packages` pada `app/page.tsx` tetap ada walaupun render dikomentari. Quality gate akan membantu mendeteksi pola seperti ini.
 
 ## Package Manager
 
-Docker menggunakan npm, sedangkan repository juga menyimpan pnpm lockfile.
+npm sudah menjadi package manager resmi project per 2026-07-05. Decision record tersedia di
+`docs/PACKAGE_MANAGER_DECISION.md`.
 
-Pilih satu package manager resmi dan:
+Status:
 
-- dokumentasikan versinya;
-- gunakan satu lockfile;
-- samakan local, CI, dan Docker;
-- tambahkan `packageManager` pada `package.json` bila keputusan sudah dibuat.
+- `package.json` memiliki `packageManager: "npm@10.9.0"`;
+- `package-lock.json` adalah lockfile utama;
+- CI dan Docker tetap memakai `npm ci`;
+- `pnpm-lock.yaml` masih ada sebagai legacy lockfile dan tidak dipakai jalur operasional aktif.
 
-Hindari menghapus salah satu lockfile sebelum pemilik project mengonfirmasi package manager resmi.
+Aturan maintenance:
+
+- gunakan `npm ci` untuk install bersih;
+- gunakan `npm install` hanya saat memperbarui dependency pada branch development;
+- jangan menjalankan `pnpm install`;
+- jangan memperbarui `pnpm-lock.yaml`;
+- jangan menghapus `pnpm-lock.yaml` sebelum owner menyetujui cleanup lockfile terpisah.
 
 ## Dependency Surface
 
@@ -76,6 +91,19 @@ Dampak:
 Tree shaking dapat mengurangi bundle client, tetapi maintenance dependency tetap ada. Audit usage sebelum menghapus package.
 
 ## Performance
+
+Baseline performance Phase 0 tersedia di `docs/PERFORMANCE_BASELINE.md`.
+
+Ringkasan hasil audit 2026-07-03:
+
+- `/` mobile Lighthouse performance 90, LCP 3.32s, TBT 39ms, CLS 0.000;
+- `/katalog` mobile Lighthouse performance 92, LCP 3.39s, TBT 43ms, CLS 0.000;
+- `/` dan `/katalog` desktop Lighthouse performance 100;
+- public script transfer sekitar 189.8 KB untuk `/` dan 174.2 KB untuk `/katalog`;
+- `/admin-daz/login` mobile Lighthouse performance 98 dengan script transfer sekitar 223.5 KB.
+
+Gunakan baseline tersebut sebagai pembanding sebelum menambah fitur commerce, dependency besar,
+atau asset image baru.
 
 ### Image
 
@@ -168,6 +196,22 @@ Perbaikan harus dilakukan bertahap dengan regression check visual.
 
 ## Security
 
+### Phase 0 audit 2026-07-03
+
+Audit environment dan security baseline sebelum commerce sudah dilakukan dan dicatat di:
+
+- `docs/ENVIRONMENT_VARIABLES.md`;
+- `docs/SECURITY_AND_PERFORMANCE.md`;
+- `docs/ROADMAP.md`.
+
+Hasil utama:
+
+- env service-role tetap server-only dan tidak masuk Docker build argument atau workflow build image;
+- RLS public/admin/feedback dan allowlist admin sudah sesuai baseline saat ini;
+- feedback route publik sudah validasi input, upload, dan rate limit in-memory per IP;
+- `npm audit` masih melaporkan moderate advisory pada PostCSS internal Next.js, sementara top-level `postcss` sudah berada di `8.5.14`;
+- CodeQL aktif, tetapi hasil alert di GitHub tetap perlu dipantau oleh maintainer.
+
 ### Admin
 
 Route admin memakai Supabase Auth cookie session, allowlist `admin_users`, dan RLS.
@@ -184,18 +228,27 @@ yang masih dipakai produk; gunakan nonaktifkan sebagai pilihan operasional yang 
 
 ### Security policy
 
-`SECURITY.md` masih template generik dengan versi `5.1.x`, `5.0.x`, dan `4.0.x` yang tidak sesuai version project `0.1.0`.
+`SECURITY.md` sudah disesuaikan dengan baseline project `0.1.x` dan mengarahkan laporan
+vulnerability ke channel private maintainer/project owner.
 
-Perlu diperbarui dengan:
+Masih perlu dikonfirmasi oleh owner:
 
-- versi yang didukung;
-- alamat pelaporan private;
+- alamat atau channel private resmi;
 - target response time;
-- larangan membuka vulnerability sensitif melalui public issue.
+- proses disclosure setelah perbaikan dirilis.
 
 ### Analytics dan privacy
 
-Vercel Analytics aktif pada production. Privacy policy dan consent requirement belum tersedia di aplikasi.
+Analytics belum aktif. Import dan render `@vercel/analytics/next` masih dikomentari di `app/layout.tsx`, dan package `@vercel/analytics` tidak terdaftar di `package.json`. Jika analytics diaktifkan kembali, privacy policy dan consent requirement perlu direview.
+
+### Feedback privacy
+
+Route feedback publik membaca request dan menyimpan submission melalui service-role key server-only. Bucket `feedback_customer_photos` private setelah migration `005`. Pertahankan aturan berikut:
+
+- jangan expose `SUPABASE_SERVICE_ROLE_KEY` ke client;
+- jangan membuka RLS public langsung untuk tabel feedback tanpa review;
+- validasi upload foto tetap wajib;
+- pertimbangkan rate limit terpusat sebelum traffic publik besar atau deployment multi-instance.
 
 ### Headers
 
@@ -216,9 +269,10 @@ Minimum roadmap:
 1. CI lint dan type check.
 2. Build smoke test.
 3. Route smoke test untuk `/` dan `/katalog`.
-4. Component test untuk filter/sorting katalog.
-5. End-to-end test untuk navigasi, gallery, FAQ, dan CTA.
-6. Container health check.
+4. Manual smoke test feedback dengan UUID request valid bila data Supabase tersedia.
+5. Component test untuk filter/sorting katalog.
+6. End-to-end test untuk navigasi, gallery, FAQ, feedback, dan CTA.
+7. Container health check.
 
 ## Legacy dan Duplikasi
 
@@ -234,7 +288,6 @@ Jangan menghapus file tersebut tanpa konfirmasi owner dan pengecekan history/dep
 ## Needs Confirmation
 
 - Kebenaran seluruh klaim pemasaran dan testimonial.
-- Package manager resmi.
 - Status file legacy.
 - Apakah dark mode, toast system, dan full shadcn/ui library masuk roadmap.
 - Apakah aplikasi memiliki SLA, monitoring, CDN, WAF, atau backup config di luar repository.

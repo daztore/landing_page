@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next"
 import { Inter, Playfair_Display } from "next/font/google"
-import { Analytics } from "@vercel/analytics/next"
+// import { Analytics } from "@vercel/analytics/next"
 import { RouteLoadingProvider } from "@/components/loading/route-loading-provider"
 import { getSiteUrl } from "@/lib/site-url"
 import "./globals.css"
@@ -77,7 +77,9 @@ export default function RootLayout({
     <html lang="id" className={`${inter.variable} ${playfair.variable} bg-background`}>
       <body className="font-sans antialiased">
         <RouteLoadingProvider>{children}</RouteLoadingProvider>
-        {process.env.NODE_ENV === "production" && <Analytics />}
+        {process.env.NODE_ENV === "production" 
+        // && <Analytics />
+        }
       </body>
     </html>
   )

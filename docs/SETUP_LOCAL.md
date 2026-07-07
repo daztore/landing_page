@@ -5,13 +5,16 @@
 Gunakan environment berikut agar konsisten dengan Dockerfile:
 
 - Node.js 20 LTS;
-- npm yang kompatibel dengan lockfile versi 3;
+- npm `10.9.0` sebagai package manager resmi project;
 - Git;
 - Docker Desktop atau Docker Engine dengan Compose v2, hanya jika menjalankan mode container.
 
-Repository memiliki `package-lock.json` dan `pnpm-lock.yaml`. Dockerfile memakai npm dan `package-lock.json`, sehingga npm adalah package manager acuan untuk setup saat ini.
+Repository memiliki `package-lock.json` dan `pnpm-lock.yaml`. Package manager resmi project
+adalah npm, dan `package-lock.json` adalah lockfile utama. `pnpm-lock.yaml` masih ada sebagai
+legacy lockfile yang tidak dipakai jalur operasional aktif.
 
-> **Peringatan:** Jangan bergantian menjalankan npm dan pnpm tanpa keputusan tim. Dua lockfile dapat menghasilkan dependency tree yang berbeda.
+> **Peringatan:** Jangan menjalankan `pnpm install` untuk project ini dan jangan memperbarui
+> `pnpm-lock.yaml`. Penghapusan `pnpm-lock.yaml` menunggu approval cleanup terpisah.
 
 ## Instalasi
 
@@ -27,7 +30,7 @@ Buat environment lokal:
 cp .env.example .env.local
 ```
 
-Isi URL dan publishable key Supabase. Lihat [SUPABASE_MIGRATION.md](./SUPABASE_MIGRATION.md).
+Isi URL Supabase, publishable key, site URL, dan service-role key server-only jika ingin menguji feedback. Lihat [SUPABASE_MIGRATION.md](./SUPABASE_MIGRATION.md).
 
 Jika sedang mengubah dependency dan memang perlu memperbarui lockfile:
 
@@ -39,14 +42,16 @@ Jangan gunakan `npm install` pada server production. Dependency dan aplikasi seh
 
 ## Environment Variable
 
-Supabase menggunakan dua environment variable:
+Supabase dan feedback menggunakan environment variable berikut:
 
 ```dotenv
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_your_service_role_key
 ```
 
-Jika belum tersedia, aplikasi tetap berjalan dengan fallback lokal. Next.js mengatur `NODE_ENV` berdasarkan command yang dijalankan.
+Jika env public Supabase belum tersedia, halaman publik tetap berjalan dengan fallback lokal. Feedback dan beberapa operasi admin membutuhkan Supabase runtime yang lengkap. Next.js mengatur `NODE_ENV` berdasarkan command yang dijalankan.
 
 ```text
 npm run dev    -> NODE_ENV=development
@@ -76,7 +81,7 @@ Script yang benar-benar terdaftar di `package.json`:
 | Command | Fungsi | Catatan |
 | --- | --- | --- |
 | `npm run dev` | Menjalankan `next dev`. | Untuk development lokal. |
-| `npm run build` | Menjalankan `next build`. | Build production; error TypeScript saat ini diabaikan oleh config. |
+| `npm run build` | Menjalankan `next build`. | Build production; TypeScript error menggagalkan build. |
 | `npm run start` | Menjalankan `next start`. | Memerlukan hasil build `.next`. |
 | `npm run lint` | Menjalankan ESLint flat config Next.js/TypeScript. | Warning baseline tidak memblokir command. |
 | `npm run typecheck` | Menjalankan `tsc --noEmit`. | Quality gate type terpisah dari build Next.js. |
@@ -87,7 +92,7 @@ Pemeriksaan TypeScript:
 npm run typecheck
 ```
 
-Command tersebut bukan script resmi project. Jalankan dari dependency lokal dan jangan mengandalkan download package dinamis di CI.
+Command tersebut adalah script resmi project dan dipakai oleh CI.
 
 ## Menjalankan Dengan Docker Compose
 
@@ -151,7 +156,7 @@ Review perubahan `package-lock.json` sebelum commit.
 
 ### `npm run lint` gagal karena ESLint tidak tersedia
 
-Kondisi ini sesuai repository saat dokumentasi dibuat. Dependency dan config ESLint perlu ditambahkan melalui pekerjaan maintenance terpisah. Jangan menghapus script untuk menyembunyikan kegagalan.
+Jalankan `npm ci` dan pastikan dependency lokal terpasang. ESLint dan flat config Next.js sudah tersedia sebagai dev dependency. Jangan menghapus script untuk menyembunyikan kegagalan.
 
 ### `next start` mengatakan production build tidak ditemukan
 

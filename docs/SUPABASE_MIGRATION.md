@@ -2,7 +2,7 @@
 
 ## Tujuan
 
-Project membaca konten landing page dan katalog dari Supabase. Data lokal tetap dipertahankan sebagai fallback sampai migration production diverifikasi.
+Project membaca konten landing page, katalog, admin CMS, dan feedback dari Supabase. Data lokal tetap dipertahankan sebagai fallback untuk konten publik sampai migration production diverifikasi.
 
 SDK yang digunakan:
 
@@ -10,7 +10,9 @@ SDK yang digunakan:
 @supabase/supabase-js 2.108.0
 ```
 
-Tidak ada service-role key di aplikasi. Query publik memakai publishable key dan dibatasi Row Level Security.
+Query publik konten/katalog memakai publishable key dan dibatasi Row Level Security.
+`SUPABASE_SERVICE_ROLE_KEY` digunakan server-side untuk flow feedback, lead publik, dan public
+order lookup karena direct public read/insert pada tabel privat ditutup.
 
 ## File Implementasi
 
@@ -19,12 +21,23 @@ Tidak ada service-role key di aplikasi. Query publik memakai publishable key dan
 | `supabase/migrations/001_create_landing_page_tables.sql` | Membuat tabel, index, trigger `updated_at`, grant, dan RLS policy. |
 | `supabase/migrations/002_create_storage_buckets.sql` | Membuat bucket gambar publik dan policy read-only. |
 | `supabase/migrations/003_create_admin_access.sql` | Membuat allowlist admin serta policy CRUD database dan Storage. |
+| `supabase/migrations/004_create_feedback_feature.sql` | Membuat tabel feedback, trigger submission, policy awal, dan bucket foto feedback. |
+| `supabase/migrations/005_harden_feedback_privacy_and_catalog_cleanup.sql` | Menutup akses public langsung ke feedback dan menjadikan bucket foto pelanggan private. |
+| `supabase/migrations/006_create_leads_feature.sql` | Membuat tabel leads, lead messages, RLS admin-only, dan RPC status workflow. |
+| `supabase/migrations/007_create_orders_feature.sql` | Membuat tabel orders, order items, order status histories, token publik hash, dan RPC status workflow. |
 | `supabase/seed.sql` | Mengisi data lokal saat ini secara idempotent. |
 | `lib/supabase/client.ts` | Membuat Supabase client dari environment variable. |
+| `lib/supabase/service-role.ts` | Membuat Supabase service-role client server-only untuk feedback, lead publik, dan public order lookup. |
 | `lib/supabase/storage.ts` | Mengubah object path Storage menjadi public URL dengan fallback aman. |
 | `lib/data/landing-page.ts` | Data access layer dan fallback handling. |
 | `lib/data/fallback.ts` | Salinan lokal yang dipakai bila env/query/data belum tersedia. |
 | `lib/data/types.ts` | Kontrak data antara server dan komponen. |
+| `lib/feedback/*` | Kontrak, data access, validasi, dan upload feedback. |
+| `features/leads/*` | Kontrak, validasi, service, form inquiry, query admin, dan status workflow lead. |
+| `features/orders/*` | Kontrak, validasi, service, form admin, query admin/public, token publik, dan status workflow order. |
+| `app/api/leads/route.ts` | Route Handler public untuk submit inquiry lead. |
+| `app/order/[orderNumber]/page.tsx` | Halaman publik order berbasis nomor order dan token. |
+| `app/feedback/[id]/*` | Halaman dan Route Handler feedback publik. |
 
 ## Tabel
 
@@ -40,6 +53,14 @@ Tidak ada service-role key di aplikasi. Query publik memakai publishable key dan
 | `product_categories` | Kategori katalog. |
 | `products` | Produk, harga, gambar, badge, dan availability. |
 | `package_tiers` | Paket Silver, Gold, dan Exclusive yang saat ini belum dirender. |
+| `admin_users` | Allowlist admin aktif untuk panel `/admin-daz`. |
+| `leads` | Inquiry/konsultasi awal sebelum order manual. |
+| `lead_messages` | Riwayat pesan, catatan follow-up, dan perubahan status lead. |
+| `orders` | Order manual, nomor order, customer, status, total, dan token publik hash. |
+| `order_items` | Item order dengan snapshot produk, harga, opsi custom, dan catatan. |
+| `order_status_histories` | Riwayat perubahan status order beserta actor, timestamp, dan catatan. |
+| `feedback_requests` | Request feedback pelanggan yang dibuat admin. |
+| `feedback_submissions` | Submission rating, kritik/saran, testimoni, rekomendasi, dan foto pelanggan. |
 
 ## Keamanan RLS
 
@@ -61,9 +82,29 @@ Storage memakai dua bucket publik:
 | `landing_page` | Hero, background hero mobile, story, dan galeri landing page. |
 | `catalogs` | Seluruh gambar produk pada `/katalog`. |
 
-Migration Storage hanya membuat policy `SELECT` untuk `anon` dan `authenticated`.
+Migration Storage awal membuat policy `SELECT` untuk `anon` dan `authenticated`.
 Migration admin menambahkan policy `INSERT`, `UPDATE`, dan `DELETE` khusus user
 `authenticated` yang lolos `public.is_active_admin()`. Anonymous tetap tidak dapat menulis.
+
+Setelah migration `005`, tabel `feedback_requests` dan `feedback_submissions` tidak lagi dibaca/ditulis langsung oleh public `anon`. Route feedback publik memakai service-role server-side untuk membaca request, memvalidasi status, menyimpan submission, dan membersihkan upload bila insert gagal.
+
+Migration `006` membuat `leads` dan `lead_messages` dengan RLS aktif. Public `anon` tidak diberi
+hak direct insert/read/update/delete. Submit publik hanya melalui `/api/leads`, yang memakai
+service-role server-only setelah validasi dan rate limit. Admin read/write dibatasi oleh
+`public.is_active_admin()`. RPC `public.change_lead_status()` mencatat status change dan actor
+admin dalam satu transaksi database.
+
+Migration `007` membuat `orders`, `order_items`, dan `order_status_histories` dengan RLS aktif.
+Public `anon` tidak diberi hak direct read/insert/update/delete. Admin read/write dibatasi oleh
+`public.is_active_admin()`. Public order detail memakai service-role server-only untuk memverifikasi
+order number dan hash token. RPC `public.change_order_status()` mencatat status change dan actor
+admin dalam satu transaksi database.
+
+Storage tambahan:
+
+| Bucket | Konten | Akses |
+| --- | --- | --- |
+| `feedback_customer_photos` | Foto pelanggan dari form feedback | Private; admin dapat membaca, Route Handler server-side mengupload. |
 
 ## Model Admin
 
@@ -75,7 +116,8 @@ Admin harus memenuhi dua syarat:
 Route admin memakai session cookie Supabase SSR. Pemeriksaan route dilakukan di server,
 sedangkan RLS tetap menjadi batas izin final untuk CRUD database dan Storage.
 
-Tidak ada public registration dan aplikasi tidak menggunakan service-role key.
+Tidak ada public registration. Admin browser tidak memakai service-role key; service-role hanya
+untuk route/server code feedback, lead publik, dan public order lookup.
 
 ## Setup Manual
 
@@ -99,29 +141,56 @@ supabase/migrations/002_create_storage_buckets.sql
 supabase/migrations/003_create_admin_access.sql
 ```
 
-6. Upload file gambar sesuai daftar object path di bawah.
+6. Jalankan migration feedback:
 
-7. Setelah migration dan upload berhasil, jalankan:
+```text
+supabase/migrations/004_create_feedback_feature.sql
+```
+
+7. Jalankan migration hardening feedback:
+
+```text
+supabase/migrations/005_harden_feedback_privacy_and_catalog_cleanup.sql
+```
+
+8. Jalankan migration lead/inquiry:
+
+```text
+supabase/migrations/006_create_leads_feature.sql
+```
+
+9. Jalankan migration manual order:
+
+```text
+supabase/migrations/007_create_orders_feature.sql
+```
+
+10. Upload file gambar sesuai daftar object path di bawah.
+
+11. Setelah migration dan upload berhasil, jalankan:
 
 ```text
 supabase/seed.sql
 ```
 
-8. Buat `.env.local`:
+12. Buat `.env.local`:
 
 ```dotenv
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_your_service_role_key
 ```
 
-9. Restart development server:
+13. Restart development server:
 
 ```bash
 npm run dev
 ```
 
-10. Buat admin pertama menggunakan langkah berikut.
-11. Verifikasi `/`, `/katalog`, dan `/admin-daz/login`.
+14. Buat admin pertama menggunakan langkah berikut.
+15. Verifikasi `/`, `/katalog`, `/produk/mahar-1`, `/admin-daz/login`, `/admin-daz/leads`,
+    `/admin-daz/orders`, dan flow feedback/order bila data tersedia.
 
 Migration dan seed tidak dijalankan otomatis oleh aplikasi.
 
@@ -247,7 +316,14 @@ select count(*) from public.testimonials where is_active;
 select count(*) from public.faqs where is_active;
 select count(*) from public.product_categories where is_active;
 select count(*) from public.products where is_active;
-select id, name, public from storage.buckets where id in ('landing_page', 'catalogs');
+select count(*) from public.leads;
+select count(*) from public.lead_messages;
+select count(*) from public.orders;
+select count(*) from public.order_items;
+select count(*) from public.order_status_histories;
+select count(*) from public.feedback_requests;
+select count(*) from public.feedback_submissions;
+select id, name, public from storage.buckets where id in ('landing_page', 'catalogs', 'feedback_customer_photos');
 select id, email, is_active from public.admin_users;
 ```
 
@@ -263,6 +339,13 @@ Expected seed:
 | Product categories | 6 |
 | Products | 10 |
 | Package tiers | 3 |
+| Leads | 0 atau sesuai inquiry yang masuk |
+| Lead messages | 0 atau sesuai inquiry/catatan yang masuk |
+| Orders | 0 atau sesuai order manual yang dibuat |
+| Order items | 0 atau sesuai item order manual |
+| Order status histories | 0 atau sesuai perubahan status order |
+| Feedback requests | 0 atau sesuai data admin |
+| Feedback submissions | 0 atau sesuai data pelanggan |
 
 ## Verifikasi Fallback
 
@@ -280,6 +363,7 @@ Jangan commit perubahan `.env.local`.
 `.dockerignore` mengecualikan seluruh `.env*`. Dockerfile menerima:
 
 ```text
+NEXT_PUBLIC_SITE_URL
 NEXT_PUBLIC_SUPABASE_URL
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 ```
@@ -290,12 +374,13 @@ Contoh build:
 
 ```bash
 docker build \
+  --build-arg NEXT_PUBLIC_SITE_URL="$NEXT_PUBLIC_SITE_URL" \
   --build-arg NEXT_PUBLIC_SUPABASE_URL="$NEXT_PUBLIC_SUPABASE_URL" \
   --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" \
   -t daztore:<commit-sha> .
 ```
 
-Nilai `NEXT_PUBLIC_*` bersifat publik dan dapat masuk ke client bundle. Jangan pernah mengganti publishable key dengan service-role key.
+Nilai `NEXT_PUBLIC_*` bersifat publik dan dapat masuk ke client bundle. Jangan pernah mengganti publishable key dengan service-role key. `SUPABASE_SERVICE_ROLE_KEY` diberikan hanya sebagai runtime env server, bukan build argument.
 
 ## Rollback
 
@@ -303,7 +388,8 @@ Rollback aplikasi tidak memerlukan penghapusan tabel:
 
 1. deploy image commit sebelumnya;
 2. local fallback lama tetap tersedia;
-3. nonaktifkan row bermasalah dengan `is_active = false` jika diperlukan.
+3. nonaktifkan row konten publik bermasalah dengan `is_active = false` jika diperlukan;
+4. untuk lead/order bermasalah, ubah status ke `cancelled` atau batasi akses admin; jangan hapus massal.
 
 Jangan menjalankan `drop table`, truncate, atau delete massal untuk rollback aplikasi.
 

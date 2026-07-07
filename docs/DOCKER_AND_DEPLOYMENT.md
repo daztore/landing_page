@@ -10,7 +10,7 @@ Repository memiliki:
 - beberapa file PHP/Supervisor yang tidak digunakan oleh Dockerfile atau Compose aktif.
 
 Compose lokal tetap tersedia untuk development. Compose production terpisah sekarang
-menyediakan flow immutable berbasis image GHCR.
+menyediakan runtime berbasis image GHCR tanpa bind mount source.
 
 ## Dockerfile
 
@@ -159,7 +159,8 @@ File `docker-compose.production.yml` menggunakan image yang sudah dibangun dan d
 ```yaml
 services:
   app:
-    image: ${APP_IMAGE}:${APP_TAG}
+    image: ghcr.io/daztore/landing_page:production
+    # image: ${APP_IMAGE:?APP_IMAGE is required}:${APP_TAG:?APP_TAG is required}
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://daztore.web.id}
@@ -180,7 +181,7 @@ services:
       app:
         condition: service_healthy
     ports:
-      - "8002:80"
+      - "8003:80"
     volumes:
       - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
@@ -190,7 +191,8 @@ Karakteristik wajib:
 
 - tidak ada bind mount source aplikasi;
 - service `app` memakai `image`, bukan `build`;
-- tag image berasal dari commit SHA;
+- image aktif saat ini memakai tag convenience `production`;
+- baris `${APP_IMAGE}:${APP_TAG}` tersedia sebagai komentar jika ingin mengaktifkan deploy/rollback berbasis tag immutable;
 - secret diberikan saat runtime, bukan disalin ke image;
 - Nginx hanya memasang config yang diperlukan;
 - health check aktif.
@@ -201,23 +203,21 @@ File tersebut tidak memiliki `build`, bind mount source, atau mount `node_module
 
 ## Flow Deployment Production
 
+Workflow aktif saat ini:
+
 ```text
 push ke main
--> CI install, lint, dan build
+-> CI install, lint, typecheck, dan build
 -> CI membangun Docker image
--> CI push image dengan tag commit SHA
--> CI SSH ke server
--> server menarik image
--> server menjalankan docker compose up -d
--> health check dan smoke test
+-> CI push image ke GHCR dengan tag commit SHA, main, dan production
 ```
+
+Job SSH deploy otomatis sudah dihapus dari `.github/workflows/ci-cd.yml`. Deploy server dilakukan manual/operasional dengan menarik image yang sudah dipush ke GHCR.
 
 Di server:
 
 ```bash
 cd /opt/daztore
-export APP_IMAGE=ghcr.io/example/daztore
-export APP_TAG=<full-commit-sha>
 docker compose -f docker-compose.production.yml pull
 docker compose -f docker-compose.production.yml up -d
 docker compose -f docker-compose.production.yml ps
@@ -227,7 +227,7 @@ Panduan setup server lengkap tersedia di `docs/CI_CD_DEPLOYMENT.md`.
 
 ## Rollback
 
-Simpan SHA image terakhir yang diketahui sehat.
+Simpan SHA image terakhir yang diketahui sehat. Dengan file saat ini yang memakai tag `production`, rollback berbasis SHA perlu mengubah tag image atau mengaktifkan kembali baris `${APP_IMAGE}:${APP_TAG}` yang masih disediakan sebagai komentar.
 
 ```bash
 cd /opt/daztore
@@ -238,7 +238,7 @@ docker compose -f docker-compose.production.yml up -d
 docker compose -f docker-compose.production.yml ps
 ```
 
-Tag `latest` atau `production` boleh menjadi alias operasional, tetapi rollback harus menggunakan tag immutable seperti full commit SHA.
+Tag `latest`, `main`, atau `production` boleh menjadi alias operasional, tetapi rollback yang aman harus menggunakan tag immutable seperti full commit SHA.
 
 ## Secret Management
 
