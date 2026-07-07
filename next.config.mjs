@@ -39,18 +39,15 @@ const remotePatterns = [supabaseRemotePattern, siteRemotePattern].filter(
     ) === index,
 )
 
-/** @type {import('next').NextConfig} */
+const disableImageOptimization =
+  process.env.NEXT_IMAGE_UNOPTIMIZED === "true"
+  
 const nextConfig = {
   images: {
     remotePatterns,
     qualities: [75],
     formats: ["image/webp"],
     minimumCacheTTL: 3600,
-
-    // Needed for Next.js 16 self-hosted Docker when allowed storage host
-    // resolves to an IP blocked by the image optimizer SSRF guard.
-    // Keep remotePatterns strict.
-    dangerouslyAllowLocalIP: true,
   },
 }
 export default nextConfig
