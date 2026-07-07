@@ -33,7 +33,8 @@ Untuk task Supabase, Docker, CI/CD, atau deployment, baca juga dokumen existing 
 - Order, payment, shipping, cart, checkout, customer account, dan tracking publik masih roadmap.
 - npm adalah package manager resmi project dengan `packageManager: "npm@10.9.0"`.
 - CI dan Docker tetap memakai `npm ci`.
-- `pnpm-lock.yaml` adalah legacy lockfile yang tidak boleh dihapus tanpa approval eksplisit owner project.
+- `package-lock.json` adalah satu-satunya lockfile resmi; lockfile package manager lain tidak
+  boleh ditambahkan tanpa decision record baru.
 
 ## Agent Working Rules
 
@@ -81,7 +82,8 @@ Untuk setiap task dari `docs/ROADMAP.md`, agent wajib:
 Khusus package manager:
 
 - jangan menambahkan field `packageManager` tanpa approval owner;
-- jangan menghapus `package-lock.json` atau `pnpm-lock.yaml` tanpa approval eksplisit;
+- jangan menghapus `package-lock.json` tanpa approval eksplisit;
+- jangan menambahkan `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`, atau lockfile package manager lain;
 - jangan mengganti command CI/Docker install tanpa keputusan resmi;
 - bila keputusan belum tersedia, ubah status roadmap menjadi `BLOCKED` dan catat rekomendasi teknis.
 

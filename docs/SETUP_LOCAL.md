@@ -9,12 +9,12 @@ Gunakan environment berikut agar konsisten dengan Dockerfile:
 - Git;
 - Docker Desktop atau Docker Engine dengan Compose v2, hanya jika menjalankan mode container.
 
-Repository memiliki `package-lock.json` dan `pnpm-lock.yaml`. Package manager resmi project
-adalah npm, dan `package-lock.json` adalah lockfile utama. `pnpm-lock.yaml` masih ada sebagai
-legacy lockfile yang tidak dipakai jalur operasional aktif.
+Repository hanya memakai `package-lock.json` sebagai lockfile resmi. Package manager resmi
+project adalah npm.
 
-> **Peringatan:** Jangan menjalankan `pnpm install` untuk project ini dan jangan memperbarui
-> `pnpm-lock.yaml`. Penghapusan `pnpm-lock.yaml` menunggu approval cleanup terpisah.
+> **Peringatan:** Jangan menjalankan `pnpm install` untuk project ini dan jangan menambahkan
+> `pnpm-lock.yaml`, `yarn.lock`, `bun.lock`, atau lockfile package manager lain tanpa decision
+> record baru.
 
 ## Instalasi
 

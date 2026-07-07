@@ -16,6 +16,12 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# lockfiles
+pnpm-lock.yaml
+yarn.lock
+bun.lock
+bun.lockb
+
 # env files
 .env*
 !.env.example
