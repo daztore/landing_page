@@ -23,6 +23,56 @@ Agent/Codex wajib membaca dokumen ini jika task berasal dari revisi QA/UX.
 
 ## Notes
 
+### QAUX-0002 - Supabase Storage Image Optimizer 400
+
+Status: `DONE`
+Priority: `P1`
+Source: `Production Debug`
+Date: `2026-07-08`
+Page/Module: `Public images / Next Image Optimizer`
+Related Route: `/`, `/katalog`, `/produk/[slug]`
+Related File: `next.config.mjs`
+
+#### Problem
+
+Production evidence menunjukkan Supabase public Storage URL bisa diakses langsung dengan `200 OK`,
+tetapi request melalui `/_next/image` mengembalikan `400 Bad Request` dengan pesan `"url"
+parameter is not allowed`.
+
+#### Expected Behavior
+
+Gambar public dari bucket Supabase `landing_page` dan `catalogs` tetap diproses oleh Next Image
+Optimizer, tidak memakai `unoptimized`, dan menghasilkan response image.
+
+#### Acceptance Criteria
+
+- [x] Next Image Optimizer tetap digunakan.
+- [x] Tidak memakai `images.unoptimized`.
+- [x] Tidak mengganti global ke `<img>`.
+- [x] Request debug lokal ke `/_next/image` untuk Supabase Storage menghasilkan `200 OK`.
+- [x] Content-Type hasil optimizer adalah `image/webp`.
+- [x] Build production berhasil.
+- [x] Docker local test dicoba dan blocker dicatat bila engine tidak tersedia.
+
+#### Developer Notes
+
+Fix yang dipilih adalah config-only: tetap memakai `remotePatterns`, menambahkan fallback
+`images.domains` khusus hostname Supabase dari `NEXT_PUBLIC_SUPABASE_URL`, dan membatasi
+`maximumRedirects` ke `0`. Next.js 16.2.10 memberi warning bahwa `images.domains` deprecated,
+tetapi build/start tetap berhasil.
+
+#### Result Notes
+
+Local `next start` dengan env public Supabase production menghasilkan:
+
+```text
+STATUS: 200 OK
+CONTENT_TYPE: image/webp
+```
+
+Docker build belum dapat dijalankan di mesin lokal karena Docker Desktop/Linux engine tidak
+aktif.
+
 ### QAUX-0001 - Example Note Title
 
 Status: `TODO`  

@@ -37,6 +37,44 @@ Notes:
 
 ## Entries
 
+### 2026-07-08 - Next Image Optimizer Supabase allowlist fallback
+
+Type:
+
+- Fix
+- Performance
+- Documentation
+
+Impact:
+
+- Medium
+
+Summary:
+
+- Menambahkan fallback `images.domains` khusus hostname Supabase dari
+  `NEXT_PUBLIC_SUPABASE_URL` sambil mempertahankan `images.remotePatterns`.
+- Menambahkan `maximumRedirects: 0` pada konfigurasi image optimizer.
+- Membuat script debug `scripts/debug-next-image.mjs` untuk memverifikasi request
+  `/_next/image` terhadap Supabase public Storage URL.
+- Mencatat QA result untuk error production `400 Bad Request` / `"url" parameter is not allowed`.
+
+Files:
+
+- `next.config.mjs`
+- `scripts/debug-next-image.mjs`
+- `docs/QA_UX_NOTES.md`
+- `docs/CHANGELOG_NOTES.md`
+
+Notes:
+
+- Local `next start` dengan env public Supabase production berhasil memproses URL Supabase melalui
+  `/_next/image` dengan `STATUS: 200 OK` dan `CONTENT_TYPE: image/webp`.
+- Next.js 16.2.10 memberi warning bahwa `images.domains` deprecated; fallback ini sengaja dibuat
+  scoped hanya ke hostname Supabase, tanpa wildcard hostname dan tanpa `unoptimized`.
+- Docker build local belum dapat dijalankan karena Docker Desktop/Linux engine tidak aktif di
+  mesin lokal.
+- Tidak ada proxy URL bebas, route image internal, perubahan database, secret, atau perubahan UI.
+
 ### 2026-07-07 - Dependabot dependency alert cleanup
 
 Type:

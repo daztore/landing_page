@@ -31,7 +31,6 @@ jobs:
       NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL || 'https://daztore.web.id' }}
       NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-      NEXT_IMAGE_UNOPTIMIZED: ${{ vars.NEXT_IMAGE_UNOPTIMIZED || 'true' }}
 
     steps:
       - name: Checkout repository
@@ -129,8 +128,6 @@ jobs:
             NEXT_PUBLIC_SITE_URL=${{ env.NEXT_PUBLIC_SITE_URL }}
             NEXT_PUBLIC_SUPABASE_URL=${{ env.NEXT_PUBLIC_SUPABASE_URL }}
             NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=${{ env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-            NEXT_IMAGE_UNOPTIMIZED=${{ env.NEXT_IMAGE_UNOPTIMIZED }}
-            
           # UPDATED:
           # Cache Docker layer agar build berikutnya lebih cepat.
           cache-from: type=gha

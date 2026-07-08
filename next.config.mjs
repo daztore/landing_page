@@ -39,15 +39,17 @@ const remotePatterns = [supabaseRemotePattern, siteRemotePattern].filter(
     ) === index,
 )
 
-const disableImageOptimization =
-  process.env.NEXT_IMAGE_UNOPTIMIZED === "true"
-  
+const imageDomains = supabaseRemotePattern ? [supabaseRemotePattern.hostname] : []
+
 const nextConfig = {
   images: {
+    domains: imageDomains,
     remotePatterns,
     qualities: [75],
     formats: ["image/webp"],
     minimumCacheTTL: 3600,
+    maximumRedirects: 0,
   },
 }
+
 export default nextConfig

@@ -225,6 +225,24 @@ Risiko tersisa:
 - Data fetching harus terkontrol dan cache-aware.
 - Fitur commerce besar harus punya baseline sebelum dan sesudah perubahan.
 
+## Image Optimizer Note 2026-07-08
+
+Next Image Optimizer tetap digunakan untuk gambar publik Supabase Storage. Konfigurasi image
+menjaga `remotePatterns` untuk path public Storage dan menambahkan fallback `images.domains`
+khusus hostname Supabase dari `NEXT_PUBLIC_SUPABASE_URL` setelah production debug menemukan
+response `400 Bad Request` dengan pesan `"url" parameter is not allowed`.
+
+Guardrail:
+
+- tidak memakai `images.unoptimized`;
+- tidak memakai wildcard hostname;
+- tidak membuat proxy URL bebas;
+- `maximumRedirects` diset `0`;
+- bucket private tetap tidak dibuka lewat route publik.
+
+Catatan: Next.js 16.2.10 memberi warning bahwa `images.domains` deprecated. Fallback ini harus
+dievaluasi ulang setelah production image optimizer stabil hanya dengan `remotePatterns`.
+
 ## Phase 0 Performance Baseline 2026-07-03
 
 Baseline detail tersedia di `docs/PERFORMANCE_BASELINE.md`.
