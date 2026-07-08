@@ -230,7 +230,9 @@ Risiko tersisa:
 Next Image Optimizer tetap digunakan untuk gambar publik Supabase Storage. Konfigurasi image
 menjaga `remotePatterns` untuk path public Storage dan menambahkan fallback `images.domains`
 khusus hostname Supabase dari `NEXT_PUBLIC_SUPABASE_URL` setelah production debug menemukan
-response `400 Bad Request` dengan pesan `"url" parameter is not allowed`.
+response `400 Bad Request` dengan pesan `"url" parameter is not allowed`. Docker runtime wajib
+menyalin `next.config.mjs`; tanpa file ini, `next start` di container memakai default image config
+dan menolak URL Supabase walaupun `.next/required-server-files.json` memuat allowlist yang benar.
 
 Guardrail:
 
@@ -238,6 +240,7 @@ Guardrail:
 - tidak memakai wildcard hostname;
 - tidak membuat proxy URL bebas;
 - `maximumRedirects` diset `0`;
+- Docker runner membawa `next.config.mjs` agar konfigurasi image optimizer aktif saat runtime;
 - bucket private tetap tidak dibuka lewat route publik.
 
 Catatan: Next.js 16.2.10 memberi warning bahwa `images.domains` deprecated. Fallback ini harus

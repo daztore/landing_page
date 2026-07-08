@@ -31,7 +31,7 @@ Source: `Production Debug`
 Date: `2026-07-08`
 Page/Module: `Public images / Next Image Optimizer`
 Related Route: `/`, `/katalog`, `/produk/[slug]`
-Related File: `next.config.mjs`
+Related File: `next.config.mjs`, `Dockerfile`
 
 #### Problem
 
@@ -59,7 +59,9 @@ Optimizer, tidak memakai `unoptimized`, dan menghasilkan response image.
 Fix yang dipilih adalah config-only: tetap memakai `remotePatterns`, menambahkan fallback
 `images.domains` khusus hostname Supabase dari `NEXT_PUBLIC_SUPABASE_URL`, dan membatasi
 `maximumRedirects` ke `0`. Next.js 16.2.10 memberi warning bahwa `images.domains` deprecated,
-tetapi build/start tetap berhasil.
+tetapi build/start tetap berhasil. Docker runtime juga harus membawa `next.config.mjs`; root cause
+container adalah file config tidak tersalin ke stage runner sehingga `next start` memakai default
+image allowlist.
 
 #### Result Notes
 
@@ -70,8 +72,12 @@ STATUS: 200 OK
 CONTENT_TYPE: image/webp
 ```
 
-Docker build belum dapat dijalankan di mesin lokal karena Docker Desktop/Linux engine tidak
-aktif.
+Docker debug setelah `next.config.mjs` disalin ke runner juga menghasilkan:
+
+```text
+STATUS: 200 OK
+CONTENT_TYPE: image/webp
+```
 
 ### QAUX-0001 - Example Note Title
 

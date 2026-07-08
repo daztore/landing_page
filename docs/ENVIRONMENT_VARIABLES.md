@@ -5,7 +5,7 @@
 | Variable | Contoh aman | Digunakan di | Klasifikasi | Sensitif |
 | --- | --- | --- | --- | --- |
 | `NODE_ENV` | `production` | Next.js dan Docker runtime | Framework-managed, build/runtime | Tidak |
-| `NEXT_PUBLIC_SITE_URL` | `https://daztore.web.id` | `lib/site-url.ts`, `next.config.mjs`, `lib/security/safe-image-src.ts` | Public, build/runtime | Tidak |
+| `NEXT_PUBLIC_SITE_URL` | `https://daztore.web.id` | `lib/site-url.ts`, `lib/security/safe-image-src.ts` | Public, build/runtime | Tidak |
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://project-ref.supabase.co` | Public Supabase client, admin SSR/browser client, service-role URL, remote image allowlist | Public, build/runtime | Tidak |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_example` | Public Supabase client dan admin SSR/browser client | Public client-side, build/runtime | Tidak rahasia |
 | `SUPABASE_SERVICE_ROLE_KEY` | `sb_secret_example` | `lib/supabase/service-role.ts`, dipakai oleh feedback, lead public, dan public order lookup server code | Server-only runtime | Ya |

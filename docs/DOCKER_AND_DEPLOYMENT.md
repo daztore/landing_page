@@ -47,6 +47,7 @@ Runtime:
 - service-role key hanya dari runtime environment server;
 - menyalin `.next`;
 - menyalin `public`;
+- menyalin `next.config.mjs` agar `next start` runtime membaca konfigurasi image optimizer;
 - menyalin `package.json`;
 - menyalin seluruh `node_modules`;
 - expose port `3000`;

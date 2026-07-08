@@ -53,7 +53,11 @@ Summary:
 
 - Menambahkan fallback `images.domains` khusus hostname Supabase dari
   `NEXT_PUBLIC_SUPABASE_URL` sambil mempertahankan `images.remotePatterns`.
+- Memperketat `remotePatterns` agar hanya mengizinkan Supabase Storage public path dan tidak lagi
+  mengizinkan hostname site sendiri untuk image remote.
 - Menambahkan `maximumRedirects: 0` pada konfigurasi image optimizer.
+- Menyalin `next.config.mjs` ke Docker runner image agar `next start` membaca konfigurasi image
+  optimizer saat runtime container.
 - Membuat script debug `scripts/debug-next-image.mjs` untuk memverifikasi request
   `/_next/image` terhadap Supabase public Storage URL.
 - Mencatat QA result untuk error production `400 Bad Request` / `"url" parameter is not allowed`.
@@ -61,18 +65,23 @@ Summary:
 Files:
 
 - `next.config.mjs`
+- `Dockerfile`
 - `scripts/debug-next-image.mjs`
 - `docs/QA_UX_NOTES.md`
 - `docs/CHANGELOG_NOTES.md`
+- `docs/SECURITY_AND_PERFORMANCE.md`
+- `docs/DOCKER_AND_DEPLOYMENT.md`
+- `docs/ENVIRONMENT_VARIABLES.md`
 
 Notes:
 
 - Local `next start` dengan env public Supabase production berhasil memproses URL Supabase melalui
   `/_next/image` dengan `STATUS: 200 OK` dan `CONTENT_TYPE: image/webp`.
+- Docker container sempat mereproduksi error `400 Bad Request` karena runner image tidak membawa
+  `next.config.mjs`; setelah Dockerfile diperbaiki, container debug menghasilkan `STATUS: 200 OK`
+  dan `CONTENT_TYPE: image/webp`.
 - Next.js 16.2.10 memberi warning bahwa `images.domains` deprecated; fallback ini sengaja dibuat
   scoped hanya ke hostname Supabase, tanpa wildcard hostname dan tanpa `unoptimized`.
-- Docker build local belum dapat dijalankan karena Docker Desktop/Linux engine tidak aktif di
-  mesin lokal.
 - Tidak ada proxy URL bebas, route image internal, perubahan database, secret, atau perubahan UI.
 
 ### 2026-07-07 - Dependabot dependency alert cleanup
