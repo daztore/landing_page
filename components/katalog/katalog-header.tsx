@@ -1,20 +1,9 @@
 "use client"
 
-import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { ArrowLeft, Search } from "lucide-react"
 
 export function KatalogHeader() {
-  const router = useRouter()
-
-  function goBack() {
-    if (window.history.length > 1) {
-      router.back()
-      return
-    }
-
-    router.push("/")
-  }
-
   function focusSearch() {
     const searchInput = document.getElementById("catalog-search")
     searchInput?.scrollIntoView({ behavior: "smooth", block: "center" })
@@ -25,14 +14,13 @@ export function KatalogHeader() {
     <>
       <div className="fixed inset-x-0 top-0 z-40 border-b border-border/60 bg-background/95 backdrop-blur md:hidden">
         <div className="flex items-center gap-3 px-4 py-3">
-          <button
-            type="button"
-            onClick={goBack}
+          <Link
+            href="/"
             className="flex h-10 w-10 items-center justify-center rounded-full border border-border/60 transition-colors hover:bg-secondary/50"
-            aria-label="Kembali"
+            aria-label="Kembali ke beranda"
           >
             <ArrowLeft className="h-4 w-4" />
-          </button>
+          </Link>
           <div className="flex-1">
             <a href="#top" className="font-serif text-lg tracking-tight text-foreground">
               daztore

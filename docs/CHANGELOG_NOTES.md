@@ -37,6 +37,33 @@ Notes:
 
 ## Entries
 
+### 2026-07-09 - Fix Katalog Back Navigation Loop (QAUX-0004)
+
+Type:
+
+- Fix
+- Documentation
+
+Impact:
+
+- Medium
+
+Summary:
+
+- Mengubah tombol kembali (back button) pada `KatalogHeader` (khusus mobile viewport) dari elemen `<button>` yang menggunakan router history back menjadi `<Link href="/">` Next.js dengan `aria-label="Kembali ke beranda"`.
+- Perubahan ini menyelesaikan bug di mana user terjebak dalam loop navigasi antara halaman detail produk `/produk/[slug]` dan halaman katalog `/katalog` saat mencoba kembali ke beranda `/`.
+- Mempertahankan `KatalogHeader` sebagai client component karena tombol cari produk masih memakai handler `onClick`, sehingga build katalog tetap lolos.
+- Menandai status QAUX-0004 di `docs/QA_UX_NOTES.md` menjadi `DONE`.
+
+Files:
+
+- `components/katalog/katalog-header.tsx`
+- `docs/QA_UX_NOTES.md`
+
+Notes:
+
+- Alur navigasi `/ -> /katalog -> /produk/[slug] -> Katalog -> /katalog -> kembali` sekarang secara konsisten berakhir di halaman utama `/`.
+
 ### 2026-07-08 - Add Daztore brand icons and social preview metadata
 
 Type:

@@ -23,6 +23,91 @@ Agent/Codex wajib membaca dokumen ini jika task berasal dari revisi QA/UX.
 
 ## Notes
 
+### QAUX-0004 - Katalog Back Navigation Mengarah Kembali ke Detail Produk
+
+Status: `DONE`
+Priority: `P1`
+Source: `Manual QA / User Report`
+Date: `2026-07-09`
+Page/Module: `Public Catalog Navigation`
+Related Route: `/`, `/katalog`, `/produk/[slug]`
+Related File: `components/katalog/katalog-header.tsx`, `features/catalog/components/product-detail-view.tsx`, `app/katalog/layout.tsx`
+
+#### Problem
+
+Terjadi bug pada alur navigasi katalog setelah user membuka detail produk.
+
+Flow yang bermasalah:
+
+1. User masuk ke `/katalog`.
+2. User membuka salah satu detail produk di `/produk/[slug]`.
+3. Di halaman detail produk, user menekan tombol kiri atas `Katalog`.
+4. User berhasil kembali ke `/katalog`.
+5. Di halaman `/katalog`, user menekan tombol kiri atas untuk kembali ke tampilan awal `daztore`.
+6. Actual result: user malah kembali ke halaman detail produk sebelumnya.
+7. Expected result: user kembali ke halaman awal `/`.
+
+Masalah ini membuat user terjebak dalam loop navigasi antara halaman katalog dan detail produk, terutama di mobile.
+
+#### Expected Behavior
+
+Navigasi harus konsisten sesuai konteks halaman:
+
+- Dari halaman detail produk, tombol `Katalog` mengarah ke `/katalog`.
+- Dari halaman `/katalog`, tombol kembali di kiri atas mengarah ke halaman awal `/`.
+- Tombol kembali di header katalog tidak boleh membawa user kembali ke detail produk sebelumnya.
+- User tidak boleh mengalami loop `/produk/[slug] -> /katalog -> /produk/[slug]`.
+
+#### Acceptance Criteria
+
+- [x] Flow `/ -> /katalog -> /produk/[slug] -> tombol Katalog -> /katalog -> tombol kembali` berakhir di `/`.
+- [x] Tombol kiri atas pada `/katalog` selalu mengarah ke `/`, bukan memakai history browser.
+- [x] Tombol `Katalog` pada `/produk/[slug]` tetap mengarah ke `/katalog`.
+- [x] Tidak ada loop navigasi antara `/katalog` dan `/produk/[slug]`.
+- [x] Label atau aria-label tombol diperjelas, misalnya `Kembali ke beranda`.
+- [x] Perilaku diuji minimal di mobile viewport karena header katalog khusus mobile.
+
+#### Developer Notes
+
+Kemungkinan root cause ada di `components/katalog/katalog-header.tsx`.
+
+Saat ini fungsi `goBack()` memakai `router.back()` jika `window.history.length > 1`:
+
+```ts
+function goBack() {
+  if (window.history.length > 1) {
+    router.back()
+    return
+  }
+
+  router.push("/")
+}
+```
+
+Masalahnya, setelah user dari detail produk menekan link Katalog, halaman detail produk masih menjadi previous history entry. Akibatnya ketika user berada di /katalog lalu menekan tombol kembali, router.back() membawa user kembali ke /produk/[slug].
+
+Rekomendasi implementasi paling aman:
+
+Ubah tombol kembali di KatalogHeader agar selalu eksplisit menuju /.
+Jangan gunakan router.back() untuk tombol ini karena konteks tombolnya adalah kembali ke halaman awal, bukan browser back.
+Bisa gunakan salah satu opsi berikut:
+function goBack() {
+  router.push("/")
+}
+
+Atau ganti button menjadi Link langsung:
+
+<Link href="/" aria-label="Kembali ke beranda">
+  <ArrowLeft className="h-4 w-4" />
+</Link>
+
+
+Jika tetap ingin mempertahankan behavior browser back, maka perlu dibedakan antara tombol “Back” dan tombol “Beranda”. Untuk UX saat ini, lebih aman tombol kiri atas di /katalog diarahkan langsung ke /.
+
+#### Result Notes
+
+Tombol kembali di `KatalogHeader` (kiri atas mobile) telah diubah dari elemen `<button>` yang menggunakan `router.back()` menjadi komponen Next.js `<Link href="/">` dengan `aria-label="Kembali ke beranda"`. Hal ini menjamin bahwa navigasi kembali dari halaman `/katalog` selalu mengarah secara eksplisit ke halaman utama `/`, sehingga memutus loop navigasi dengan detail produk `/produk/[slug]`. Client boundary pada `KatalogHeader` juga dipertahankan karena tombol cari produk masih memakai interaksi `onClick`. Validasi `next build` dan pengujian flow navigasi mobile berhasil tanpa loop.
+
 ### QAUX-0003 - Mobile Landing Page UX Review
 
 Status: `TODO`
