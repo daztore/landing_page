@@ -18,24 +18,35 @@ const playfair = Playfair_Display({
 })
 
 const siteUrl = getSiteUrl()
-const siteTitle = "daztore.id - Premium Mahar, Seserahan & Flower Bouquet"
+const siteTitle = "Daztore.id | Mahar, Seserahan, Bouquet & Gift Custom"
 const siteDescription =
-  "Layanan premium untuk mahar, seserahan, dan flower bouquet dengan presentasi elegan dan storytelling yang bermakna. Wujudkan momen pernikahan impian Anda bersama daztore.id."
-const ogImage = "/hero-mahar.webp"
+  "Daztore.id membantu menyiapkan mahar, seserahan, bouquet, hampers, dan gift custom dengan tampilan elegan, hangat, dan personal."
+const ogImage = "/brand/og-image.jpg"
 
 export const metadata: Metadata = {
   metadataBase: siteUrl,
   title: siteTitle,
   description: siteDescription,
+  applicationName: "Daztore.id",
   keywords: [
     "mahar pernikahan",
     "seserahan premium",
-    "flower bouquet wedding",
-    "daztore",
-    "daztore.id",
+    "bouquet wedding",
+    "gift custom",
+    "hampers premium",
+    "Daztore.id",
     "mahar elegan",
     "hantaran pernikahan",
   ],
+  manifest: "/site.webmanifest",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/brand/icon-32.png", type: "image/png", sizes: "32x32" },
+    ],
+    shortcut: ["/favicon.ico"],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   alternates: {
     canonical: "/",
   },
@@ -43,13 +54,14 @@ export const metadata: Metadata = {
     title: siteTitle,
     description: siteDescription,
     url: "/",
-    siteName: "daztore.id",
+    siteName: "Daztore.id",
+    locale: "id_ID",
     images: [
       {
         url: ogImage,
         width: 1200,
         height: 630,
-        alt: "Mahar dan seserahan premium daztore.id",
+        alt: "Daztore.id - Mahar, Seserahan, Bouquet & Gift Custom",
       },
     ],
     type: "website",
@@ -63,7 +75,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#faf6ee",
+  themeColor: "#fff8f3",
   width: "device-width",
   initialScale: 1,
 }

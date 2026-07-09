@@ -1,0 +1,54 @@
+
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="Daztore.id brand logo">
+      <rect width="1024" height="1024" rx="220" fill="#fff8f3" />
+      <g transform="translate(256 126)">
+        
+    <rect width="512" height="512" rx="136" fill="#fff8f3" />
+    <rect x="24" y="24" width="464" height="464" rx="122" fill="none" stroke="#ead4c3" stroke-width="6" />
+    <circle cx="256" cy="250" r="154" fill="#fffdfa" stroke="#f8ede3" stroke-width="14" />
+    <circle cx="256" cy="250" r="158" fill="none" stroke="#d9b8a0" stroke-width="4" stroke-dasharray="2 16" opacity="0.9" />
+
+    <g fill="#c49476" opacity="0.96">
+      <ellipse cx="334" cy="158" rx="26" ry="44" transform="rotate(-24 334 158)" />
+      <ellipse cx="378" cy="174" rx="24" ry="40" transform="rotate(14 378 174)" />
+      <ellipse cx="354" cy="210" rx="22" ry="36" transform="rotate(48 354 210)" />
+      <circle cx="356" cy="178" r="18" fill="#b8896b" />
+      <circle cx="336" cy="190" r="10" fill="#fff8f3" opacity="0.95" />
+    </g>
+
+    <g fill="none" stroke="#b8896b" stroke-width="4" stroke-linecap="round" opacity="0.72">
+      <path d="M313 205c18-28 28-54 26-82" />
+      <path d="M341 218c22-20 42-34 65-44" />
+    </g>
+
+    <text
+      x="252"
+      y="338"
+      text-anchor="middle"
+      font-family="Georgia, 'Times New Roman', serif"
+      font-size="220"
+      font-weight="700"
+      fill="#8e6249"
+    >D</text>
+  
+      </g>
+      <text
+        x="512"
+        y="808"
+        text-anchor="middle"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="108"
+        letter-spacing="6"
+        fill="#8e6249"
+      >DAZTORE.ID</text>
+      <text
+        x="512"
+        y="874"
+        text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="34"
+        letter-spacing="4"
+        fill="#b8896b"
+      >MAHAR, SESERAHAN, BOUQUET &amp; GIFT CUSTOM</text>
+    </svg>
+  

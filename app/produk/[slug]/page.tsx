@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
 
   if (!product) {
     return {
-      title: "Produk Tidak Ditemukan | daztore.id",
+      title: "Produk Tidak Ditemukan | Daztore.id",
       robots: {
         index: false,
         follow: false,
@@ -33,16 +33,16 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
   const canonical = `/produk/${product.slug}`
 
   return {
-    title: `${product.title} | daztore.id`,
+    title: `${product.title} | Daztore.id`,
     description,
     alternates: {
       canonical,
     },
     openGraph: {
-      title: `${product.title} | daztore.id`,
+      title: `${product.title} | Daztore.id`,
       description,
       url: canonical,
-      siteName: "daztore.id",
+      siteName: "Daztore.id",
       images: [
         {
           url: product.image.src,
@@ -53,7 +53,7 @@ export async function generateMetadata({ params }: ProductPageProps): Promise<Me
     },
     twitter: {
       card: "summary_large_image",
-      title: `${product.title} | daztore.id`,
+      title: `${product.title} | Daztore.id`,
       description,
       images: [product.image.src],
     },

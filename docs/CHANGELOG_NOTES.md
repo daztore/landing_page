@@ -37,6 +37,81 @@ Notes:
 
 ## Entries
 
+### 2026-07-08 - Add Daztore brand icons and social preview metadata
+
+Type:
+
+- Feature
+- Documentation
+
+Impact:
+
+- Medium
+
+Summary:
+
+- Menambahkan generator asset branding berbasis `sharp` untuk menghasilkan favicon, Apple touch
+  icon, icon 192/512, source SVG, dan Open Graph image warm-brand tanpa dependency baru.
+- Menyimpan asset hasil generate di `public/brand` serta root public icon yang dibutuhkan browser
+  (`/favicon.ico` dan `/apple-touch-icon.png`).
+- Memperbarui root metadata Next.js dengan `manifest`, `icons`, Open Graph, Twitter card,
+  canonical, `metadataBase`, dan copy branding baru untuk share preview.
+- Menambahkan `public/site.webmanifest` agar shortcut/app icon mobile memakai konfigurasi dasar
+  yang production-safe.
+
+Files:
+
+- `app/layout.tsx`
+- `app/katalog/page.tsx`
+- `app/produk/[slug]/page.tsx`
+- `package.json`
+- `public/site.webmanifest`
+- `public/brand/*`
+- `public/favicon.ico`
+- `public/apple-touch-icon.png`
+- `scripts/generate-brand-assets.mjs`
+- `docs/CHANGELOG_NOTES.md`
+
+Notes:
+
+- Attachment task hanya berisi brief teks; tidak ada file logo source yang ikut terlampir. Asset
+  brand sementara digenerate dari monogram `D` + floral accent sesuai arahan visual brief agar
+  favicon/preview tetap siap deploy.
+- `NEXT_PUBLIC_SITE_URL` sudah tersedia di project, jadi `.env.example` tidak perlu menambah env
+  baru.
+
+### 2026-07-08 - Fix broken #packages navigation (Phase 1)
+
+Type:
+
+- Fix
+- Database
+
+Impact:
+
+- Medium
+
+Summary:
+
+- Semua referensi `#packages` di fallback data diganti ke `/katalog` karena section Packages belum aktif/dirender.
+- Seed SQL dan migration data existing CMS/Supabase ikut disinkronkan agar production tidak lagi membaca CTA/navigasi `#packages`.
+- Hero CTA "Lihat Paket" → "Lihat Katalog" dengan href `/katalog`.
+- Mobile bottom nav "Paket" → "Katalog" dengan href `/katalog`.
+- Footer menu "Paket" → "Katalog" dengan href `/katalog`.
+- Desktop header nav "Paket" (sebelumnya disabled/Coming Soon) → "Katalog" dengan href `/katalog`, sekarang aktif.
+- Route `/katalog` dikonfirmasi tersedia dan berfungsi.
+
+Files:
+
+- `lib/data/fallback.ts`
+- `supabase/seed.sql`
+- `supabase/migrations/008_update_packages_links_to_catalog.sql`
+
+Notes:
+
+- Production nav dikonfirmasi dibaca dari Supabase/CMS melalui `queryNavigation()` di `lib/data/landing-page.ts`, jadi fallback saja memang tidak cukup.
+- Migration baru juga menyinkronkan CTA hero `secondaryCtaHref`/`secondaryCtaLabel` pada record CMS existing bila masih memakai `#packages`.
+
 ### 2026-07-08 - Next Image Optimizer Supabase allowlist fallback
 
 Type:

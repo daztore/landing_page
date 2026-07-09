@@ -1,0 +1,21 @@
+{
+  "name": "Daztore.id",
+  "short_name": "Daztore",
+  "description": "Daztore.id membantu menyiapkan mahar, seserahan, bouquet, hampers, dan gift custom dengan tampilan elegan, hangat, dan personal.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff8f3",
+  "theme_color": "#b8896b",
+  "icons": [
+    {
+      "src": "/brand/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/brand/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

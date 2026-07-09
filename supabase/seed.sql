@@ -52,8 +52,8 @@ values
       "badge": "Premium Wedding Atelier",
       "primaryCtaLabel": "Mulai Konsultasi",
       "primaryCtaMessage": "Halo daztore.id, saya tertarik dengan layanan Anda.",
-      "secondaryCtaLabel": "Lihat Paket",
-      "secondaryCtaHref": "#packages",
+      "secondaryCtaLabel": "Lihat Katalog",
+      "secondaryCtaHref": "/katalog",
       "mobileBackgroundUrl": "bouquet-bg.jpg",
       "collectionTitle": "Signature Collection",
       "collectionSubtitle": "Handcrafted with love",
@@ -282,17 +282,17 @@ insert into public.navigation_items (
 )
 values
   ('story', 'Cerita', '#story', 'header', null, null, false, 10, true),
-  ('packages', 'Paket', '#packages', 'header', 'Coming Soon', null, true, 20, true),
+  ('packages', 'Katalog', '/katalog', 'header', null, null, false, 20, true),
   ('gallery', 'Galeri', '#gallery', 'header', null, null, false, 30, true),
   ('testimonials', 'Testimoni', '#testimonials', 'header', null, null, false, 40, true),
   ('contact', 'Kontak', '#contact', 'header', null, null, false, 50, true),
   ('catalog-cta', 'Katalog', '/katalog', 'header_cta', null, null, false, 10, true),
   ('home-mobile', 'Beranda', '#top', 'mobile', null, '🏠', false, 10, true),
   ('catalog-mobile', 'Katalog', '/katalog', 'mobile', null, '📦', false, 20, true),
-  ('packages-mobile', 'Paket', '#packages', 'mobile', null, '💎', false, 30, true),
+  ('packages-mobile', 'Katalog', '/katalog', 'mobile', null, '💎', false, 30, true),
   ('chat-mobile', 'Chat', 'whatsapp', 'mobile', null, '💬', false, 40, true),
   ('story-footer', 'Cerita', '#story', 'footer', null, null, false, 10, true),
-  ('packages-footer', 'Paket', '#packages', 'footer', null, null, false, 20, true),
+  ('packages-footer', 'Katalog', '/katalog', 'footer', null, null, false, 20, true),
   ('gallery-footer', 'Galeri', '#gallery', 'footer', null, null, false, 30, true),
   ('testimonials-footer', 'Testimoni', '#testimonials', 'footer', null, null, false, 40, true)
 on conflict (slug, placement) do update set
@@ -505,3 +505,4 @@ on conflict (slug) do update set
   is_active = excluded.is_active;
 
 commit;
+
