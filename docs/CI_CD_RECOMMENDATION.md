@@ -2,12 +2,13 @@
 
 ## Workflow Aktif
 
-Repository memiliki dua workflow yang berjalan berdampingan:
+Repository memiliki tiga workflow yang berjalan berdampingan:
 
 | Workflow | File | Fungsi |
 | --- | --- | --- |
 | `CI/CD` | `.github/workflows/ci-cd.yml` | Verify, build image, dan push GHCR. |
 | `CodeQL Security Scan` | `.github/workflows/codeql.yml` | Analisis keamanan JavaScript/TypeScript. |
+| `Summarize new issues` | `.github/workflows/summary.yml` | Ringkasan issue baru melalui GitHub Models. |
 
 Workflow CodeQL tidak dihapus atau digabungkan dengan deployment.
 
@@ -59,8 +60,11 @@ Tag SHA tersedia untuk rollback immutable. Tag `main` dan `production` adalah al
 - Service-role key hanya dibutuhkan sebagai runtime secret di server untuk fitur feedback privat.
 - Server private GHCR harus memakai credential read-only `read:packages`.
 
-Untuk supply-chain hardening berikutnya, pin GitHub Actions ke full commit SHA, bukan hanya
-major version tag.
+Seluruh referensi `uses:` pada workflow dipin ke full 40-character commit SHA dari tag release
+resmi. Komentar versi patch dipertahankan di samping SHA agar provenance mudah direview, dan
+`.github/dependabot.yml` memantau ecosystem `github-actions` setiap minggu. Permission workflow
+tetap least privilege; pembaruan SHA dari Dependabot harus tetap direview terhadap release resmi
+sebelum merge.
 
 ## Kenapa Build Tidak Dilakukan di Server
 

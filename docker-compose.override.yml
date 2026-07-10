@@ -1,0 +1,5 @@
+services:
+  app:
+    environment:
+      ORDER_ACCESS_COOKIE_SECRET: ${ORDER_ACCESS_COOKIE_SECRET:-}
+      RATE_LIMIT_STORE: memory

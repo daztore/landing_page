@@ -30,7 +30,9 @@ Buat environment lokal:
 cp .env.example .env.local
 ```
 
-Isi URL Supabase, publishable key, site URL, dan service-role key server-only jika ingin menguji feedback. Lihat [SUPABASE_MIGRATION.md](./SUPABASE_MIGRATION.md).
+Isi URL Supabase, publishable key, site URL, dan service-role key server-only jika ingin menguji
+feedback/lead/order. Tambahkan secret cookie order minimal 32 byte. Lihat
+[SUPABASE_MIGRATION.md](./SUPABASE_MIGRATION.md).
 
 Jika sedang mengubah dependency dan memang perlu memperbarui lockfile:
 
@@ -49,9 +51,19 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_your_service_role_key
+ORDER_ACCESS_COOKIE_SECRET=replace_with_random_value_at_least_32_bytes
+RATE_LIMIT_STORE=memory
 ```
 
 Jika env public Supabase belum tersedia, halaman publik tetap berjalan dengan fallback lokal. Feedback dan beberapa operasi admin membutuhkan Supabase runtime yang lengkap. Next.js mengatur `NODE_ENV` berdasarkan command yang dijalankan.
+
+Local development memakai `RATE_LIMIT_STORE=memory` dan tidak membutuhkan shared store. Jangan
+memakai mode ini untuk production multi-instance; Compose production mengunci adapter `supabase`.
+Perintah `docker compose` lokal otomatis memuat `docker-compose.override.yml`, yang menetapkan
+mode memory dan meneruskan `ORDER_ACCESS_COOKIE_SECRET` opsional tanpa mengubah base
+`docker-compose.yml`. Uji cookie order melalui `http://localhost:8002`; browser modern memberi
+pengecualian secure-context untuk localhost. HTTP melalui hostname/IP LAN bukan target pengujian
+cookie `Secure` dan dapat menolak cookie.
 
 ```text
 npm run dev    -> NODE_ENV=development

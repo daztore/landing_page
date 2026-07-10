@@ -11,8 +11,8 @@ SDK yang digunakan:
 ```
 
 Query publik konten/katalog memakai publishable key dan dibatasi Row Level Security.
-`SUPABASE_SERVICE_ROLE_KEY` digunakan server-side untuk flow feedback, lead publik, dan public
-order lookup karena direct public read/insert pada tabel privat ditutup.
+`SUPABASE_SERVICE_ROLE_KEY` digunakan server-side untuk flow feedback, lead publik, shared
+rate-limit RPC, dan public order lookup karena direct public read/insert pada tabel privat ditutup.
 
 ## File Implementasi
 
@@ -25,9 +25,11 @@ order lookup karena direct public read/insert pada tabel privat ditutup.
 | `supabase/migrations/005_harden_feedback_privacy_and_catalog_cleanup.sql` | Menutup akses public langsung ke feedback dan menjadikan bucket foto pelanggan private. |
 | `supabase/migrations/006_create_leads_feature.sql` | Membuat tabel leads, lead messages, RLS admin-only, dan RPC status workflow. |
 | `supabase/migrations/007_create_orders_feature.sql` | Membuat tabel orders, order items, order status histories, token publik hash, dan RPC status workflow. |
+| `supabase/migrations/008_update_packages_links_to_catalog.sql` | Menyinkronkan link packages legacy ke katalog. |
+| `supabase/migrations/009_create_rate_limit_store.sql` | Membuat shared rate-limit bucket dan RPC atomic `consume_rate_limit`. |
 | `supabase/seed.sql` | Mengisi data lokal saat ini secara idempotent. |
 | `lib/supabase/client.ts` | Membuat Supabase client dari environment variable. |
-| `lib/supabase/service-role.ts` | Membuat Supabase service-role client server-only untuk feedback, lead publik, dan public order lookup. |
+| `lib/supabase/service-role.ts` | Membuat Supabase service-role client server-only untuk feedback, lead publik, shared rate limit, dan public order lookup. |
 | `lib/supabase/storage.ts` | Mengubah object path Storage menjadi public URL dengan fallback aman. |
 | `lib/data/landing-page.ts` | Data access layer dan fallback handling. |
 | `lib/data/fallback.ts` | Salinan lokal yang dipakai bila env/query/data belum tersedia. |
@@ -36,7 +38,8 @@ order lookup karena direct public read/insert pada tabel privat ditutup.
 | `features/leads/*` | Kontrak, validasi, service, form inquiry, query admin, dan status workflow lead. |
 | `features/orders/*` | Kontrak, validasi, service, form admin, query admin/public, token publik, dan status workflow order. |
 | `app/api/leads/route.ts` | Route Handler public untuk submit inquiry lead. |
-| `app/order/[orderNumber]/page.tsx` | Halaman publik order berbasis nomor order dan token. |
+| `app/order/[orderNumber]/access/route.ts` | Menukar raw token order menjadi cookie akses `HttpOnly` bertanda tangan. |
+| `app/order/[orderNumber]/page.tsx` | Halaman publik order berbasis nomor order dan cookie akses. |
 | `app/feedback/[id]/*` | Halaman dan Route Handler feedback publik. |
 
 ## Tabel
@@ -59,6 +62,7 @@ order lookup karena direct public read/insert pada tabel privat ditutup.
 | `orders` | Order manual, nomor order, customer, status, total, dan token publik hash. |
 | `order_items` | Item order dengan snapshot produk, harga, opsi custom, dan catatan. |
 | `order_status_histories` | Riwayat perubahan status order beserta actor, timestamp, dan catatan. |
+| `rate_limit_buckets` | Counter hash, jumlah request, dan waktu reset shared lintas instance. |
 | `feedback_requests` | Request feedback pelanggan yang dibuat admin. |
 | `feedback_submissions` | Submission rating, kritik/saran, testimoni, rekomendasi, dan foto pelanggan. |
 
@@ -96,9 +100,16 @@ admin dalam satu transaksi database.
 
 Migration `007` membuat `orders`, `order_items`, dan `order_status_histories` dengan RLS aktif.
 Public `anon` tidak diberi hak direct read/insert/update/delete. Admin read/write dibatasi oleh
-`public.is_active_admin()`. Public order detail memakai service-role server-only untuk memverifikasi
-order number dan hash token. RPC `public.change_order_status()` mencatat status change dan actor
-admin dalam satu transaksi database.
+`public.is_active_admin()`. Public order exchange/detail memakai service-role server-only untuk
+memverifikasi order number, hash token, dan token version cookie. RPC
+`public.change_order_status()` mencatat status change dan actor admin dalam satu transaksi
+database.
+
+Migration `009` membuat `rate_limit_buckets` dengan RLS aktif tanpa policy public. Hanya
+`service_role` yang diberi akses tabel dan execute pada RPC `public.consume_rate_limit()`. RPC
+melakukan atomic upsert, menetapkan expiry sesuai window, membatasi count, dan membersihkan paling
+banyak 100 row expired per pemanggilan. Raw IP/email/WhatsApp tidak disimpan; aplikasi hanya
+mengirim SHA-256 key yang sudah dinormalisasi.
 
 Storage tambahan:
 
@@ -117,7 +128,7 @@ Route admin memakai session cookie Supabase SSR. Pemeriksaan route dilakukan di 
 sedangkan RLS tetap menjadi batas izin final untuk CRUD database dan Storage.
 
 Tidak ada public registration. Admin browser tidak memakai service-role key; service-role hanya
-untuk route/server code feedback, lead publik, dan public order lookup.
+untuk route/server code feedback, lead publik, shared rate limit, dan public order lookup.
 
 ## Setup Manual
 
@@ -165,31 +176,44 @@ supabase/migrations/006_create_leads_feature.sql
 supabase/migrations/007_create_orders_feature.sql
 ```
 
-10. Upload file gambar sesuai daftar object path di bawah.
+10. Jalankan migration sinkronisasi link katalog:
 
-11. Setelah migration dan upload berhasil, jalankan:
+```text
+supabase/migrations/008_update_packages_links_to_catalog.sql
+```
+
+11. Jalankan migration shared rate-limit store **sebelum** deploy kode aplikasi terbaru:
+
+```text
+supabase/migrations/009_create_rate_limit_store.sql
+```
+
+12. Upload file gambar sesuai daftar object path di bawah.
+
+13. Setelah migration dan upload berhasil, jalankan:
 
 ```text
 supabase/seed.sql
 ```
 
-12. Buat `.env.local`:
+14. Buat `.env.local`:
 
 ```dotenv
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_your_service_role_key
+ORDER_ACCESS_COOKIE_SECRET=replace_with_random_value_at_least_32_bytes
 ```
 
-13. Restart development server:
+15. Restart development server:
 
 ```bash
 npm run dev
 ```
 
-14. Buat admin pertama menggunakan langkah berikut.
-15. Verifikasi `/`, `/katalog`, `/produk/mahar-1`, `/admin-daz/login`, `/admin-daz/leads`,
+16. Buat admin pertama menggunakan langkah berikut.
+17. Verifikasi `/`, `/katalog`, `/produk/mahar-1`, `/admin-daz/login`, `/admin-daz/leads`,
     `/admin-daz/orders`, dan flow feedback/order bila data tersedia.
 
 Migration dan seed tidak dijalankan otomatis oleh aplikasi.
@@ -321,6 +345,7 @@ select count(*) from public.lead_messages;
 select count(*) from public.orders;
 select count(*) from public.order_items;
 select count(*) from public.order_status_histories;
+select count(*) from public.rate_limit_buckets;
 select count(*) from public.feedback_requests;
 select count(*) from public.feedback_submissions;
 select id, name, public from storage.buckets where id in ('landing_page', 'catalogs', 'feedback_customer_photos');
@@ -344,6 +369,7 @@ Expected seed:
 | Orders | 0 atau sesuai order manual yang dibuat |
 | Order items | 0 atau sesuai item order manual |
 | Order status histories | 0 atau sesuai perubahan status order |
+| Rate-limit buckets | 0 atau counter hash yang belum expired/terbersihkan |
 | Feedback requests | 0 atau sesuai data admin |
 | Feedback submissions | 0 atau sesuai data pelanggan |
 

@@ -11,7 +11,7 @@ import {
   uploadFeedbackImage,
 } from "@/lib/feedback/storage"
 import {
-  checkInMemoryRateLimit,
+  checkRateLimit,
   getRequestClientIp,
 } from "@/lib/security/rate-limit"
 import { getSupabaseServiceRoleClient } from "@/lib/supabase/service-role"
@@ -49,11 +49,24 @@ export async function POST(
     )
   }
 
-  const rateLimit = checkInMemoryRateLimit({
+  const rateLimit = await checkRateLimit({
     key: `feedback-submit:${getRequestClientIp(request)}`,
     limit: 10,
     windowMs: 60 * 60 * 1000,
   })
+
+  if (!rateLimit.available) {
+    return NextResponse.json(
+      { error: "Feedback sementara tidak dapat diproses. Silakan coba lagi nanti." },
+      {
+        status: 503,
+        headers: {
+          "Cache-Control": "no-store",
+          "Retry-After": String(rateLimit.retryAfterSeconds),
+        },
+      },
+    )
+  }
 
   if (!rateLimit.allowed) {
     return NextResponse.json(

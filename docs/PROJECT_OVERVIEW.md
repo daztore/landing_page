@@ -83,6 +83,7 @@ docker/
   codeql.yml                 Security scanning JavaScript/TypeScript
 Dockerfile                   Build dan runtime Next.js
 docker-compose.yml           Service app dan Nginx
+docker-compose.override.yml  Override local untuk in-memory rate limiter
 docker-compose.production.yml Compose production berbasis image GHCR
 ```
 
@@ -95,7 +96,8 @@ docker-compose.production.yml Compose production berbasis image GHCR
 | `/` | Landing page utama dengan navigasi, hero, cerita, proses, keunggulan, galeri, testimoni, FAQ, urgency CTA, kontak, footer, dan tombol WhatsApp mengambang. |
 | `/katalog` | Katalog produk statis dengan pencarian, filter kategori, sorting, kartu produk, favorite state lokal, dan CTA WhatsApp. |
 | `/produk/[slug]` | Detail produk aktif dengan harga estimasi dan form inquiry. |
-| `/order/[orderNumber]` | Ringkasan order publik berbasis token aman dan `noindex`. |
+| `/order/[orderNumber]/access?token=...` | Exchange token order menjadi cookie `HttpOnly` dan redirect ke URL bersih. |
+| `/order/[orderNumber]` | Ringkasan order publik berbasis cookie access proof dan `noindex`. |
 | `/feedback/[id]` | Halaman feedback pelanggan berbasis UUID, `force-dynamic`, dan `noindex`. |
 | `/feedback/[id]/submit` | Route Handler `POST` untuk submit rating, kritik/saran, testimoni, rekomendasi, dan foto pelanggan. |
 | `/admin-daz` | Redirect ke `/admin-daz/dashboard`. |
@@ -103,8 +105,9 @@ docker-compose.production.yml Compose production berbasis image GHCR
 | `/admin-daz/**` | Admin CMS terproteksi untuk dashboard, landing content, katalog, leads, orders, feedback, media, dan settings. |
 
 Route dynamic aktif adalah `/produk/[slug]`, `/order/[orderNumber]`, dan `/feedback/[id]`. Route
-Handler aktif berada pada lead submit, order admin actions, feedback submit, dan admin feedback
-requests. `proxy.ts` berjalan untuk `/admin-daz/:path*` guna refresh cookie Supabase Auth. Custom
+Handler aktif berada pada lead submit, order access/admin actions, feedback submit, dan admin
+feedback requests. `proxy.ts` berjalan untuk `/admin-daz/:path*` guna refresh cookie Supabase Auth
+serta `/order/:path*` untuk header keamanan dan kompatibilitas link token lama. Custom
 loading tersedia; custom `error.tsx`, `global-error.tsx`, dan `not-found.tsx` belum tersedia.
 
 Detail route tersedia di [ROUTES_AND_PAGES.md](./ROUTES_AND_PAGES.md).

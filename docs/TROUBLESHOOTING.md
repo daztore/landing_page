@@ -112,6 +112,24 @@ Jika organisasi memblokir Google Fonts saat build, evaluasi self-hosted font seb
 `SUPABASE_SERVICE_ROLE_KEY` dibutuhkan saat menjalankan route feedback, tetapi tidak dibutuhkan
 sebagai Docker build argument. Pastikan secret tersedia pada environment runtime server.
 
+### Endpoint lead/feedback/forgot-password mengembalikan `503`
+
+Production rate limiter sengaja fail-closed. Periksa:
+
+- `RATE_LIMIT_STORE=supabase` pada runtime production;
+- `SUPABASE_SERVICE_ROLE_KEY` tersedia server-only;
+- migration `supabase/migrations/009_create_rate_limit_store.sql` sudah diterapkan;
+- RPC `public.consume_rate_limit` dapat dieksekusi role `service_role`.
+
+Jangan mengganti production ke `memory` hanya untuk menghilangkan `503`; itu akan mengembalikan
+masalah counter yang tidak konsisten lintas instance.
+
+### Link order publik selalu tidak valid
+
+Pastikan `ORDER_ACCESS_COOKIE_SECRET` tersedia saat runtime, acak minimal 32 byte, dan tidak
+memiliki whitespace di awal/akhir. Cookie akses berlaku 15 menit. Jika link diregenerasi, cookie
+dan link lama sengaja invalid; gunakan link terbaru dari admin.
+
 ### Static asset tidak ditemukan
 
 Path image harus cocok dengan file dalam `public/`.
@@ -197,6 +215,10 @@ docker compose config
 
 Pastikan command memakai `docker-compose.production.yml`. Compose lokal menggunakan `build`,
 sedangkan production Compose menggunakan `${APP_IMAGE}:${APP_TAG}`.
+
+Jika `docker compose -f docker-compose.production.yml config --quiet` gagal, set `APP_IMAGE` dan
+`APP_TAG` terlebih dahulu. `APP_TAG` operasional wajib full commit SHA 40 karakter, bukan
+`production`, `main`, atau `latest`.
 
 ## Connectivity dan Integrasi
 

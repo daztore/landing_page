@@ -22,8 +22,9 @@ npm run dev
 ```
 
 Isi `.env.local` dengan URL, publishable key Supabase, site URL, dan service-role key server-only
-untuk fitur feedback, inquiry lead, serta public order lookup. Jika database belum siap, aplikasi
-tetap memakai fallback lokal untuk konten publik.
+untuk fitur feedback, inquiry lead, shared rate limit, serta public order lookup. Tambahkan
+`ORDER_ACCESS_COOKIE_SECRET` acak minimal 32 byte bila menguji akses order. Jika database belum
+siap, aplikasi tetap memakai fallback lokal untuk konten publik.
 
 Buka:
 
@@ -40,6 +41,7 @@ Script project:
 npm run dev
 npm run lint
 npm run typecheck
+npm test
 npm run build
 npm run start
 ```
@@ -68,7 +70,8 @@ Route aktif:
 | `/` | Landing page utama dan CTA kontak. |
 | `/katalog` | Katalog Supabase dengan pencarian, filter, dan sorting client-side. |
 | `/produk/[slug]` | Detail produk aktif dengan harga estimasi dan CTA konsultasi. |
-| `/order/[orderNumber]?token=...` | Ringkasan order publik berbasis token aman dan `noindex`. |
+| `/order/[orderNumber]/access?token=...` | Exchange singkat token order menjadi cookie `HttpOnly`, lalu redirect `303` ke URL bersih. |
+| `/order/[orderNumber]` | Ringkasan order publik melalui cookie akses bertanda tangan dan `noindex`. |
 | `/api/leads` | Route Handler `POST` untuk inquiry produk publik. |
 | `/feedback/[id]` | Form feedback pelanggan berbasis link UUID dan tidak diindex. |
 | `/feedback/[id]/submit` | Route Handler `POST` untuk submission feedback dan upload foto pelanggan. |
@@ -90,15 +93,17 @@ Setup ringkas:
 5. Jalankan `supabase/migrations/005_harden_feedback_privacy_and_catalog_cleanup.sql`.
 6. Jalankan `supabase/migrations/006_create_leads_feature.sql`.
 7. Jalankan `supabase/migrations/007_create_orders_feature.sql`.
-8. Upload asset landing page ke bucket `landing_page` dan asset produk ke bucket `catalogs`.
-9. Jalankan `supabase/seed.sql`.
-10. Buat user email/password melalui Supabase Auth, lalu tambahkan user tersebut ke `public.admin_users`.
-11. Atur Supabase Auth URL Configuration untuk reset password admin:
+8. Jalankan `supabase/migrations/008_update_packages_links_to_catalog.sql`.
+9. Jalankan `supabase/migrations/009_create_rate_limit_store.sql` sebelum deploy kode yang memakai shared rate limiter.
+10. Upload asset landing page ke bucket `landing_page` dan asset produk ke bucket `catalogs`.
+11. Jalankan `supabase/seed.sql`.
+12. Buat user email/password melalui Supabase Auth, lalu tambahkan user tersebut ke `public.admin_users`.
+13. Atur Supabase Auth URL Configuration untuk reset password admin:
     - Site URL production: `https://daztore.web.id`.
     - Redirect URL production: `https://daztore.web.id/admin-daz/auth/callback`.
     - Redirect URL local: `http://localhost:3000/admin-daz/auth/callback`.
-12. Isi `.env.local`.
-13. Restart development server.
+14. Isi `.env.local`.
+15. Restart development server.
 
 Nilai gambar pada database disimpan sebagai object path portabel, bukan full public URL.
 File di `public/` tetap dipertahankan sebagai fallback lokal. Daftar object path yang perlu
@@ -118,6 +123,8 @@ Aplikasi tersedia di `http://localhost:8002`.
 
 `docker-compose.yml` tetap ditujukan untuk penggunaan lokal. Deployment server wajib memakai
 `docker-compose.production.yml`, yang menarik image GHCR tanpa bind mount source.
+`docker-compose.override.yml` otomatis memilih rate-limit adapter in-memory untuk perintah Compose
+lokal; file base development tidak diubah oleh hardening production.
 
 ## Deployment Production
 
@@ -137,6 +144,10 @@ push ke main
 ```
 
 Server production tidak perlu menjalankan `npm install` atau `npm run build`. Server hanya menarik image yang sudah divalidasi CI dan me-restart container.
+
+Production Compose mewajibkan `APP_IMAGE` dan `APP_TAG`; isi `APP_TAG` dengan full commit SHA,
+bukan alias mutable `main`, `production`, atau `latest`. Secret server-only, termasuk
+`ORDER_ACCESS_COOKIE_SECRET`, hanya diberikan saat runtime.
 
 Panduan secrets, persiapan server, deploy manual, dan rollback:
 [CI/CD Deployment](./docs/CI_CD_DEPLOYMENT.md).
@@ -179,6 +190,10 @@ Dokumentasi teknis dan operasional existing:
 - CTA utama membuka WhatsApp, email, atau Instagram.
 - Supabase public content memakai publishable key; feedback, inquiry lead publik, dan public order
   lookup memakai service-role key server-only melalui route/server Next.js.
+- Production rate limiter memakai shared Supabase RPC atomik; development memakai adapter
+  in-memory eksplisit. Migration `009` wajib diterapkan sebelum image baru dideploy.
+- Raw token order hanya dipakai oleh route exchange; halaman bersih membaca cookie `HttpOnly`
+  bertanda tangan yang otomatis invalid setelah regenerasi link.
 - Admin memakai Supabase Auth cookie session dan allowlist `admin_users`.
 - Write database/Storage hanya diizinkan RLS untuk admin aktif.
 - `feedback_customer_photos` adalah bucket private; public feedback submit diproses server-side.

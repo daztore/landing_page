@@ -5,7 +5,11 @@ import {
   orderNumberPattern,
   publicOrderTokenPattern,
 } from "@/features/orders/validation/order-request"
-import { hashPublicOrderToken } from "@/features/orders/services/public-token"
+import { hasValidPublicOrderAccess } from "@/features/orders/services/public-access"
+import {
+  publicOrderAccessMaximumCredentialLength,
+  publicOrderTokenMatches,
+} from "@/features/orders/services/public-access-crypto"
 import { getSupabaseServiceRoleClient } from "@/lib/supabase/service-role"
 
 interface PublicOrderRow {
@@ -20,6 +24,12 @@ interface PublicOrderRow {
   total_amount: number
   currency: "IDR"
   created_at: string
+  public_access_token_hash: string
+}
+
+interface PublicOrderAccessRow {
+  order_number: string
+  public_access_token_hash: string
 }
 
 interface PublicOrderItemRow {
@@ -46,10 +56,15 @@ function mapPublicItem(row: PublicOrderItemRow): PublicOrderItem {
   }
 }
 
-export async function getPublicOrderDetail(
+export interface PublicOrderAccessGrant {
+  orderNumber: string
+  publicAccessTokenHash: string
+}
+
+export async function exchangePublicOrderAccessToken(
   orderNumber: string,
   token: string | null | undefined,
-): Promise<PublicOrderDetail | null> {
+): Promise<PublicOrderAccessGrant | null> {
   const normalizedOrderNumber = orderNumber.trim().toUpperCase()
   const normalizedToken = String(token ?? "").trim()
 
@@ -66,15 +81,55 @@ export async function getPublicOrderDetail(
     return null
   }
 
-  const tokenHash = hashPublicOrderToken(normalizedToken)
+  const { data, error } = await client
+    .from("orders")
+    .select("order_number,public_access_token_hash")
+    .eq("order_number", normalizedOrderNumber)
+    .maybeSingle()
+
+  if (error || !data) {
+    return null
+  }
+
+  const order = data as PublicOrderAccessRow
+
+  if (!publicOrderTokenMatches(normalizedToken, order.public_access_token_hash)) {
+    return null
+  }
+
+  return {
+    orderNumber: order.order_number,
+    publicAccessTokenHash: order.public_access_token_hash,
+  }
+}
+
+export async function getPublicOrderDetail(
+  orderNumber: string,
+  accessCredential: string | null | undefined,
+): Promise<PublicOrderDetail | null> {
+  const normalizedOrderNumber = orderNumber.trim().toUpperCase()
+  const credential = String(accessCredential ?? "")
+
+  if (
+    !orderNumberPattern.test(normalizedOrderNumber) ||
+    !credential ||
+    credential.length > publicOrderAccessMaximumCredentialLength
+  ) {
+    return null
+  }
+
+  const client = getSupabaseServiceRoleClient()
+
+  if (!client) {
+    return null
+  }
 
   const { data: orderData, error: orderError } = await client
     .from("orders")
     .select(
-      "id,order_number,status,customer_name,event_date,due_date,subtotal_amount,discount_amount,total_amount,currency,created_at",
+      "id,order_number,status,customer_name,event_date,due_date,subtotal_amount,discount_amount,total_amount,currency,created_at,public_access_token_hash",
     )
     .eq("order_number", normalizedOrderNumber)
-    .eq("public_access_token_hash", tokenHash)
     .maybeSingle()
 
   if (orderError || !orderData) {
@@ -82,6 +137,16 @@ export async function getPublicOrderDetail(
   }
 
   const order = orderData as PublicOrderRow
+
+  if (
+    !hasValidPublicOrderAccess(
+      credential,
+      order.order_number,
+      order.public_access_token_hash,
+    )
+  ) {
+    return null
+  }
 
   const [itemsResult, historiesResult] = await Promise.all([
     client

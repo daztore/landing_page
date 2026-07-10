@@ -12,7 +12,9 @@
 | Sedang | Quality assurance | Tidak ada unit, integration, atau end-to-end test. |
 | Sedang | Admin operations | CRUD dan upload masih memerlukan uji manual terhadap project Supabase target. |
 | Sedang | Feedback privacy | Flow feedback memakai service-role server-only, bucket private, dan rate limit dasar per IP. |
-| Tinggi | Public endpoint abuse | Rate limit feedback masih in-memory per proses; endpoint inquiry/checkout/payment nanti wajib punya abuse prevention yang sesuai skala. |
+| Tinggi | Rate-limit rollout | Production sudah memakai shared Supabase RPC, tetapi migration `009` wajib diterapkan sebelum deploy agar endpoint tidak fail-closed `503`. |
+| Sedang | Trusted proxy | Topologi repo mendukung client langsung ke Nginx; CDN/load balancer future memerlukan allowlist CIDR resmi. |
+| Sedang | Order access secret | `ORDER_ACCESS_COOKIE_SECRET` wajib acak minimal 32 byte dan rotasinya membatalkan cookie aktif. |
 | Sedang | Upload content validation | Upload sudah validasi MIME/ukuran/path, tetapi belum validasi magic byte atau malware scanning. |
 | Sedang | Security headers | CSP dan HSTS belum ditentukan; header dasar tersedia di Nginx. |
 | Sedang | CI/CD deploy | Workflow aktif hanya verify/build/push GHCR; SSH deploy otomatis belum aktif. |
@@ -30,7 +32,7 @@ Prioritas lanjutan:
 
 1. Pertimbangkan `output: "standalone"` untuk runtime image lebih kecil.
 2. Jalankan container sebagai non-root user jika kompatibel.
-3. Pin base image dan GitHub Actions ke digest/full commit SHA.
+3. Pin base image ke digest pada task terpisah; GitHub Actions sudah dipin ke full commit SHA.
 4. Tambahkan monitoring deployment dan alert healthcheck.
 
 `.dockerignore` sudah mengecualikan `.env*`. Secret harus tersedia melalui environment runtime.
@@ -208,7 +210,7 @@ Hasil utama:
 
 - env service-role tetap server-only dan tidak masuk Docker build argument atau workflow build image;
 - RLS public/admin/feedback dan allowlist admin sudah sesuai baseline saat ini;
-- feedback route publik sudah validasi input, upload, dan rate limit in-memory per IP;
+- feedback route publik sudah validasi input/upload dan memakai shared rate limit production;
 - dependency advisory PostCSS internal Next.js sudah dibersihkan pada 2026-07-07; `postcss`
   resolved ke `8.5.16` dan `npm audit --audit-level=low` bersih pada saat cleanup;
 - CodeQL aktif, tetapi hasil alert di GitHub tetap perlu dipantau oleh maintainer.
@@ -249,7 +251,8 @@ Route feedback publik membaca request dan menyimpan submission melalui service-r
 - jangan expose `SUPABASE_SERVICE_ROLE_KEY` ke client;
 - jangan membuka RLS public langsung untuk tabel feedback tanpa review;
 - validasi upload foto tetap wajib;
-- pertimbangkan rate limit terpusat sebelum traffic publik besar atau deployment multi-instance.
+- shared rate limiter production aktif melalui migration `009`; pantau ukuran
+  `rate_limit_buckets`, error RPC, dan response `503` setelah rollout.
 
 ### Headers
 

@@ -210,8 +210,8 @@ Implementasi Phase 2 pada 2026-07-06:
 
 - Tabel `leads` dan `lead_messages` sudah dibuat melalui migration
   `supabase/migrations/006_create_leads_feature.sql`.
-- Public submit memakai `/api/leads`, validasi server-side, rate limit in-memory, honeypot, dan
-  service-role server-only.
+- Public submit memakai `/api/leads`, validasi server-side, shared rate limit production,
+  honeypot, dan service-role server-only. Development tetap memakai in-memory adapter.
 - Direct public insert/read Supabase untuk lead tidak dibuka.
 - Admin lead management aktif di `/admin-daz/leads` dan `/admin-daz/leads/[id]`.
 - Perubahan status disimpan di `lead_messages` melalui RPC `public.change_lead_status()`.
@@ -297,7 +297,8 @@ Sebelum inquiry public aktif:
 - tambahkan honeypot dan time-to-submit jika spam mulai terlihat;
 - error public harus generik;
 - log server tidak boleh memuat data pribadi berlebihan;
-- untuk multi-instance, ganti rate limit in-memory dengan store terpusat.
+- production multi-instance memakai shared Supabase RPC `consume_rate_limit`; migration `009`
+  wajib tersedia sebelum deploy.
 
 ### Notification Preparation
 
@@ -339,8 +340,10 @@ Implementasi Phase 3 pada 2026-07-06:
   estimasi, dan metadata produk yang aman.
 - Item manual didukung untuk kebutuhan custom yang tidak berasal dari katalog.
 - Total order dihitung ulang server-side dari item dan diskon manual.
-- Public order detail tersedia di `/order/[orderNumber]?token=...` dengan token publik yang
-  disimpan sebagai hash di database.
+- Public order access tersedia melalui exchange
+  `/order/[orderNumber]/access?token=...`, lalu redirect ke URL bersih `/order/[orderNumber]`
+  dengan cookie `HttpOnly` bertanda tangan. Token publik tetap hanya disimpan sebagai hash di
+  database.
 - Halaman publik order menampilkan data terbatas: status, nama depan customer, tanggal relevan,
   item, total, dan timeline status tanpa WhatsApp/email/catatan admin.
 - Payment provider, payment transaction, webhook payment, shipping/tracking, cart, checkout, dan
@@ -387,6 +390,7 @@ tanpa task implementasi/migration khusus.
 | `orders` | ACTIVE PHASE 3 | Header order manual, nomor order, customer, total, token publik hash, dan status. |
 | `order_items` | ACTIVE PHASE 3 | Item order dengan snapshot produk, harga, opsi custom, catatan, dan quantity. |
 | `order_status_histories` | ACTIVE PHASE 3 | Riwayat perubahan status order beserta actor, timestamp, dan catatan. |
+| `rate_limit_buckets` | ACTIVE SECURITY | Counter hash shared lintas instance dengan expiry window dan RPC atomik. |
 | `payment_transactions` | PLANNED | Data transaksi payment provider, provider reference, amount, currency, dan status. |
 | `payment_webhook_events` | PLANNED | Raw event webhook payment untuk idempotency, audit, dan diagnosis. |
 | `shipments` | PLANNED | Data pengiriman, courier, service, resi, alamat ringkas, dan status. |

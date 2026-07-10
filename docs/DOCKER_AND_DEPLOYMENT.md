@@ -6,6 +6,7 @@ Repository memiliki:
 
 - `Dockerfile` multi-stage;
 - `docker-compose.yml`;
+- `docker-compose.override.yml` untuk konfigurasi local-only;
 - reverse proxy Nginx;
 - beberapa file PHP/Supervisor yang tidak digunakan oleh Dockerfile atau Compose aktif.
 
@@ -66,6 +67,8 @@ Image belum menggunakan Next.js standalone output. Setelah build, Dockerfile men
 - Memasang bind mount `.:/app`.
 - Memasang anonymous volume `/app/node_modules`.
 - Tidak mengekspos port langsung ke host.
+- Override local menetapkan `RATE_LIMIT_STORE=memory`, sehingga development container tidak
+  membutuhkan shared store. Base `docker-compose.yml` tetap tidak diubah oleh hardening production.
 
 ### Service `web`
 
@@ -160,14 +163,15 @@ File `docker-compose.production.yml` menggunakan image yang sudah dibangun dan d
 ```yaml
 services:
   app:
-    image: ghcr.io/daztore/landing_page:production
-    # image: ${APP_IMAGE:?APP_IMAGE is required}:${APP_TAG:?APP_TAG is required}
+    image: ${APP_IMAGE:?APP_IMAGE is required}:${APP_TAG:?APP_TAG is required}
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-https://daztore.web.id}
       NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?NEXT_PUBLIC_SUPABASE_URL is required}
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:?NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is required}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:?SUPABASE_SERVICE_ROLE_KEY is required}
+      ORDER_ACCESS_COOKIE_SECRET: ${ORDER_ACCESS_COOKIE_SECRET:?ORDER_ACCESS_COOKIE_SECRET is required}
+      RATE_LIMIT_STORE: supabase
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ >/dev/null || exit 1"]
@@ -192,15 +196,44 @@ Karakteristik wajib:
 
 - tidak ada bind mount source aplikasi;
 - service `app` memakai `image`, bukan `build`;
-- image aktif saat ini memakai tag convenience `production`;
-- baris `${APP_IMAGE}:${APP_TAG}` tersedia sebagai komentar jika ingin mengaktifkan deploy/rollback berbasis tag immutable;
+- image aplikasi wajib memakai `${APP_IMAGE}:${APP_TAG}`;
+- `APP_TAG` operasional wajib full commit SHA immutable; `main`/`production` hanya convenience tag;
 - secret diberikan saat runtime, bukan disalin ke image;
 - Nginx hanya memasang config yang diperlukan;
 - health check aktif.
 - environment public Supabase tersedia pada build dan runtime.
-- service-role key tersedia hanya pada runtime.
+- service-role key dan secret cookie akses order tersedia hanya pada runtime.
+- rate-limit store production dikunci ke adapter shared `supabase`; Compose lokal tetap tidak
+  diubah dan memakai default in-memory.
 
 File tersebut tidak memiliki `build`, bind mount source, atau mount `node_modules`.
+
+## Trusted Proxy dan Access Log
+
+Topologi production yang didukung repository saat ini:
+
+```text
+client -> Nginx service `web` (host :8003) -> Next.js service `app` (network internal)
+```
+
+Service `app` tidak mempublikasikan port host. Karena itu Nginx menjadi trust boundary dan selalu
+menimpa header app-facing `X-Daztore-Client-IP` dari `$remote_addr`. `X-Forwarded-For` juga ditimpa,
+`CF-Connecting-IP` dibuang, dan aplikasi mengabaikan header forwarding lain. Nilai custom tersebut
+tetap divalidasi sebagai IPv4/IPv6; nilai kosong/tidak valid menjadi `unknown`.
+
+Konfigurasi ini tidak mengklaim dukungan client-IP asli di belakang CDN/load balancer yang belum
+dipilih. Jika upstream resmi ditambahkan, operator wajib lebih dulu mengatur `real_ip_header`,
+`set_real_ip_from` menggunakan CIDR resmi provider, dan `real_ip_recursive`; jangan percaya header
+provider dari koneksi publik biasa. Tanpa konfigurasi itu, Nginx memakai IP peer upstream sehingga
+rate limit menjadi lebih konservatif, tetapi client tidak dapat memilih key melalui spoofed header.
+
+Access log Nginx memakai method + `$uri` tanpa query args atau referer, sehingga raw token pada
+route exchange order tidak masuk access log. Response `/order/**` memakai satu effective
+`Referrer-Policy: no-referrer`; header upstream disembunyikan sebelum policy Nginx diterapkan.
+Location `/order/**` juga mengarahkan `error_log` ke `/dev/null` karena format error bawaan Nginx
+dapat menyertakan request URI lengkap saat upstream gagal. Trade-off observability ini disengaja:
+status, path tanpa query, ukuran response, dan request time tetap tersedia pada sanitized access
+log, sedangkan diagnosis detail order dilakukan melalui healthcheck/app log tanpa mencetak token.
 
 ## Flow Deployment Production
 
@@ -219,6 +252,10 @@ Di server:
 
 ```bash
 cd /opt/daztore
+export APP_IMAGE=ghcr.io/daztore/landing_page
+export APP_TAG=<full-40-character-commit-sha>
+printf '%s' "$APP_TAG" | grep -Eq '^[0-9a-f]{40}$' || exit 1
+docker compose -f docker-compose.production.yml config --quiet
 docker compose -f docker-compose.production.yml pull
 docker compose -f docker-compose.production.yml up -d
 docker compose -f docker-compose.production.yml ps
@@ -228,12 +265,15 @@ Panduan setup server lengkap tersedia di `docs/CI_CD_DEPLOYMENT.md`.
 
 ## Rollback
 
-Simpan SHA image terakhir yang diketahui sehat. Dengan file saat ini yang memakai tag `production`, rollback berbasis SHA perlu mengubah tag image atau mengaktifkan kembali baris `${APP_IMAGE}:${APP_TAG}` yang masih disediakan sebagai komentar.
+Simpan SHA image terakhir yang diketahui sehat. Rollback hanya mengubah `APP_TAG` ke full commit
+SHA tersebut; jangan memakai alias mutable.
 
 ```bash
 cd /opt/daztore
 export APP_IMAGE=ghcr.io/example/daztore
-export APP_TAG=<previous-known-good-sha>
+export APP_TAG=<previous-known-good-full-sha>
+printf '%s' "$APP_TAG" | grep -Eq '^[0-9a-f]{40}$' || exit 1
+docker compose -f docker-compose.production.yml config --quiet
 docker compose -f docker-compose.production.yml pull
 docker compose -f docker-compose.production.yml up -d
 docker compose -f docker-compose.production.yml ps
@@ -248,6 +288,8 @@ Tag `latest`, `main`, atau `production` boleh menjadi alias operasional, tetapi 
 - Jangan menaruh secret sebagai Docker build argument biasa.
 - Simpan secret di GitHub Actions Secrets dan secret store server.
 - Inject secret server-only melalui environment runtime atau Docker secrets.
+- `ORDER_ACCESS_COOKIE_SECRET` harus acak minimal 32 byte, khusus untuk bukti akses order, dan
+  tidak boleh memakai ulang `SUPABASE_SERVICE_ROLE_KEY`.
 - Publishable key Supabase boleh berada di client bundle, tetapi service-role key tidak boleh.
 - Batasi akses registry dan SSH ke principal deployment.
 

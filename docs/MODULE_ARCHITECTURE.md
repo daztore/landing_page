@@ -444,12 +444,25 @@ Keputusan implementasi:
   membuat snapshot item katalog.
 - `features/orders` memakai API server `features/leads/server.ts` untuk validasi lead dan
   menandai lead sebagai `converted` saat order dibuat dari lead.
-- Public order detail memakai `/order/[orderNumber]?token=...`; raw token tidak disimpan di
-  database, hanya hash dan hint.
+- Public order link memakai `/order/[orderNumber]/access?token=...` hanya untuk exchange singkat;
+  route kemudian membuat cookie `HttpOnly` bertanda tangan dan redirect ke
+  `/order/[orderNumber]`. Raw token tidak disimpan di database/cookie, hanya hash dan hint di
+  domain order.
 - Public direct read/write Supabase untuk `orders`, `order_items`, dan `order_status_histories`
   tidak dibuka. Admin memakai Supabase Auth cookie session dan RLS admin.
 - Tidak ada dependency dari `features/orders` ke payments, shipping, cart, checkout, atau customer
   account.
+
+Hardening QAUX 2026-07-10 mempertahankan boundary yang sama:
+
+- primitive hash/HMAC dan credential berada di
+  `features/orders/services/public-access-crypto.ts` dan tidak bergantung pada UI;
+- pembacaan secret/cookie server-only berada di `features/orders/services/public-access.ts`;
+- `app/order/[orderNumber]/access/route.ts` hanya menjadi orchestration exchange/redirect;
+- shared rate limiter berada di `lib/security/rate-limit.ts`, sedangkan core store interface dan
+  in-memory adapter berada di `lib/security/rate-limit-core.ts`;
+- production adapter memakai Supabase RPC `consume_rate_limit`; route publik tidak memuat logic
+  provider/store sendiri.
 
 ### Admin Module Boundary
 

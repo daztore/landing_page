@@ -9,7 +9,8 @@ Roadmap ini tidak memberi izin untuk langsung membangun payment, order, shipping
 - Framework: Next.js App Router.
 - Package manager resmi: npm `10.9.0` melalui `packageManager` di `package.json`; `package-lock.json` adalah satu-satunya lockfile resmi.
 - Database/CMS: Supabase untuk konten publik, admin CMS, feedback, Storage, Auth, dan RLS.
-- Route publik aktif: `/`, `/katalog`, `/produk/[slug]`, `/order/[orderNumber]`, `/feedback/[id]`.
+- Route publik aktif: `/`, `/katalog`, `/produk/[slug]`, `/order/[orderNumber]`,
+  `/order/[orderNumber]/access`, `/feedback/[id]`.
 - Route API aktif: `/api/leads`, `/feedback/[id]/submit`.
 - Route admin aktif: `/admin-daz/**`, termasuk `/admin-daz/leads` dan `/admin-daz/orders`.
 - Deployment: Docker multi-stage, GHCR image build, dan Compose production berbasis image.
@@ -130,7 +131,18 @@ Hasil audit 2026-07-03:
 - Feedback public route sudah validasi UUID, body, rating, rekomendasi, jumlah file, MIME/extension/size, path, rate limit in-memory per IP, dan cleanup upload jika database insert gagal.
 - Error publik dibuat generik; detail teknis hanya dilog server-side.
 - CodeQL aktif untuk JavaScript/TypeScript dengan `security-extended`.
-- Gap sebelum commerce: rate limit feedback masih in-memory per proses dan perlu store terpusat bila deployment multi-instance, upload belum validasi magic byte/content scanning, dan CSP/HSTS belum ditentukan. Advisory PostCSS internal Next.js sudah dibersihkan pada 2026-07-07 melalui dependency update dan npm override yang tervalidasi.
+- Gap sebelum commerce: upload belum validasi magic byte/content scanning dan CSP/HSTS belum
+  ditentukan. Advisory PostCSS internal Next.js sudah dibersihkan pada 2026-07-07 melalui
+  dependency update dan npm override yang tervalidasi.
+
+Hardening 2026-07-10:
+
+- Endpoint lead, feedback, dan forgot-password memakai shared Supabase RPC rate limiter pada
+  production; development tetap memakai adapter in-memory.
+- Trust boundary client IP dipindahkan ke header custom yang ditimpa Nginx.
+- Raw token order ditukar menjadi cookie `HttpOnly` bertanda tangan lalu dibersihkan dari URL.
+- Workflow GitHub Actions dipin ke full commit SHA dan Compose production mewajibkan image tag
+  immutable.
 
 ### [P0][DONE] Performance baseline
 
@@ -320,6 +332,10 @@ Hasil implementasi 2026-07-06:
 - Data yang disimpan dibatasi ke kontak follow-up, minat produk, catatan, consent snapshot,
   product snapshot, source URL, dan user agent ringkas.
 
+Hardening 2026-07-10 mengganti limiter production dengan shared Supabase RPC atomik. Limit per IP
+dan nomor WhatsApp tetap sama; key personal dinormalisasi lalu di-hash. Development mempertahankan
+adapter in-memory.
+
 ### [P1][DONE] Admin lead management
 
 Subtask:
@@ -442,6 +458,10 @@ Hasil implementasi 2026-07-06:
   item, total, dan timeline status tanpa WhatsApp/email/catatan admin.
 - Metadata halaman order diset `noindex,nofollow`, dan `/order` ditambahkan ke `robots.txt`
   disallow.
+
+Hardening 2026-07-10 menambahkan route exchange `/order/[orderNumber]/access?token=...`, cookie
+`HttpOnly` bertanda tangan dengan expiry 15 menit, redirect `303` ke URL bersih, invalidasi cookie
+setelah regenerasi link, serta response `private, no-store`/`no-referrer`.
 
 ### [P1][DONE] Order status workflow
 

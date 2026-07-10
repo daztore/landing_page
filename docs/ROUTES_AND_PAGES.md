@@ -11,7 +11,8 @@ Project menggunakan Next.js App Router karena route didefinisikan melalui folder
 | `/` | `app/page.tsx` | Halaman utama | Landing page pemasaran dan kontak. |
 | `/katalog` | `app/katalog/page.tsx` | Halaman katalog | Pencarian, filter, sorting, dan CTA produk. |
 | `/produk/[slug]` | `app/produk/[slug]/page.tsx` | Publik dynamic | Detail produk katalog aktif, harga estimasi, dan form inquiry. |
-| `/order/[orderNumber]` | `app/order/[orderNumber]/page.tsx` | Publik dynamic via token | Ringkasan order publik terbatas dengan metadata `noindex`. |
+| `/order/[orderNumber]/access?token=...` | `app/order/[orderNumber]/access/route.ts` | Route Handler publik | Exchange raw token menjadi cookie akses, lalu redirect `303` ke URL bersih. |
+| `/order/[orderNumber]` | `app/order/[orderNumber]/page.tsx` | Publik dynamic via cookie | Ringkasan order publik terbatas dengan metadata `noindex`. |
 | `/api/leads` | `app/api/leads/route.ts` | Route Handler publik | Submit inquiry produk melalui `POST`. |
 | `/feedback/[id]` | `app/feedback/[id]/page.tsx` | Publik dynamic | Form feedback pelanggan berbasis UUID, `force-dynamic`, dan `noindex`. |
 | `/feedback/[id]/submit` | `app/feedback/[id]/submit/route.ts` | Route Handler publik | Submit feedback pelanggan melalui `POST`. |
@@ -167,7 +168,7 @@ Jika UUID tidak valid atau request tidak ditemukan, halaman memanggil `notFound(
 Validasi yang dilakukan:
 
 - UUID feedback request;
-- rate limit in-memory per IP sebelum parsing form/upload;
+- shared rate limit production per IP sebelum parsing form/upload; development memakai in-memory;
 - konfigurasi service-role Supabase;
 - rating integer 1 sampai 5;
 - minimal kritik/saran atau testimoni;
@@ -186,7 +187,7 @@ Validasi yang dilakukan:
 
 - content type `application/json`;
 - ukuran body maksimal 16 KB;
-- rate limit in-memory per IP dan nomor WhatsApp;
+- shared rate limit production per IP dan nomor WhatsApp; development memakai in-memory;
 - nama, WhatsApp, email opsional, product slug atau minat produk, tanggal acara, budget, catatan,
   consent, honeypot, dan time-to-submit ringan;
 - validasi produk aktif server-side sebelum menyimpan `product_id` dan `product_snapshot`.
@@ -197,20 +198,32 @@ Response public tidak mengembalikan full row lead.
 
 ## Route `/order/[orderNumber]`
 
-`app/order/[orderNumber]/page.tsx` adalah halaman ringkasan order publik berbasis token dengan:
+Public order memakai dua tahap:
+
+```text
+/order/[orderNumber]/access?token=...
+-> validasi raw token terhadap hash database
+-> cookie HttpOnly bertanda tangan
+-> 303 /order/[orderNumber]
+```
+
+`app/order/[orderNumber]/page.tsx` adalah halaman ringkasan order publik berbasis cookie dengan:
 
 - `dynamic = "force-dynamic"`;
-- query string wajib `?token=...`;
+- URL bersih tanpa raw token;
 - validasi format order number `DZT-YYYYMMDD-xxxxx`;
 - lookup server-side melalui `features/orders/queries/getPublicOrderDetail()`;
-- verifikasi token terhadap hash di database;
+- verifikasi signature, expiry 15 menit, order number, dan token version terhadap hash terkini;
+- link legacy `/order/[orderNumber]?token=...` langsung diarahkan ke route exchange;
 - metadata `robots` noindex/nofollow;
+- response `Cache-Control: private, no-store` dan `Referrer-Policy: no-referrer`;
 - tampilan data terbatas: status, nama depan customer, tanggal relevan, item, total, dan timeline
   status;
-- tanpa WhatsApp, email, catatan admin, token hint, atau data admin.
+- tanpa WhatsApp, email, catatan admin, token hint, raw token, atau data admin.
 
-Jika order number/token invalid, service-role belum tersedia, atau hash token tidak cocok, halaman
-memanggil `notFound()`. Route `/order` juga ditambahkan ke `robots.txt` disallow.
+Jika token/cookie/signature invalid atau expired, secret/service-role belum tersedia, atau hash
+token sudah berubah setelah regenerasi link, response tetap generik/not found. Route `/order` juga
+ditambahkan ke `robots.txt` disallow.
 
 ## Layout `/katalog`
 
@@ -230,6 +243,7 @@ Route Handler aktif:
 | --- | --- | --- | --- |
 | `app/api/leads/route.ts` | `POST` | Public | Submit inquiry produk dengan validasi dan rate limit. |
 | `app/feedback/[id]/submit/route.ts` | `POST` | Public via link UUID | Submit feedback pelanggan dengan rate limit dasar dan upload foto ke bucket private. |
+| `app/order/[orderNumber]/access/route.ts` | `GET` | Public via bearer link | Validasi token, set cookie akses, dan redirect ke URL order bersih. |
 | `app/admin-daz/forgot-password/request/route.ts` | `POST` | Public via forgot password form | Meminta email recovery admin dengan validasi JSON, body limit, rate limit per IP/email hash, dan response generik. |
 | `app/admin-daz/auth/callback/route.ts` | `GET` | Public via Supabase recovery link | Menukar recovery `code` menjadi session SSR dan redirect aman ke reset password. |
 | `app/admin-daz/(protected)/feedback/requests/route.ts` | `GET` | Admin | List feedback request. |
@@ -277,12 +291,16 @@ Dengan demikian UI tidak mengonfirmasi apakah email tertentu terdaftar. Supabase
 mengizinkan Redirect URL aktual `/admin-daz/auth/callback`; `/admin-daz/reset-password` adalah
 redirect internal aplikasi setelah code exchange, bukan redirect langsung dari Supabase.
 Route request forgot password memvalidasi JSON, membatasi body 4 KB, dan menerapkan rate limit
-in-memory per IP serta hash email sebelum memanggil Supabase Auth.
+shared di production per IP serta hash email sebelum memanggil Supabase Auth. Development memakai
+adapter in-memory eksplisit.
 
 ## Middleware
 
-`proxy.ts` berjalan hanya untuk `/admin-daz/:path*` dan menyegarkan cookie Supabase Auth.
-Protected route group memeriksa JWT melalui `getClaims()` dan allowlist `admin_users`.
+`proxy.ts` berjalan untuk `/admin-daz/:path*` dan `/order/:path*`. Pada admin, proxy menyegarkan
+cookie Supabase Auth. Pada order, proxy menerapkan header `private, no-store`, `no-referrer`, dan
+`noindex,nofollow`, serta mengarahkan link legacy `?token=...` ke route exchange.
+
+Protected route group admin memeriksa JWT melalui `getClaims()` dan allowlist `admin_users`.
 User anonymous diarahkan ke login; user non-admin diarahkan ke halaman akses ditolak.
 Route `/admin-daz/login`, `/admin-daz/forgot-password`, `/admin-daz/forgot-password/request`,
 `/admin-daz/auth/callback`, dan `/admin-daz/reset-password` tetap boleh dilewati proxy karena proxy

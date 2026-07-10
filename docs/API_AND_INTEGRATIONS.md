@@ -24,6 +24,7 @@ Ditemukan:
 - Route Handler `POST` untuk submit inquiry lead;
 - Route Handler `POST` untuk submit feedback;
 - Route Handler `POST` untuk request recovery password admin;
+- Route Handler `GET` untuk exchange token akses order;
 - Route Handler admin untuk membuat dan mengubah status order;
 - Route Handler `GET`/`POST` admin untuk feedback request.
 
@@ -79,6 +80,7 @@ Bucket `feedback_customer_photos` bersifat private setelah migration `005`. Foto
 | --- | --- | --- | --- | --- |
 | `/api/leads` | `app/api/leads/route.ts` | `POST` | Public | Submit inquiry produk dengan validasi, rate limit, honeypot, dan insert server-side. |
 | `/feedback/[id]/submit` | `app/feedback/[id]/submit/route.ts` | `POST` | Public via UUID link | Validasi input, rate limit dasar, upload foto, dan insert feedback memakai service-role server-only. |
+| `/order/[orderNumber]/access` | `app/order/[orderNumber]/access/route.ts` | `GET` | Public via token | Menukar raw token menjadi cookie akses `HttpOnly`, lalu redirect ke URL bersih. |
 | `/admin-daz/forgot-password/request` | `app/admin-daz/forgot-password/request/route.ts` | `POST` | Public via forgot password form | Meminta email recovery Supabase Auth dengan validasi JSON, body limit, rate limit per IP/email hash, dan response generik. |
 | `/admin-daz/auth/callback` | `app/admin-daz/auth/callback/route.ts` | `GET` | Public via recovery email | Menukar Supabase Auth recovery code menjadi session cookie SSR dan menolak open redirect. |
 | `/admin-daz/feedback/requests` | `app/admin-daz/(protected)/feedback/requests/route.ts` | `GET` | Admin | List feedback request melalui session admin dan RLS. |
@@ -149,7 +151,7 @@ Validasi dan security:
 - hanya menerima method `POST`;
 - membatasi content type `application/json` dan ukuran body 16 KB;
 - validasi field server-side;
-- rate limit in-memory per IP dan nomor WhatsApp sebelum operasi database;
+- shared rate limit Supabase RPC per IP dan nomor WhatsApp pada production; adapter in-memory pada development;
 - honeypot dan time-to-submit ringan;
 - gunakan error publik generik;
 - jangan log payload penuh atau data pribadi berlebihan;
@@ -231,13 +233,20 @@ Route publik:
 
 | Route | Method | Akses | Tujuan |
 | --- | --- | --- | --- |
-| `/order/[orderNumber]?token=...` | `GET` | Public via token | Menampilkan ringkasan order terbatas. |
+| `/order/[orderNumber]/access?token=...` | `GET` | Public via token | Validasi token, set cookie akses, dan redirect `303`. |
+| `/order/[orderNumber]` | `GET` | Public via cookie | Menampilkan ringkasan order terbatas pada URL bersih. |
 
 Aturan security:
 
 - order number harus mengikuti format `DZT-YYYYMMDD-xxxxx`;
 - token publik diverifikasi server-side terhadap hash di database;
 - database tidak menyimpan raw token publik;
+- raw token tidak diteruskan ke page/HTML/JavaScript dan tidak disimpan di cookie;
+- cookie akses ditandatangani dengan secret khusus server-only, `HttpOnly`, `SameSite=Lax`,
+  `Secure` pada production, path per order, dan expiry 15 menit;
+- credential cookie terikat pada hash token aktif, sehingga regenerasi link membatalkan cookie lama;
+- link legacy dengan `?token=...` tetap diarahkan ke route exchange;
+- route order mengirim `private, no-store`, `no-referrer`, serta `noindex,nofollow`;
 - halaman publik tidak menampilkan WhatsApp, email, catatan admin, atau full customer profile;
 - metadata route memakai `noindex,nofollow`;
 - public direct read Supabase untuk tabel order tidak dibuka.
@@ -369,12 +378,13 @@ login email/password
 Publishable key tetap merupakan credential publik. Akses admin berasal dari JWT user dan
 allowlist, bukan dari kerahasiaan key.
 
-Route `/feedback/[id]` dan `/feedback/[id]/submit` tidak memakai session user. Aksesnya berbasis UUID request feedback dan diproses server-side. Submit feedback juga memiliki rate limit in-memory per IP sebelum parsing form dan upload foto.
+Route `/feedback/[id]` dan `/feedback/[id]/submit` tidak memakai session user. Aksesnya berbasis UUID request feedback dan diproses server-side. Submit feedback memiliki shared rate limit production per IP sebelum parsing form dan upload foto; development memakai in-memory store.
 
 `components/ui/sidebar.tsx` memiliki kode cookie untuk menyimpan state sidebar, tetapi komponen tersebut tidak dipakai oleh halaman aktif. Cookie itu bukan cookie autentikasi.
 
-Tidak ada bearer token custom atau local storage session custom. Service-role key ada, tetapi hanya
-berada di server-only code untuk feedback, lead public submit, dan public order lookup.
+Bearer token order hanya muncul pada request exchange singkat dan diganti cookie `HttpOnly`
+bertanda tangan; tidak ada custom token di localStorage. Service-role key hanya berada di
+server-only code untuk feedback, lead public submit, shared rate limit, dan public order lookup.
 
 ### Admin Password Recovery
 
@@ -385,7 +395,7 @@ Alur teknis:
 ```text
 AdminForgotPasswordForm
 -> POST /admin-daz/forgot-password/request
--> validasi JSON, body limit, dan rate limit in-memory per IP/email hash
+-> validasi JSON, body limit, dan shared rate limit production per IP/email hash
 -> supabase.auth.resetPasswordForEmail(email, { redirectTo }) via SSR publishable client
 -> /admin-daz/auth/callback?code=...&next=/admin-daz/reset-password
 -> supabase.auth.exchangeCodeForSession(code)

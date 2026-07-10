@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { cookies } from "next/headers"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 
@@ -7,13 +8,16 @@ import {
   orderStatusLabels,
   type PublicOrderDetail,
 } from "@/features/orders"
-import { getPublicOrderDetail } from "@/features/orders/server"
+import {
+  getPublicOrderDetail,
+  publicOrderAccessCookieName,
+} from "@/features/orders/server"
 
 export const dynamic = "force-dynamic"
 
 interface PublicOrderPageProps {
   params: Promise<{ orderNumber: string }>
-  searchParams: Promise<{ token?: string }>
+  searchParams: Promise<{ token?: string | string[] }>
 }
 
 const dateFormatter = new Intl.DateTimeFormat("id-ID", {
@@ -43,6 +47,7 @@ export async function generateMetadata({
 
   return {
     title: `Order ${orderNumber} | daztore.id`,
+    referrer: "no-referrer",
     robots: {
       index: false,
       follow: false,
@@ -124,7 +129,15 @@ export default async function PublicOrderPage({
 }: PublicOrderPageProps) {
   const { orderNumber } = await params
   const query = await searchParams
-  const order = await getPublicOrderDetail(orderNumber, query.token)
+  const legacyToken = query.token
+
+  if (legacyToken !== undefined) {
+    notFound()
+  }
+
+  const cookieStore = await cookies()
+  const accessCredential = cookieStore.get(publicOrderAccessCookieName)?.value
+  const order = await getPublicOrderDetail(orderNumber, accessCredential)
 
   if (!order) {
     notFound()

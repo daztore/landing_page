@@ -6,7 +6,7 @@ import {
   parseCreateLeadRequestBody,
 } from "@/features/leads/validation/lead-request"
 import {
-  checkInMemoryRateLimit,
+  checkRateLimit,
   getRequestClientIp,
 } from "@/lib/security/rate-limit"
 
@@ -32,6 +32,19 @@ function rateLimitResponse(retryAfterSeconds: number) {
   )
 }
 
+function rateLimitUnavailableResponse(retryAfterSeconds: number) {
+  return NextResponse.json(
+    { error: "Inquiry sementara tidak dapat diproses. Silakan coba lagi nanti." },
+    {
+      status: 503,
+      headers: {
+        "Cache-Control": "no-store",
+        "Retry-After": String(retryAfterSeconds),
+      },
+    },
+  )
+}
+
 export async function POST(request: Request) {
   if (!getJsonContentType(request)) {
     return NextResponse.json(
@@ -48,11 +61,15 @@ export async function POST(request: Request) {
   }
 
   const clientIp = getRequestClientIp(request)
-  const ipRateLimit = checkInMemoryRateLimit({
+  const ipRateLimit = await checkRateLimit({
     key: `lead-submit:${clientIp}`,
     limit: 8,
     windowMs: 60 * 60 * 1000,
   })
+
+  if (!ipRateLimit.available) {
+    return rateLimitUnavailableResponse(ipRateLimit.retryAfterSeconds)
+  }
 
   if (!ipRateLimit.allowed) {
     return rateLimitResponse(ipRateLimit.retryAfterSeconds)
@@ -76,11 +93,15 @@ export async function POST(request: Request) {
     )
   }
 
-  const phoneRateLimit = checkInMemoryRateLimit({
+  const phoneRateLimit = await checkRateLimit({
     key: `lead-submit-phone:${parsed.input.whatsappNumber}`,
     limit: 4,
     windowMs: 60 * 60 * 1000,
   })
+
+  if (!phoneRateLimit.available) {
+    return rateLimitUnavailableResponse(phoneRateLimit.retryAfterSeconds)
+  }
 
   if (!phoneRateLimit.allowed) {
     return rateLimitResponse(phoneRateLimit.retryAfterSeconds)

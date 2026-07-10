@@ -23,6 +23,334 @@ Agent/Codex wajib membaca dokumen ini jika task berasal dari revisi QA/UX.
 
 ## Notes
 
+### QAUX-0010 - Production Compose Wajib Memakai Image Tag Immutable
+
+Status: `TODO`
+Priority: `P1`
+Source: `Security Review / Production Deployment Hardening`
+Date: `2026-07-10`
+Page/Module: `Docker Production Deployment`
+Related Route: `N/A`
+Related File: `docker-compose.production.yml`, `.github/workflows/ci-cd.yml`, `docs/CI_CD_DEPLOYMENT.md`, `.env.example`
+
+#### Problem
+
+`docker-compose.production.yml` saat ini memakai image aplikasi tetap
+`ghcr.io/daztore/landing_page:production`, sedangkan deklarasi berbasis `APP_IMAGE` dan `APP_TAG`
+masih menjadi komentar. Tag `production` dapat berpindah ke image lain dan tidak cukup untuk
+menjamin rollback ke artifact yang persis sama.
+
+`docker-compose.yml` memang sengaja memakai bind mount source untuk development lokal. File
+tersebut **bukan bagian dari masalah ini dan tidak boleh diubah** dalam task production hardening.
+Compose production saat ini sudah tidak melakukan bind mount seluruh source; perilaku tersebut
+harus dipertahankan.
+
+#### Expected Behavior
+
+Deployment production menjalankan image aplikasi yang ditentukan secara eksplisit menggunakan
+tag immutable, terutama commit SHA dari workflow CI/CD. Tag convenience seperti `production` atau
+`main` tetap boleh dipush, tetapi bukan sumber kebenaran untuk deploy dan rollback production.
+
+#### Acceptance Criteria
+
+- [ ] `docker-compose.production.yml` memakai format image berbasis variabel wajib, misalnya `${APP_IMAGE:?APP_IMAGE is required}:${APP_TAG:?APP_TAG is required}`.
+- [ ] `APP_TAG` pada deployment production diisi dengan full commit SHA atau tag release immutable, bukan hanya `production`, `main`, atau `latest`.
+- [ ] Baris image hardcoded `ghcr.io/daztore/landing_page:production` dihapus dari konfigurasi aktif.
+- [ ] Workflow tetap mem-push tag commit SHA; tag `main` dan `production` hanya menjadi convenience tag.
+- [ ] Runbook deploy dan rollback menjelaskan cara memilih `APP_TAG` tertentu, menjalankan `docker compose pull`, lalu `docker compose up -d`.
+- [ ] `docker compose -f docker-compose.production.yml config` gagal dengan pesan jelas saat `APP_IMAGE` atau `APP_TAG` tidak tersedia.
+- [ ] Runtime secret tetap diinject melalui environment server dan tidak menjadi Docker build argument atau masuk ke image.
+- [ ] Compose production tetap tidak memiliki bind mount seluruh repository/source code.
+- [ ] Mount konfigurasi Nginx tetap read-only.
+- [ ] `docker-compose.yml` development tidak diubah.
+- [ ] Healthcheck aplikasi dan dependency `web -> app service_healthy` tetap bekerja.
+
+#### Developer Notes
+
+Scope Docker pada note ini hanya `docker-compose.production.yml` dan dokumentasi deployment yang
+terkait. Jangan menghapus bind mount dari `docker-compose.yml`, karena file tersebut memang untuk
+hot reload/development lokal.
+
+Contoh arah konfigurasi:
+
+```yaml
+services:
+  app:
+    image: ${APP_IMAGE:?APP_IMAGE is required}:${APP_TAG:?APP_TAG is required}
+```
+
+Contoh operasional:
+
+```bash
+export APP_IMAGE=ghcr.io/daztore/landing_page
+export APP_TAG=<FULL_COMMIT_SHA>
+docker compose -f docker-compose.production.yml pull
+docker compose -f docker-compose.production.yml up -d
+```
+
+Jika QAUX-0006 menambahkan secret server-only baru untuk cookie akses order, variabel tersebut
+juga harus diteruskan sebagai runtime environment di Compose production tanpa menuliskan nilai
+aslinya ke repository.
+
+#### Result Notes
+
+Diisi setelah selesai.
+
+### QAUX-0009 - Pin Seluruh GitHub Actions ke Full Commit SHA
+
+Status: `TODO`
+Priority: `P1`
+Source: `Security Review / CI Supply Chain Hardening`
+Date: `2026-07-10`
+Page/Module: `GitHub Actions / CI/CD / CodeQL`
+Related Route: `N/A`
+Related File: `.github/workflows/ci-cd.yml`, `.github/workflows/codeql.yml`, `.github/workflows/summary.yml`, `.github/dependabot.yml`
+
+#### Problem
+
+Workflow memakai major-version tag seperti `actions/checkout@v5`, `actions/setup-node@v6`, dan
+`docker/*-action@vN`. Major tag dapat berpindah ke commit berbeda. Jika upstream action atau tag
+mengalami kompromi, workflow dapat mengeksekusi kode yang tidak sama dengan hasil review terakhir.
+
+#### Expected Behavior
+
+Setiap `uses:` pada workflow mengarah ke full 40-character commit SHA yang telah diverifikasi.
+Versi manusia tetap ditulis sebagai komentar agar mudah direview dan diperbarui. Permission job
+harus tetap minimum dan tidak boleh diperluas hanya untuk menyelesaikan pinning.
+
+#### Acceptance Criteria
+
+- [ ] Semua referensi `uses:` pada seluruh file `.github/workflows/*.yml` dipin ke full 40-character commit SHA.
+- [ ] Setiap SHA memiliki komentar versi, misalnya `# v5.x.x`, agar asal versinya mudah diaudit.
+- [ ] Tidak ada referensi action berbasis branch, floating major tag, atau `@main` yang tersisa.
+- [ ] SHA diambil dari release/tag resmi action terkait dan bukan dari fork tidak dikenal.
+- [ ] Permission workflow/job tetap least privilege; jangan menambah `write` permission yang tidak dibutuhkan.
+- [ ] Dependabot dikonfigurasi untuk ecosystem `github-actions` agar pembaruan SHA dapat diajukan melalui pull request, jika konfigurasi tersebut belum tersedia.
+- [ ] Workflow CI, image build, CodeQL, dan summary tetap memiliki trigger dan perilaku yang sama setelah pinning.
+- [ ] YAML workflow dapat diparse dan tidak memiliki syntax error.
+- [ ] Tidak ada secret yang dicetak ke log saat validasi workflow.
+
+#### Developer Notes
+
+Lakukan perubahan mekanis dan reviewable. Jangan mengganti action atau mengubah arsitektur CI pada
+task yang sama kecuali action lama sudah tidak didukung atau memiliki advisory keamanan yang
+relevan. Pertahankan komentar versi agar Dependabot/reviewer dapat memahami pembaruan SHA.
+
+GitHub repository setting yang perlu diverifikasi owner secara manual dan tidak boleh diklaim
+selesai hanya dari perubahan kode:
+
+- Secret scanning aktif jika tersedia pada plan repository.
+- Push protection aktif jika tersedia.
+- Actions policy membatasi action ke GitHub-owned atau allowlist yang disetujui.
+
+#### Result Notes
+
+Diisi setelah selesai.
+
+### QAUX-0008 - Rate Limit Production Harus Konsisten Lintas Instance
+
+Status: `TODO`
+Priority: `P1`
+Source: `Security Review / Abuse Prevention`
+Date: `2026-07-10`
+Page/Module: `Public Endpoint Rate Limiting`
+Related Route: `/api/leads`, `/feedback/[id]/submit`, `/admin-daz/forgot-password/request`
+Related File: `lib/security/rate-limit.ts`, `app/api/leads/route.ts`, `app/feedback/[id]/submit/route.ts`, `app/admin-daz/forgot-password/request/route.ts`, `.env.example`, `docker-compose.production.yml`
+
+#### Problem
+
+Rate limiter saat ini menyimpan counter di `Map` memory proses. Counter hilang saat restart dan
+tidak dibagi antar replica/container. Pada deployment multi-instance, request dapat berpindah
+instance sehingga batas efektif menjadi lebih longgar dan tidak konsisten.
+
+#### Expected Behavior
+
+Production memakai store rate limit bersama dengan increment dan expiry atomik. In-memory store
+boleh dipertahankan untuk development/test atau sebagai fallback yang terdokumentasi, tetapi tidak
+boleh menjadi satu-satunya proteksi pada production multi-instance.
+
+#### Acceptance Criteria
+
+- [ ] Buat boundary/interface rate limiter agar route tidak bergantung langsung pada global `Map`.
+- [ ] Production dapat memakai shared store yang sesuai dengan infrastruktur project, misalnya Redis/Valkey atau mekanisme atomik lain yang terdokumentasi.
+- [ ] Increment, window expiry, dan penentuan `remaining` dilakukan secara atomik untuk mencegah race condition.
+- [ ] Existing limit per IP dan per identifier tetap dipertahankan untuk lead dan forgot-password.
+- [ ] Identifier pribadi seperti email atau nomor WhatsApp dinormalisasi lalu di-hash sebelum menjadi key shared store.
+- [ ] TTL key tidak lebih panjang dari kebutuhan window rate limit.
+- [ ] Jika shared store gagal, endpoint tidak diam-diam menjadi unlimited; pilih respons aman dan terdokumentasi, misalnya fallback konservatif atau `503` generik.
+- [ ] Response limit tetap menyediakan `Retry-After` ketika request ditolak.
+- [ ] Development lokal tetap dapat berjalan tanpa service eksternal bila memakai adapter in-memory yang eksplisit.
+- [ ] Environment variable shared store didokumentasikan tanpa nilai asli dan tetap server-only.
+- [ ] Runtime credential shared store diteruskan melalui `docker-compose.production.yml`, bukan build argument.
+- [ ] Tambahkan test untuk reset window, request di atas limit, TTL, dan dua instance yang memakai key/store yang sama.
+- [ ] `npm run lint`, `npm run typecheck`, dan `npm run build` berhasil.
+
+#### Developer Notes
+
+Jangan memasukkan provider-specific code ke setiap Route Handler. Gunakan satu adapter/service di
+layer security. Jangan menambah dependency baru tanpa mengecek apakah project/infrastruktur sudah
+memiliki client yang dapat dipakai. Jika shared store production belum dipilih atau credential
+belum tersedia, tandai note `BLOCKED` atau `IN_PROGRESS` dengan sisa pekerjaan yang jelas; jangan
+mengklaim masalah multi-instance selesai hanya dengan merapikan `Map`.
+
+QAUX-0007 harus diselesaikan bersamaan atau lebih dahulu agar key IP rate limit tidak berasal dari
+header yang dapat dipalsukan client.
+
+#### Result Notes
+
+Diisi setelah selesai.
+
+### QAUX-0007 - Trusted Proxy dan Client IP Tidak Boleh Dapat Dipalsukan
+
+Status: `TODO`
+Priority: `P0`
+Source: `Security Review / Rate Limit Bypass`
+Date: `2026-07-10`
+Page/Module: `Nginx Reverse Proxy / Request Security`
+Related Route: `/api/leads`, `/feedback/[id]/submit`, `/admin-daz/forgot-password/request`
+Related File: `docker/nginx/default.conf`, `lib/security/rate-limit.ts`, `docker-compose.production.yml`
+
+#### Problem
+
+`getRequestClientIp()` saat ini mengambil elemen pertama dari `X-Forwarded-For`. Nginx memakai
+`$proxy_add_x_forwarded_for`, yang dapat mempertahankan nilai `X-Forwarded-For` dari client sebelum
+menambahkan IP koneksi. Tanpa trusted-proxy boundary yang eksplisit, client dapat mengirim header
+palsu dan mengubah key rate limit per IP.
+
+#### Expected Behavior
+
+Aplikasi hanya mempercayai client IP yang telah dinormalisasi oleh reverse proxy tepercaya.
+Header yang dikirim langsung oleh client tidak boleh dapat menentukan key rate limit. Konfigurasi
+harus tetap benar baik saat Nginx menerima traffic langsung maupun saat ada CDN/load balancer resmi
+di depannya.
+
+#### Acceptance Criteria
+
+- [ ] Tentukan dan dokumentasikan topologi proxy production: client langsung ke Nginx atau client -> CDN/load balancer tepercaya -> Nginx.
+- [ ] Nginx menimpa header app-facing client IP dengan nilai hasil trusted proxy resolution; jangan meneruskan `X-Forwarded-For` client secara mentah sebagai sumber kebenaran.
+- [ ] Jika ada CDN/load balancer, gunakan allowlist/trusted proxy range dan header resmi provider; jangan mempercayai header tersebut dari koneksi publik biasa.
+- [ ] Aplikasi membaca satu header client IP yang telah dinormalisasi oleh Nginx, lalu memakai fallback `unknown` bila boundary tidak valid.
+- [ ] Urutan fallback tidak lagi memprioritaskan elemen pertama `X-Forwarded-For` yang dikontrol client.
+- [ ] Request dengan spoofed `X-Forwarded-For`, `X-Real-IP`, atau `CF-Connecting-IP` tidak dapat memilih key rate limit sendiri.
+- [ ] Tambahkan test yang membandingkan request normal dan request dengan spoofed forwarding header.
+- [ ] Semua endpoint yang memakai `getRequestClientIp()` tetap berfungsi.
+- [ ] Perubahan Nginx tidak merusak WebSocket/upgrade, host, proto, healthcheck, atau request normal.
+- [ ] `docker-compose.yml` development tidak perlu diubah; perubahan Compose, bila diperlukan, hanya dilakukan pada `docker-compose.production.yml`.
+
+#### Developer Notes
+
+Untuk deployment tanpa CDN di depan Nginx, salah satu pola sederhana adalah Nginx mengirim
+`X-Real-IP $remote_addr` dan aplikasi hanya mempercayai header tersebut karena port aplikasi tidak
+diekspos langsung. Jangan otomatis memakai pola ini bila `$remote_addr` masih merupakan IP CDN.
+Dalam skenario CDN, konfigurasi `real_ip_header`, `set_real_ip_from`, dan recursive resolution harus
+disesuaikan dengan daftar proxy tepercaya yang benar.
+
+Jangan memperbaiki bypass hanya dengan memilih elemen terakhir `X-Forwarded-For` tanpa memahami
+proxy chain. Tujuan utamanya adalah menetapkan trust boundary, bukan sekadar mengganti index array.
+
+#### Result Notes
+
+Diisi setelah selesai.
+
+### QAUX-0006 - Hilangkan Raw Token Order dari URL Setelah Access Exchange
+
+Status: `TODO`
+Priority: `P0`
+Source: `Security Review / Sensitive Token Exposure`
+Date: `2026-07-10`
+Page/Module: `Public Order Access`
+Related Route: `/order/[orderNumber]`, optional access exchange route under `/order/[orderNumber]/**`
+Related File: `app/order/[orderNumber]/page.tsx`, `features/orders/queries/public-order.ts`, `features/orders/services/public-token.ts`, `docker/nginx/default.conf`, `.env.example`, `docker-compose.production.yml`
+
+#### Problem
+
+Public order link saat ini memakai raw bearer token pada query string:
+
+```text
+/order/ORDER-NUMBER?token=RAW_TOKEN
+```
+
+Token dibuat secara acak dan database hanya menyimpan hash, tetapi raw token di URL dapat tertinggal
+di browser history, screenshot/copy-paste, reverse proxy access log, APM/analytics, atau referrer.
+`noindex` tidak mencegah kebocoran melalui jalur tersebut.
+
+#### Expected Behavior
+
+Raw token hanya digunakan untuk access exchange singkat. Setelah token tervalidasi server-side,
+server membuat bukti akses berumur pendek melalui cookie `HttpOnly`, lalu melakukan redirect ke
+URL bersih `/order/[orderNumber]` tanpa query token. Halaman order berikutnya membaca bukti akses
+server-side dan tidak mengekspos token ke JavaScript atau HTML.
+
+#### Acceptance Criteria
+
+- [ ] Link order baru mengarah ke flow access exchange server-side, bukan merender halaman detail sambil mempertahankan `?token=...` di address bar.
+- [ ] Token divalidasi menggunakan hash existing; raw token tetap tidak disimpan di database.
+- [ ] Setelah validasi berhasil, response menetapkan cookie akses yang `HttpOnly`, `Secure` pada production, `SameSite=Lax` atau lebih ketat, memiliki expiry pendek, dan path dibatasi ke order terkait bila memungkinkan.
+- [ ] Cookie berupa bukti akses opaque/signed dan tidak menyimpan raw token secara plaintext bila dapat dihindari.
+- [ ] Signature menggunakan secret server-only khusus dengan entropy memadai; jangan memakai `NEXT_PUBLIC_*` dan jangan menggunakan ulang service-role key sebagai signing secret.
+- [ ] Server melakukan redirect `303` atau redirect aman lain ke `/order/[orderNumber]` tanpa query token.
+- [ ] Regenerasi public order link menginvalidasi cookie/link lama melalui perbandingan terhadap token hash/version terbaru.
+- [ ] URL lama `/order/[orderNumber]?token=...` tetap ditangani secara backward-compatible selama masa transisi dan segera diarahkan ke flow exchange.
+- [ ] Token invalid, cookie invalid, signature invalid, atau cookie expired menghasilkan respons generik tanpa membedakan penyebab internal.
+- [ ] Raw token tidak dicetak ke server log, application log, error log, analytics event, atau telemetry.
+- [ ] Nginx/access logging untuk route exchange tidak menyimpan query string token; gunakan log format berbasis path tanpa args atau nonaktifkan access log khusus route dengan pertimbangan observability yang terdokumentasi.
+- [ ] Response route order/exchange mengirim `Cache-Control: private, no-store`.
+- [ ] Route order/exchange mengirim `Referrer-Policy: no-referrer`.
+- [ ] Metadata `noindex,nofollow` dan pembatasan data customer yang sudah ada tetap dipertahankan.
+- [ ] Tidak ada raw token di client bundle, rendered HTML, React props, atau browser console.
+- [ ] Tambahkan test untuk token valid, token invalid, redirect ke URL bersih, cookie tampered, cookie expired, dan link yang diregenerasi.
+- [ ] Dokumentasi env, security, dan deployment diperbarui bila signing secret baru ditambahkan.
+- [ ] `npm run lint`, `npm run typecheck`, dan `npm run build` berhasil.
+
+#### Developer Notes
+
+Rekomendasi implementasi tanpa dependency baru adalah memakai primitive `node:crypto` untuk
+membuat dan memverifikasi bukti akses bertanda tangan. Payload minimum dapat berisi order number,
+identifier/version token hash saat ini, waktu terbit, dan waktu kedaluwarsa. Verifikasi harus
+membandingkan signature secara timing-safe dan memastikan order/token version masih aktif.
+
+Jangan memakai cookie biasa yang hanya berisi order number karena dapat dipalsukan. Jangan pula
+menganggap URL sudah aman hanya karena token panjang atau halaman memakai `noindex`.
+
+Contoh flow yang diharapkan:
+
+```text
+Admin/customer membuka link bertoken
+-> server memvalidasi raw token
+-> server membuat cookie akses HttpOnly bertanda tangan
+-> server redirect ke /order/ORDER-NUMBER
+-> halaman membaca dan memvalidasi cookie server-side
+```
+
+Karena request exchange awal masih membawa token, sanitasi access log dan `Referrer-Policy` tetap
+wajib. Jangan log nilai query ketika validasi gagal.
+
+#### Result Notes
+
+Diisi setelah selesai.
+Dokumen ini digunakan untuk mencatat revisi dari tim QA, UX, user lapangan, atau stakeholder.
+
+Agent/Codex wajib membaca dokumen ini jika task berasal dari revisi QA/UX.
+
+## Status Legend
+
+- `TODO`
+- `IN_PROGRESS`
+- `DONE`
+- `BLOCKED`
+- `CANCELLED`
+
+## Priority Legend
+
+- `P0` = Bug critical/security/breaking
+- `P1` = Mengganggu flow utama
+- `P2` = Improvement penting
+- `P3` = Minor/nice to have
+
+---
+
+## Notes
+
 ### QAUX-0005 - Admin Lupa Password dan Reset Password
 
 Status: `DONE`

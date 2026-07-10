@@ -7,7 +7,7 @@ import {
 } from "@/lib/admin-daz/password-recovery"
 import { createAdminServerClient } from "@/lib/admin-daz/supabase-server"
 import {
-  checkInMemoryRateLimit,
+  checkRateLimit,
   getRequestClientIp,
 } from "@/lib/security/rate-limit"
 import { getSiteUrl } from "@/lib/site-url"
@@ -72,6 +72,22 @@ function rateLimitResponse(retryAfterSeconds: number) {
   )
 }
 
+function rateLimitUnavailableResponse(retryAfterSeconds: number) {
+  return NextResponse.json(
+    {
+      error:
+        "Permintaan reset password sementara tidak dapat diproses. Silakan coba lagi nanti.",
+    },
+    {
+      status: 503,
+      headers: {
+        ...noStoreHeaders,
+        "Retry-After": String(retryAfterSeconds),
+      },
+    },
+  )
+}
+
 export async function POST(request: Request) {
   if (!getJsonContentType(request)) {
     return NextResponse.json(
@@ -88,11 +104,15 @@ export async function POST(request: Request) {
   }
 
   const clientIp = getRequestClientIp(request)
-  const ipRateLimit = checkInMemoryRateLimit({
+  const ipRateLimit = await checkRateLimit({
     key: `admin-password-recovery-ip:${clientIp}`,
     limit: 5,
     windowMs: 15 * 60 * 1000,
   })
+
+  if (!ipRateLimit.available) {
+    return rateLimitUnavailableResponse(ipRateLimit.retryAfterSeconds)
+  }
 
   if (!ipRateLimit.allowed) {
     return rateLimitResponse(ipRateLimit.retryAfterSeconds)
@@ -140,11 +160,15 @@ export async function POST(request: Request) {
     )
   }
 
-  const emailRateLimit = checkInMemoryRateLimit({
+  const emailRateLimit = await checkRateLimit({
     key: `admin-password-recovery-email:${getEmailHash(email)}`,
     limit: 3,
     windowMs: 60 * 60 * 1000,
   })
+
+  if (!emailRateLimit.available) {
+    return rateLimitUnavailableResponse(emailRateLimit.retryAfterSeconds)
+  }
 
   if (!emailRateLimit.allowed) {
     return rateLimitResponse(emailRateLimit.retryAfterSeconds)

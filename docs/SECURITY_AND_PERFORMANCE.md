@@ -133,11 +133,58 @@ Risiko tersisa:
 
 - Supabase Dashboard harus mengizinkan Redirect URL production/local yang benar; email recovery
   lama dapat masih membawa redirect lama setelah konfigurasi dashboard berubah.
-- Rate limit forgot password masih in-memory per proses; deployment multi-instance membutuhkan
-  store terpusat agar limit konsisten lintas container.
+- Rate limit forgot password memakai shared Supabase RPC pada production sejak hardening
+  2026-07-10; local/test tetap in-memory.
 - Direct call ke endpoint Supabase Auth tetap berada di luar kontrol aplikasi; route UI aplikasi
   sudah dibatasi, sedangkan proteksi direct abuse tetap bergantung pada Supabase Auth dan
   konfigurasi email provider.
+
+## Public Access, Proxy, Rate Limit, CI, dan Deployment Hardening 2026-07-10
+
+Hardening QAUX-0006 sampai QAUX-0010 menerapkan guardrail berikut:
+
+- Link order baru memakai `/order/[orderNumber]/access?token=...`; raw token divalidasi terhadap
+  hash database lalu ditukar menjadi cookie HMAC `HttpOnly`, `SameSite=Lax`, `Secure` pada
+  production, path per order, dan expiry 15 menit.
+- Cookie tidak menyimpan raw token/hash. Credential berisi token version yang diturunkan dengan
+  HMAC dan selalu dibandingkan dengan hash aktif, sehingga regenerasi link membatalkan cookie lama.
+- Link legacy `/order/[orderNumber]?token=...` tetap diarahkan `303` ke exchange. Response order
+  memakai `private, no-store`, `no-referrer`, dan `noindex,nofollow`.
+- `ORDER_ACCESS_COOKIE_SECRET` adalah secret khusus minimal 32 byte, server-only, dan fail-closed;
+  service-role key tidak dipakai sebagai signing secret.
+- Nginx access log hanya menyimpan method + `$uri` tanpa query args/referer. Upstream
+  `Referrer-Policy` disembunyikan dan route `/order/**` mendapat satu effective `no-referrer`.
+- Nginx error log dinonaktifkan khusus `/order/**` untuk mencegah format error bawaan merekam query
+  token saat upstream gagal; sanitized access log tetap menyimpan path/status/timing.
+- Nginx menimpa `X-Daztore-Client-IP`, `X-Real-IP`, dan `X-Forwarded-For` dari `$remote_addr`,
+  serta membuang `CF-Connecting-IP`; aplikasi hanya membaca custom header yang valid IPv4/IPv6.
+- Topologi yang didukung adalah client langsung ke Nginx lalu service app internal. CDN/load
+  balancer future wajib memakai allowlist CIDR resmi dan konfigurasi real-IP sebelum diaktifkan.
+- Production rate limiter memakai shared Supabase RPC `consume_rate_limit` dengan atomic upsert,
+  expiry window, key SHA-256, dan RLS/service-role-only. Development/local memakai adapter
+  in-memory eksplisit/default.
+- Production Compose mengunci `RATE_LIMIT_STORE=supabase`. Shared store error atau mode invalid
+  menghasilkan `503`, `Retry-After: 60`, dan `no-store`; endpoint tidak menjadi unlimited.
+- Seluruh `uses:` GitHub Actions dipin ke full 40-character commit SHA dengan komentar versi dan
+  Dependabot `github-actions` mingguan. Permission/trigger workflow tidak diperluas.
+- Production Compose mewajibkan `${APP_IMAGE}:${APP_TAG}`; runbook memakai full commit SHA untuk
+  deploy/rollback, sedangkan `main`/`production` hanya convenience tag.
+
+Urutan rollout wajib:
+
+1. Terapkan `supabase/migrations/009_create_rate_limit_store.sql`.
+2. Siapkan `ORDER_ACCESS_COOKIE_SECRET` acak minimal 32 byte.
+3. Set `APP_IMAGE` dan full-SHA `APP_TAG` pada server.
+4. Jalankan `docker compose ... config --quiet`, lalu pull/up.
+
+Risiko tersisa:
+
+- Migration `009` belum dijalankan otomatis oleh aplikasi; deploy kode lebih dulu akan membuat
+  public write endpoint fail-closed `503`.
+- Secret scanning, push protection, dan Actions allowlist tetap perlu diverifikasi manual di
+  repository settings.
+- Jika ada proxy/CDN eksternal di luar repository, owner harus mengonfirmasi topologi dan CIDR
+  trusted sebelum mengandalkan IP end-user untuk rate limit.
 
 ## Dependency Security Cleanup 2026-07-07
 
@@ -174,7 +221,8 @@ Catatan Docker:
 Keputusan sebelum commerce:
 
 - Jangan menambah endpoint publik write baru sebelum rate limit/abuse prevention dipilih.
-- Rate limit feedback saat ini masih in-memory per proses; gunakan store terpusat bila deployment menjadi multi-instance atau traffic meningkat.
+- Production feedback/lead/forgot-password memakai shared Supabase RPC rate limiter; migration
+  `009` wajib diterapkan sebelum deploy.
 - Jangan membuka public write policy Supabase untuk lead/order/payment; validasi tetap lewat server route/service layer.
 - Payment/shipping webhook wajib punya signature validation, idempotency, dan logging tanpa secret sebelum implementasi.
 - Upload file tambahan harus menambahkan validasi konten yang lebih kuat jika file berasal dari publik.
@@ -205,7 +253,8 @@ Guardrail yang sudah diterapkan:
 - Route Handler `/api/leads` memvalidasi `Content-Type`, `Content-Length`, JSON body, nama,
   WhatsApp, email, product slug, minat produk, event date, budget range, panjang catatan, consent,
   honeypot, dan time-to-submit ringan.
-- Rate limit in-memory diterapkan per IP dan nomor WhatsApp.
+- Rate limit awal dibuat in-memory; sejak hardening 2026-07-10 production memakai shared Supabase
+  RPC per IP dan nomor WhatsApp dengan key hash.
 - Error publik dibuat generik dan log server tidak mencetak payload lengkap customer.
 - Public submit memakai service-role server-only melalui `lib/supabase/service-role.ts` karena RLS
   public write ditutup.
@@ -216,8 +265,7 @@ Guardrail yang sudah diterapkan:
 
 Risiko tersisa:
 
-- Rate limit lead masih in-memory per proses; deployment multi-instance membutuhkan store
-  terpusat.
+- Shared limiter production memerlukan migration `009`; kegagalan store sengaja fail-closed `503`.
 - Privacy/legal page masih placeholder, sementara lead menyimpan kontak customer dan consent
   snapshot.
 - Belum ada CAPTCHA/provider anti-spam eksternal; baseline saat ini sengaja tanpa dependency baru.
@@ -238,8 +286,8 @@ Guardrail yang sudah diterapkan:
   tidak mengubah order lama.
 - Perubahan status hanya lewat order service dan RPC `public.change_order_status()`, lalu dicatat
   ke `order_status_histories`.
-- Public order detail memerlukan order number dan token; database hanya menyimpan hash token,
-  bukan raw token.
+- Public order exchange memerlukan order number dan token; database hanya menyimpan hash token.
+  Setelah validasi, halaman detail memakai cookie akses bertanda tangan tanpa raw token.
 - Halaman publik order membatasi data customer dan tidak menampilkan WhatsApp, email, catatan
   admin, atau token hint.
 - Route `/order/[orderNumber]` memakai metadata `noindex,nofollow`, dan `/order` ditambahkan ke
@@ -373,7 +421,10 @@ Checklist manual:
 - Public content dapat memakai `revalidate`.
 - Admin berada di route `/admin-daz/**`.
 - Public inquiry submit memakai Route Handler server-side `/api/leads`.
-- Public order detail memakai token lookup server-side dan tidak membuka tabel order ke public RLS.
+- Public order detail memakai cookie access proof server-side setelah token exchange dan tidak
+  membuka tabel order ke public RLS.
+- Endpoint public write production memakai shared rate limiter atomik; local/test memakai
+  in-memory adapter.
 - Feedback submit memakai Route Handler server-side.
 - Service-role client berada di file `server-only`.
 - Docker production harus memakai image siap jalan, bukan build di server.

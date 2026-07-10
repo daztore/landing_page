@@ -4,11 +4,15 @@
 
 | Variable | Contoh aman | Digunakan di | Klasifikasi | Sensitif |
 | --- | --- | --- | --- | --- |
+| `APP_IMAGE` | `ghcr.io/daztore/landing_page` | Docker Compose production image coordinate | Deployment runtime | Tidak |
+| `APP_TAG` | `<full-40-character-commit-sha>` | Docker Compose production immutable image tag | Deployment runtime | Tidak |
 | `NODE_ENV` | `production` | Next.js dan Docker runtime | Framework-managed, build/runtime | Tidak |
 | `NEXT_PUBLIC_SITE_URL` | `https://daztore.web.id` | `lib/site-url.ts`, `lib/security/safe-image-src.ts`, admin password recovery redirect | Public, build/runtime | Tidak |
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://project-ref.supabase.co` | Public Supabase client, admin SSR/browser client, service-role URL, remote image allowlist | Public, build/runtime | Tidak |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_example` | Public Supabase client dan admin SSR/browser client | Public client-side, build/runtime | Tidak rahasia |
-| `SUPABASE_SERVICE_ROLE_KEY` | `sb_secret_example` | `lib/supabase/service-role.ts`, dipakai oleh feedback, lead public, dan public order lookup server code | Server-only runtime | Ya |
+| `SUPABASE_SERVICE_ROLE_KEY` | `sb_secret_example` | `lib/supabase/service-role.ts`, dipakai oleh feedback, lead public, shared rate-limit RPC, dan public order lookup server code | Server-only runtime | Ya |
+| `ORDER_ACCESS_COOKIE_SECRET` | `<random-secret-minimal-32-byte>` | Menandatangani cookie bukti akses order setelah token exchange | Server-only runtime | Ya |
+| `RATE_LIMIT_STORE` | `memory` atau `supabase` | Memilih adapter rate limit server-side | Server-only runtime config | Tidak |
 
 ## Audit 2026-07-03
 
@@ -25,6 +29,9 @@ Hasil:
 - `Dockerfile` hanya menerima build argument `NEXT_PUBLIC_*`; service-role tidak masuk build argument.
 - Workflow GitHub Actions aktif hanya memakai env public untuk verify/build image dan tidak memakai `SUPABASE_SERVICE_ROLE_KEY`.
 - `docker-compose.production.yml` mewajibkan `SUPABASE_SERVICE_ROLE_KEY` sebagai runtime environment.
+- Production memakai Supabase RPC `consume_rate_limit` sebagai shared rate-limit store atomik;
+  development/test tetap memakai adapter in-memory tanpa service eksternal.
+- Key limiter disimpan sebagai SHA-256 dan tidak memuat email, WhatsApp, atau alamat IP mentah.
 - `.gitignore` mengecualikan `.env*` dan hanya membuka `.env.example`.
 - `.dockerignore` mengecualikan `.env*`, sehingga env lokal tidak masuk build context Docker.
 
@@ -34,15 +41,39 @@ Catatan gap:
 - `docker-compose.yml` lokal memakai fallback kosong untuk env. Ini nyaman untuk development dengan fallback data lokal, tetapi route feedback dan `/api/leads` akan gagal aman jika `SUPABASE_SERVICE_ROLE_KEY` belum tersedia.
 - Provider commerce seperti payment, shipping, SMTP, dan anti-spam belum memiliki env aktif. Jangan menambahkan nama credential baru ke `.env.example` sebelum implementasi/provider diputuskan.
 
+## Shared Rate-Limit Store
+
+Tidak ada credential provider baru untuk rate limiter. Production memakai infrastruktur Supabase
+yang sudah tersedia melalui `NEXT_PUBLIC_SUPABASE_URL` dan `SUPABASE_SERVICE_ROLE_KEY`; key secret
+tetap server-only. Migration `supabase/migrations/009_create_rate_limit_store.sql` wajib diterapkan
+sebelum deploy image yang memakai adapter baru.
+
+Pemilihan store bersifat eksplisit dan nilai lain dianggap konfigurasi gagal:
+
+- `RATE_LIMIT_STORE=supabase`: Supabase RPC bersama lintas instance, fail-closed `503` bila store
+  tidak tersedia;
+- `RATE_LIMIT_STORE=memory`: `InMemoryRateLimitStore` untuk local/test;
+- nilai tidak diisi: default `supabase` saat `NODE_ENV=production`, dan `memory` pada
+  development/test.
+
+`docker-compose.override.yml` mengunci local Compose ke `memory` tanpa mengubah base
+`docker-compose.yml`; `docker-compose.production.yml` mengunci production ke `supabase`. Jika
+production dijalankan di luar Compose resmi, tetapkan `RATE_LIMIT_STORE=supabase` secara eksplisit
+agar intent deployment tetap mudah diaudit.
+
 ## Local Development
 
 `.env.example` hanya berisi nama variable:
 
 ```dotenv
+APP_IMAGE=ghcr.io/daztore/landing_page
+APP_TAG=
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 NEXT_PUBLIC_SITE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
+ORDER_ACCESS_COOKIE_SECRET=
+RATE_LIMIT_STORE=memory
 ```
 
 Buat `.env.local` dan isi dengan nilai project:
@@ -52,6 +83,8 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
 NEXT_PUBLIC_SITE_URL=https://daztore.web.id
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_your_service_role_key
+ORDER_ACCESS_COOKIE_SECRET=replace_with_random_value_at_least_32_bytes
+RATE_LIMIT_STORE=memory
 ```
 
 `.env.local` terabaikan Git. `.env.example` dikecualikan dari pola ignore agar dapat di-commit.
@@ -165,13 +198,19 @@ docker compose up -d
 Production Compose juga memerlukan:
 
 ```dotenv
+APP_IMAGE=ghcr.io/daztore/landing_page
+APP_TAG=<full-40-character-commit-sha>
 NEXT_PUBLIC_SITE_URL=https://daztore.web.id
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_your_key
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_your_service_role_key
+ORDER_ACCESS_COOKIE_SECRET=<random-secret-minimal-32-byte>
+RATE_LIMIT_STORE=supabase
 ```
 
-`docker-compose.production.yml` saat ini memakai image `ghcr.io/daztore/landing_page:production` secara langsung. File tersebut juga masih menyimpan contoh baris komentar untuk pola `${APP_IMAGE}:${APP_TAG}` jika nanti rollback berbasis SHA ingin diaktifkan melalui environment server.
+`docker-compose.production.yml` mewajibkan `${APP_IMAGE}:${APP_TAG}`. Gunakan full commit SHA yang
+dipush CI untuk `APP_TAG`; tag `main`, `production`, atau `latest` tidak boleh menjadi sumber
+kebenaran deploy/rollback.
 
 Workflow GitHub Actions aktif saat ini tidak menjalankan Compose di server. Workflow hanya memakai env public Supabase saat verify/build image, lalu push image ke GHCR. `.env` server tetap dibutuhkan untuk deploy manual dengan `docker-compose.production.yml`.
 
@@ -207,8 +246,12 @@ NEXT_PUBLIC_SITE_URL
 `NEXT_PUBLIC_SITE_URL` dapat disimpan sebagai Actions variable. Kedua Supabase public variable
 tetap dapat disimpan sebagai Actions secrets untuk pengelolaan environment yang konsisten.
 `SUPABASE_SERVICE_ROLE_KEY` tidak dipakai oleh workflow build saat ini. Key ini wajib ada di
-environment runtime server untuk feedback, lead public submit, dan public order lookup, bukan build
-argument.
+environment runtime server untuk feedback, lead public submit, shared rate-limit RPC, dan public
+order lookup, bukan build argument.
+
+`ORDER_ACCESS_COOKIE_SECRET` juga tidak dipakai saat build. Secret ini hanya dibaca server runtime,
+tidak boleh memakai prefix `NEXT_PUBLIC_*`, dan rotasinya membatalkan cookie akses order yang masih
+aktif. Link order dapat ditukar kembali selama token publik belum diregenerasi.
 
 ## Rotation
 
@@ -220,12 +263,16 @@ Jika publishable key dirotasi:
 4. deploy image dengan commit SHA baru;
 5. verifikasi query publik masih lolos RLS.
 
+Jika `ORDER_ACCESS_COOKIE_SECRET` dirotasi, seluruh cookie akses order aktif langsung invalid.
+Deploy secret baru melalui runtime environment, lalu verifikasi link order terbaru masih dapat
+ditukar menjadi cookie baru. Raw token/hash database tidak perlu diubah hanya karena rotasi secret.
+
 ## Variable Yang Belum Digunakan
 
 Project belum menggunakan:
 
 - database connection string langsung;
-- authentication secret custom;
+- custom admin authentication secret di luar Supabase Auth;
 - SMTP credential;
 - storage secret terpisah;
 - payment credential.

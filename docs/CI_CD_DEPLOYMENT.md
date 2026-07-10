@@ -80,13 +80,27 @@ digunakan ke direktori aplikasi server tersebut.
 Contoh `.env`:
 
 ```dotenv
+APP_IMAGE=ghcr.io/daztore/landing_page
+APP_TAG=<full-40-character-commit-sha>
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_xxx
 NEXT_PUBLIC_SITE_URL=https://daztore.web.id
 SUPABASE_SERVICE_ROLE_KEY=sb_secret_xxx
+ORDER_ACCESS_COOKIE_SECRET=<random-secret-minimal-32-byte>
+RATE_LIMIT_STORE=supabase
 ```
 
-`docker-compose.production.yml` saat ini memakai image `ghcr.io/daztore/landing_page:production` secara langsung. Untuk rollback berbasis SHA, ubah tag image secara eksplisit atau aktifkan kembali pola `${APP_IMAGE}:${APP_TAG}` yang masih tersedia sebagai komentar di Compose.
+`APP_IMAGE` dan `APP_TAG` wajib tersedia. Gunakan full commit SHA yang dipush workflow untuk
+`APP_TAG`; jangan deploy memakai alias `main`, `production`, atau `latest`. Alias tersebut tetap
+dipush hanya sebagai convenience tag dan bukan sumber kebenaran deployment/rollback.
+
+`ORDER_ACCESS_COOKIE_SECRET` adalah secret runtime khusus untuk menandatangani bukti akses order.
+Gunakan nilai acak minimal 32 byte, jangan memakai ulang service-role key, dan jangan memasukkannya
+ke Docker build argument atau variable `NEXT_PUBLIC_*`.
+
+Production Compose mengunci `RATE_LIMIT_STORE=supabase` agar seluruh replica memakai counter
+Postgres/RPC yang sama. Migration `009_create_rate_limit_store.sql` harus diterapkan lebih dulu;
+jika RPC gagal, endpoint public write mengembalikan `503` dan tidak menjadi unlimited.
 
 File `.env` harus memiliki permission terbatas:
 
@@ -111,20 +125,35 @@ Jangan menyimpan token registry di repository atau menuliskannya ke `.env` Compo
 
 ```bash
 cd /opt/daztore
+export APP_IMAGE=ghcr.io/daztore/landing_page
+export APP_TAG=<full-40-character-commit-sha>
+printf '%s' "$APP_TAG" | grep -Eq '^[0-9a-f]{40}$' || {
+  echo "APP_TAG wajib berupa full commit SHA 40 karakter" >&2
+  exit 1
+}
 docker compose -f docker-compose.production.yml config --quiet
 docker compose -f docker-compose.production.yml pull
 docker compose -f docker-compose.production.yml up -d --remove-orphans
 docker compose -f docker-compose.production.yml ps
 ```
 
+Compose memakai required-variable interpolation dan gagal dengan pesan jelas bila `APP_IMAGE`,
+`APP_TAG`, atau runtime secret wajib tidak tersedia. Jalankan `config --quiet` sebelum `pull` agar
+deployment berhenti sebelum mengubah container.
+
 Production Compose:
 
-- memakai image `ghcr.io/daztore/landing_page:production` secara langsung;
-- menyediakan komentar alternatif `${APP_IMAGE}:${APP_TAG}` untuk rollback berbasis SHA;
+- memakai image wajib `${APP_IMAGE}:${APP_TAG}`;
+- mengharuskan `APP_TAG` operasional berupa full commit SHA immutable;
 - tidak memiliki `build`;
 - tidak memasang source code atau `node_modules`;
 - menunggu healthcheck Next.js sebelum menjalankan Nginx;
 - mengekspos Nginx pada port host `8003`.
+
+Topologi client-IP yang didukung adalah client langsung ke Nginx container, lalu Nginx ke service
+app internal. Jika TLS proxy/CDN/load balancer lain berada di depan port `8003`, deployment harus
+ditahan sampai CIDR upstream resmi dikonfigurasi sebagai trusted proxy di Nginx. Jangan hanya
+meneruskan `X-Forwarded-For` atau header provider tanpa allowlist koneksi.
 
 ## Log dan Diagnosis
 
@@ -138,12 +167,15 @@ curl -fsS http://localhost:8003/katalog
 
 ## Rollback
 
-Gunakan full commit SHA dari image terakhir yang diketahui sehat jika Compose diubah memakai variable image/tag. Dengan file saat ini yang memakai tag `production`, rollback berbasis SHA perlu mengubah tag image atau mengaktifkan kembali pola `${APP_IMAGE}:${APP_TAG}`.
+Gunakan full commit SHA dari image terakhir yang diketahui sehat. Jangan memindahkan kembali tag
+`production` atau membangun ulang commit lama di server.
 
 ```bash
 cd /opt/daztore
 export APP_IMAGE=ghcr.io/daztore/landing_page
-export APP_TAG=<previous-commit-sha>
+export APP_TAG=<previous-full-40-character-commit-sha>
+printf '%s' "$APP_TAG" | grep -Eq '^[0-9a-f]{40}$' || exit 1
+docker compose -f docker-compose.production.yml config --quiet
 docker compose -f docker-compose.production.yml pull
 docker compose -f docker-compose.production.yml up -d --remove-orphans
 docker compose -f docker-compose.production.yml ps

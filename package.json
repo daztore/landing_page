@@ -9,6 +9,9 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "test": "npm run test:orders && npm run test:security",
+    "test:orders": "tsc -p tsconfig.orders-test.json && node --test .next/order-tests/tests/orders/public-access-crypto.test.js",
+    "test:security": "tsc -p tsconfig.security-test.json && node --test .next/security-tests/tests/security/rate-limit.test.js",
     "generate:brand-assets": "node scripts/generate-brand-assets.mjs"
   },
   "dependencies": {
