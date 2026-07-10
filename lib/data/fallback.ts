@@ -23,7 +23,7 @@ export const fallbackContact: SiteContact = {
   brandName: "daztore",
   brandSuffix: ".id",
   footerDescription:
-    "Premium wedding atelier untuk mahar, seserahan, dan flower bouquet. Dirancang dengan ketelitian. Dihadirkan dengan kehangatan.",
+    "Atelier pernikahan premium untuk mahar, seserahan, dan flower bouquet. Dirancang dengan ketelitian. Dihadirkan dengan kehangatan.",
   whatsappNumber: "6287756877555",
   email: "hello@daztore.id",
   instagramUrl: "https://instagram.com/daztore.id",
@@ -112,7 +112,7 @@ export const fallbackNavigation: NavigationItem[] = [
 
 export const fallbackHero: HeroSection = {
   slug: "hero",
-  badge: "Premium Wedding Atelier",
+  badge: "Atelier Pernikahan Premium",
   title: "Setiap cinta layak",
   highlightedTitle: "dirayakan dengan indah.",
   description:
@@ -125,11 +125,11 @@ export const fallbackHero: HeroSection = {
   imageAlt: "Mahar pernikahan premium dengan bunga mawar putih dan aksen emas",
   mobileBackgroundUrl: "/bouquet-bg.jpg",
   collectionTitle: "Signature Collection",
-  collectionSubtitle: "Handcrafted with love",
+  collectionSubtitle: "Dirangkai dengan cinta",
   accentLabel: "Limited",
   accentValue: "Hanya 8 slot / bulan",
   metrics: [
-    { slug: "couples", label: "Couples", value: "500+" },
+    { slug: "couples", label: "Pasangan", value: "500+" },
     { slug: "rating", label: "Rating", value: "4.9 / 5" },
     { slug: "years", label: "Tahun", value: "7+" },
   ],
@@ -137,7 +137,7 @@ export const fallbackHero: HeroSection = {
 
 export const fallbackStory: StorySection = {
   slug: "story",
-  eyebrow: "Our Story",
+  eyebrow: "Cerita Kami",
   title: "Mahar & seserahan,",
   highlightedTitle: "lebih dari sekadar tradisi.",
   description:
@@ -237,7 +237,7 @@ export const fallbackFeatures: FeaturesSection = {
 
 export const fallbackGallery: GallerySection = {
   slug: "gallery",
-  eyebrow: "Portfolio",
+  eyebrow: "Galeri",
   title: "Galeri momen",
   highlightedTitle: "yang kami rayakan.",
   description:
@@ -443,7 +443,7 @@ export const fallbackUrgency: UrgencySectionData = {
   metrics: [
     { slug: "happy-couples", label: "Pasangan Puas", value: "500+" },
     { slug: "premium-rating", label: "Rating Premium", value: "4.9/5" },
-    { slug: "support", label: "Support", value: "24/7" },
+    { slug: "response-time", label: "Respon", value: "< 1 jam" },
   ],
 }
 

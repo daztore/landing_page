@@ -14,7 +14,7 @@ export function SiteFooter({
   const footerItems = items.filter((item) => item.placement === "footer")
 
   return (
-    <footer className="relative border-t border-border/60 bg-background">
+    <footer className="relative border-t border-border/60 bg-background pb-[calc(env(safe-area-inset-bottom)+5.5rem)] md:pb-0">
       <div className="mx-auto max-w-7xl px-6 py-14 md:px-10 md:py-20">
         <div className="grid grid-cols-1 gap-12 md:grid-cols-12">
           <div className="md:col-span-5">
@@ -74,11 +74,16 @@ export function SiteFooter({
 
         <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-border/60 pt-8 text-xs text-muted-foreground md:flex-row">
           <div>
-            &copy; {new Date().getFullYear()} {contact.brandName}{contact.brandSuffix} — Crafted with love.
+            &copy; {new Date().getFullYear()} {contact.brandName}
+            {contact.brandSuffix} · Dirangkai dengan cinta.
           </div>
           <div className="flex items-center gap-6">
-            <a href={contact.privacyUrl} className="hover:text-primary transition-colors">Kebijakan Privasi</a>
-            <a href={contact.termsUrl} className="hover:text-primary transition-colors">Syarat & Ketentuan</a>
+            <a href={contact.privacyUrl} className="hover:text-primary transition-colors">
+              Kebijakan Privasi
+            </a>
+            <a href={contact.termsUrl} className="hover:text-primary transition-colors">
+              Syarat & Ketentuan
+            </a>
           </div>
         </div>
       </div>

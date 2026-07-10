@@ -609,6 +609,44 @@ Notes:
 - Magic-byte/content validation upload dan CSP/HSTS tetap menjadi gap sebelum commerce publik.
   Advisory PostCSS internal Next.js sudah dibersihkan pada cleanup Dependabot 2026-07-07.
 
+### 2026-07-10 - QAUX-0003 mobile landing page UX cleanup
+
+Type:
+
+- UX
+- Frontend
+
+Impact:
+
+- Medium
+
+Summary:
+
+- Menghilangkan spacer mobile bottom nav yang sebelumnya muncul sebelum `<main>` dan menggantinya dengan padding bawah aman pada halaman utama serta footer.
+- Menambahkan safe-area padding untuk mobile bottom nav iPhone dan mendeduplikasi item mobile yang masih dobel dari data navigasi.
+- Menyembunyikan floating WhatsApp button pada mobile agar tidak duplikat dengan item `Chat` di bottom nav, sambil mempertahankan tombol tersebut di desktop.
+- Memadatkan hero mobile dengan CTA utama full width, CTA sekunder yang kurang dominan, serta metrics mobile berbentuk pill yang lebih ringkas.
+- Membuat label gallery selalu terlihat di mobile dan memperbaiki placeholder gambar agar tetap rapi saat asset belum tersedia.
+- Menormalkan copy legacy dari fallback/CMS untuk istilah campuran bahasa, typo `Mahar & seserahan,lebih`, deskripsi `Ribuan pasangan`, dan klaim `24/7 Support`.
+
+Files:
+
+- `app/page.tsx`
+- `components/site-navigation.tsx`
+- `components/hero.tsx`
+- `components/gallery.tsx`
+- `components/site-footer.tsx`
+- `components/whatsapp-button.tsx`
+- `lib/data/fallback.ts`
+- `lib/data/landing-page.ts`
+- `docs/QA_UX_NOTES.md`
+- `docs/CHANGELOG_NOTES.md`
+
+Notes:
+
+- Scope dibatasi pada landing page mobile sesuai QAUX-0003 tanpa redesign besar atau perubahan route.
+- Normalisasi copy di `lib/data/landing-page.ts` berfungsi sebagai guard sementara untuk data Supabase/CMS yang masih menyimpan string legacy.
+
 ### 2026-07-03 - Sync README and documentation with current code
 
 Type:

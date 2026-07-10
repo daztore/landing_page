@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import { useEffect, useState } from "react"
-import { X, ChevronLeft, ChevronRight } from "lucide-react"
+import { X, ChevronLeft, ChevronRight, ImageIcon } from "lucide-react"
 import { Reveal } from "@/components/reveal"
 import { cn } from "@/lib/utils"
 import { fallbackGallery } from "@/lib/data/fallback"
@@ -67,7 +67,21 @@ export function Gallery({ data = fallbackGallery }: GalleryProps) {
                 className="relative h-full w-full overflow-hidden rounded-2xl border border-border/70 bg-secondary text-left transition-all duration-500 hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10"
               >
                 {!loaded[i] && (
-                  <div aria-hidden className="absolute inset-0 shimmer" />
+                  <div
+                    aria-hidden
+                    className="absolute inset-0 overflow-hidden rounded-2xl bg-[oklch(0.95_0.02_75)]"
+                  >
+                    <div className="absolute inset-0 shimmer opacity-70" />
+                    <div className="relative flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
+                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-background/80 text-primary shadow-sm">
+                        <ImageIcon className="h-5 w-5" />
+                      </div>
+                      <div className="text-[10px] uppercase tracking-[0.22em] text-primary/80">
+                        Galeri Daztore
+                      </div>
+                      <div className="font-serif text-base text-foreground/80">{item.label}</div>
+                    </div>
+                  </div>
                 )}
                 <Image
                   src={getGalleryImageSrc(i)}
@@ -85,16 +99,16 @@ export function Gallery({ data = fallbackGallery }: GalleryProps) {
                   className={cn(
                     "object-cover transition-all duration-700",
                     loaded[i] ? "opacity-100 scale-100" : "opacity-0 scale-105",
-                    "group-hover:scale-[1.04]",
+                    "md:group-hover:scale-[1.04]",
                   )}
                 />
                 <div
                   aria-hidden
-                  className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/10 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100"
+                  className="absolute inset-0 bg-gradient-to-t from-foreground/70 via-foreground/10 to-transparent opacity-100 transition-opacity duration-500 md:opacity-0 md:group-hover:opacity-100"
                 />
-                <div className="absolute inset-x-4 bottom-4 translate-y-2 opacity-0 transition-all duration-500 group-hover:translate-y-0 group-hover:opacity-100">
+                <div className="absolute inset-x-4 bottom-4 translate-y-0 opacity-100 transition-all duration-500 md:translate-y-2 md:opacity-0 md:group-hover:translate-y-0 md:group-hover:opacity-100">
                   <div className="text-[10px] uppercase tracking-[0.22em] text-primary-foreground/80">
-                    Daztore Portfolio
+                    Galeri Daztore
                   </div>
                   <div className="mt-1 font-serif text-lg text-primary-foreground">
                     {item.label}

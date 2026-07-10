@@ -32,9 +32,9 @@ export function WhatsappButton({
       )}
       target="_blank"
       rel="noreferrer"
-      aria-label="Chat via WhatsApp"
+      aria-label="Hubungi via WhatsApp"
       className={cn(
-        "group fixed z-40 flex items-center gap-3 rounded-full bg-[#25D366] pl-4 pr-5 py-3 text-sm font-medium text-white shadow-xl shadow-[#25D366]/30 transition-all duration-500 active:translate-y-0.5",
+        "group fixed z-40 hidden items-center gap-3 rounded-full bg-[#25D366] pl-4 pr-5 py-3 text-sm font-medium text-white shadow-xl shadow-[#25D366]/30 transition-all duration-500 active:translate-y-0.5 md:flex",
         // Mobile positioning: above bottom nav on home, lower on katalog
         isKatalogPage
           ? "bottom-6 right-4 md:bottom-7 md:right-7"

@@ -22,7 +22,7 @@ export function Hero({
   return (
     <section
       id="top"
-      className="relative isolate overflow-hidden bg-background pt-24 pb-12 sm:pt-28 sm:pb-16 md:pt-36 md:pb-28"
+      className="relative isolate overflow-hidden bg-background pt-20 pb-10 sm:pt-24 sm:pb-14 md:pt-36 md:pb-28"
     >
       {/* Mobile-only bouquet background with elegant overlays */}
       <div className="absolute inset-0 -z-10 md:hidden overflow-hidden">
@@ -85,51 +85,61 @@ export function Hero({
         style={{ animationDelay: "1.5s" }}
       />
 
-      <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-8 sm:gap-10 md:gap-14 px-4 sm:px-6 md:grid-cols-12 md:px-10">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-6 px-4 sm:gap-10 sm:px-6 md:grid-cols-12 md:gap-14 md:px-10">
         {/* Copy */}
         <div className="md:col-span-6">
-          <div className="hero-badge inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card/60 px-3 sm:px-4 py-1.5 text-[11px] sm:text-xs tracking-[0.18em] uppercase text-primary backdrop-blur">
+          <div className="hero-badge inline-flex items-center gap-2 rounded-full border border-primary/30 bg-card/60 px-3 py-1.5 text-[10px] uppercase tracking-[0.16em] text-primary backdrop-blur sm:px-4 sm:text-xs">
             <Sparkles className="h-3 sm:h-3.5 w-3 sm:w-3.5" />
             {data.badge}
           </div>
 
-          <h1 className="hero-headline mt-4 sm:mt-6 font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl leading-[1.1] tracking-tight text-foreground text-balance">
+          <h1 className="hero-headline mt-4 font-serif text-[2rem] leading-[1.1] tracking-tight text-foreground text-balance sm:mt-6 sm:text-4xl md:text-5xl lg:text-6xl">
             {data.title}
             <span className="block italic text-gold-gradient">{data.highlightedTitle}</span>
           </h1>
 
-          <p className="hero-description mt-4 sm:mt-6 max-w-xl text-base sm:text-lg leading-relaxed text-muted-foreground text-pretty">
+          <p className="hero-description mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground text-pretty sm:mt-6 sm:text-base md:text-lg">
             {data.description}
           </p>
 
-          <div className="hero-ctas mt-6 sm:mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="hero-ctas mt-5 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:items-center">
             <a
               href={buildWhatsAppUrl(whatsappNumber, data.primaryCtaMessage)}
               target="_blank"
               rel="noreferrer"
-              className="group inline-flex items-center justify-center gap-2 rounded-full bg-primary px-6 sm:px-7 py-3 sm:py-3.5 text-sm font-medium text-primary-foreground shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/25 active:translate-y-0"
+              className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-md transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-primary/25 active:translate-y-0 sm:w-auto sm:px-7 sm:py-3.5"
             >
               {data.primaryCtaLabel}
               <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
             </a>
             <a
               href={data.secondaryCtaHref}
-              className="inline-flex items-center justify-center gap-2 rounded-full border border-foreground/20 bg-transparent px-6 sm:px-7 py-3 sm:py-3.5 text-sm font-medium text-foreground transition-all duration-300 hover:bg-foreground hover:text-background"
+              className="inline-flex self-start items-center justify-center gap-2 rounded-full border border-foreground/20 bg-background/75 px-6 py-3 text-sm font-medium text-foreground/85 transition-all duration-300 hover:bg-foreground hover:text-background sm:self-auto sm:px-7 sm:py-3.5"
             >
               {data.secondaryCtaLabel}
             </a>
           </div>
 
-          {/* Trust stats */}
-          <dl className="hero-stats mt-8 sm:mt-12 grid max-w-md grid-cols-3 gap-4 sm:gap-6 border-t border-border/60 pt-6 sm:pt-8">
+          <dl className="hero-stats mt-5 flex flex-wrap gap-2 md:hidden">
             {data.metrics.map((metric) => (
-              <div key={metric.slug}>
-                <dt className="text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground">
+              <div
+                key={metric.slug}
+                className="rounded-full border border-border/70 bg-card/75 px-3 py-2 backdrop-blur"
+              >
+                <dt className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
                   {metric.label}
                 </dt>
-                <dd className="mt-1 font-serif text-xl sm:text-2xl text-foreground">
-                  {metric.value}
-                </dd>
+                <dd className="mt-1 font-serif text-base text-foreground">{metric.value}</dd>
+              </div>
+            ))}
+          </dl>
+
+          {/* Trust stats */}
+          <dl className="hero-stats mt-12 hidden max-w-md grid-cols-3 gap-6 border-t border-border/60 pt-8 md:grid">
+            {data.metrics.map((metric) => (
+              <div key={metric.slug}>
+                <dt className="text-xs uppercase tracking-widest text-muted-foreground">{metric.label}</dt>
+                <dd className="mt-1 font-serif text-2xl text-foreground">{metric.value}</dd>
               </div>
             ))}
           </dl>
@@ -138,7 +148,7 @@ export function Hero({
         {/* Visual */}
         <div className="hero-visual relative md:col-span-6">
           <div
-            className="relative aspect-[3/4] sm:aspect-[4/5] overflow-hidden rounded-2xl sm:rounded-[2rem] shadow-lg sm:shadow-2xl shadow-primary/10"
+            className="relative aspect-[5/4] overflow-hidden rounded-2xl shadow-lg shadow-primary/10 sm:aspect-[4/5] sm:rounded-[2rem] sm:shadow-2xl"
           >
             <Image
               src={heroImage}

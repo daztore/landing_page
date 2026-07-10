@@ -179,13 +179,13 @@ Tombol kembali di `KatalogHeader` (kiri atas mobile) telah diubah dari elemen `<
 
 ### QAUX-0003 - Mobile Landing Page UX Review
 
-Status: `TODO`
+Status: `DONE`
 Priority: `P1`
 Source: `UI/UX Mobile Review`
 Date: `2026-07-08`
 Page/Module: `Public Landing Page`
 Related Route: `/`
-Related File: `components/site-navigation.tsx`, `components/hero.tsx`, `components/gallery.tsx`, `components/story.tsx`, `components/urgency-section.tsx`, `components/final-cta.tsx`, `lib/data/fallback.ts`
+Related File: `app/page.tsx`, `components/site-navigation.tsx`, `components/hero.tsx`, `components/gallery.tsx`, `components/site-footer.tsx`, `components/whatsapp-button.tsx`, `lib/data/fallback.ts`, `lib/data/landing-page.ts`
 
 #### Problem
 
@@ -210,18 +210,18 @@ Landing page mobile harus terasa premium, ringan, jelas, dan conversion-oriented
 
 - [x] CTA `Lihat Paket` tidak lagi mengarah ke section yang belum tersedia.
 - [x] Jika Packages belum aktif, hapus/sembunyikan item `Paket` dari mobile bottom navigation dan footer, atau arahkan ke `/katalog`.
-- [ ] Jika bottom navigation sudah punya `Chat`, floating WhatsApp button di mobile disembunyikan atau diubah menjadi versi lebih kecil agar tidak terasa duplikatif.
-- [ ] Spacer bottom nav tidak lagi diletakkan sebelum `<main>`. Gunakan padding bottom pada `main`/footer/body wrapper, misalnya `pb-24 md:pb-0`, bukan spacer di atas hero.
-- [ ] Bottom navigation mobile memakai safe area untuk iPhone: `padding-bottom: env(safe-area-inset-bottom)`.
-- [ ] Hero mobile dipadatkan agar CTA utama terlihat lebih cepat tanpa scroll terlalu jauh.
-- [ ] Primary CTA mobile dibuat full width atau lebih dominan daripada secondary CTA.
-- [ ] Metrics hero di mobile dibuat lebih ringkas, misalnya dalam pill/card horizontal, atau dipindahkan setelah hero visual.
-- [ ] Gallery label tampil permanen di mobile, bukan hanya saat hover.
-- [ ] Copy bahasa dibuat konsisten. Contoh: `Couples` menjadi `Pasangan`, `Our Story` menjadi `Cerita Kami`, `Portfolio` menjadi `Galeri`.
-- [ ] Typo `Mahar & seserahan,lebih` diperbaiki menjadi `Mahar & seserahan, lebih`.
-- [ ] Copy `Ribuan pasangan` disesuaikan dengan metric `500+`, misalnya `Ratusan pasangan`.
-- [ ] Klaim `24/7 Support` diganti jika tidak benar-benar tersedia.
-- [ ] Gambar yang belum tersedia tetap punya placeholder yang rapi: warm beige background, shimmer ringan, icon/label kategori, dan aspect ratio stabil agar layout tidak loncat.
+- [x] Jika bottom navigation sudah punya `Chat`, floating WhatsApp button di mobile disembunyikan atau diubah menjadi versi lebih kecil agar tidak terasa duplikatif.
+- [x] Spacer bottom nav tidak lagi diletakkan sebelum `<main>`. Gunakan padding bottom pada `main`/footer/body wrapper, misalnya `pb-24 md:pb-0`, bukan spacer di atas hero.
+- [x] Bottom navigation mobile memakai safe area untuk iPhone: `padding-bottom: env(safe-area-inset-bottom)`.
+- [x] Hero mobile dipadatkan agar CTA utama terlihat lebih cepat tanpa scroll terlalu jauh.
+- [x] Primary CTA mobile dibuat full width atau lebih dominan daripada secondary CTA.
+- [x] Metrics hero di mobile dibuat lebih ringkas, misalnya dalam pill/card horizontal, atau dipindahkan setelah hero visual.
+- [x] Gallery label tampil permanen di mobile, bukan hanya saat hover.
+- [x] Copy bahasa dibuat konsisten. Contoh: `Couples` menjadi `Pasangan`, `Our Story` menjadi `Cerita Kami`, `Portfolio` menjadi `Galeri`.
+- [x] Typo `Mahar & seserahan,lebih` diperbaiki menjadi `Mahar & seserahan, lebih`.
+- [x] Copy `Ribuan pasangan` disesuaikan dengan metric `500+`, misalnya `Ratusan pasangan`.
+- [x] Klaim `24/7 Support` diganti jika tidak benar-benar tersedia.
+- [x] Gambar yang belum tersedia tetap punya placeholder yang rapi: warm beige background, shimmer ringan, icon/label kategori, dan aspect ratio stabil agar layout tidak loncat.
 
 #### Developer Notes
 
@@ -265,7 +265,11 @@ Rekomendasi implementasi paling aman:
 
 #### Result Notes
 
-Diisi setelah revisi selesai.
+Revisi mobile landing page diselesaikan dengan perubahan kecil dan backward-compatible pada lapisan presentasi. `SiteNavigation` kini menghapus spacer `h-20` yang sebelumnya muncul sebelum `<main>`, menambahkan safe-area padding untuk bottom nav iPhone, dan mendeduplikasi item mobile yang masih duplikat dari data CMS/fallback. `app/page.tsx` serta `SiteFooter` diberi padding bawah mobile agar konten dan footer tidak tertutup bottom nav.
+
+Untuk conversion flow mobile, floating WhatsApp button disembunyikan pada mobile dan tetap tampil di desktop, sehingga tidak bentrok dengan item `Chat` di bottom nav. Hero dipadatkan dengan spacing mobile yang lebih ringkas, CTA utama full width, CTA sekunder lebih ringan, dan metrics mobile diubah menjadi pill compact. Gallery mobile kini selalu menampilkan overlay label, dan placeholder gambar diperbaiki dengan warm beige background, shimmer ringan, ikon, dan label agar tetap stabil saat gambar belum siap.
+
+Konsistensi copy juga diperbaiki di dua lapisan: fallback lokal dan loader `lib/data/landing-page.ts`. Selain string fallback yang diperbarui ke bahasa Indonesia yang konsisten, loader sekarang menormalisasi copy legacy dari Supabase/CMS seperti `Premium Wedding Atelier`, `Our Story`, `Portfolio`, `Couples`, typo `Mahar & seserahan,lebih`, deskripsi `Ribuan pasangan`, dan klaim `24/7 Support` agar output publik tetap selaras walau data CMS belum sepenuhnya dibersihkan. Validasi `npm run lint`, `npm run typecheck`, dan `npm run build` dijalankan setelah perubahan.
 
 ### QAUX-0002 - Supabase Storage Image Optimizer 400
 

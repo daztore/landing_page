@@ -53,7 +53,14 @@ export function SiteNavigation({
   const isKatalogPage = pathname.startsWith("/katalog")
   const links = items.filter((item) => item.placement === "header")
   const headerCta = items.find((item) => item.placement === "header_cta")
-  const mobileLinks = items.filter((item) => item.placement === "mobile")
+  const mobileLinks = items
+    .filter((item) => item.placement === "mobile")
+    .filter(
+      (item, index, collection) =>
+        collection.findIndex(
+          (candidate) => candidate.label === item.label && candidate.href === item.href,
+        ) === index,
+    )
 
   const resolveHref = (item: NavigationItem) =>
     item.href === "whatsapp" ? buildWhatsAppUrl(contact.whatsappNumber) : item.href
@@ -176,8 +183,8 @@ export function SiteNavigation({
 
       {/* Mobile bottom navigation - hidden on katalog page */}
       {!isKatalogPage && (
-        <div className="fixed inset-x-0 bottom-0 z-40 md:hidden border-t border-border/60 bg-background/95 backdrop-blur">
-          <nav className="flex items-center justify-around px-2 py-2">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border/60 bg-background/95 backdrop-blur md:hidden">
+          <nav className="flex items-center justify-around px-2 py-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)]">
             {mobileLinks.map((item) => {
               const external = item.href === "whatsapp"
               return (
@@ -196,9 +203,6 @@ export function SiteNavigation({
           </nav>
         </div>
       )}
-
-      {/* Spacer for bottom nav on mobile - hidden on katalog page */}
-      {!isKatalogPage && <div className="h-20 md:hidden" />}
     </>
   )
 }

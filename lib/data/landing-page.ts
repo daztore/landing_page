@@ -45,6 +45,17 @@ import {
 
 type JsonObject = Record<string, unknown>
 
+const legacyLandingCopyReplacements = new Map<string, string>([
+  ["Premium Wedding Atelier", "Atelier Pernikahan Premium"],
+  ["Premium wedding atelier", "Atelier pernikahan premium"],
+  ["Handcrafted with love", "Dirangkai dengan cinta"],
+  ["Our Story", "Cerita Kami"],
+  ["Portfolio", "Galeri"],
+  ["Couples", "Pasangan"],
+  ["Ribuan pasangan", "Ratusan pasangan"],
+  ["24/7 Support", "Respon < 1 jam"],
+])
+
 interface SectionRow {
   slug: string
   eyebrow: string | null
@@ -146,6 +157,54 @@ function reportQueryError(scope: string, error: { message: string } | null) {
   }
 }
 
+function normalizeLegacyLandingCopy(value: string): string {
+  let normalized = value.replaceAll(",lebih", ", lebih")
+
+  for (const [legacyCopy, replacement] of legacyLandingCopyReplacements.entries()) {
+    normalized = normalized.replaceAll(legacyCopy, replacement)
+  }
+
+  return normalized
+}
+
+function normalizeLandingValue<T>(value: T): T {
+  if (typeof value === "string") {
+    return normalizeLegacyLandingCopy(value) as T
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((entry) => normalizeLandingValue(entry)) as T
+  }
+
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, entry]) => [key, normalizeLandingValue(entry)]),
+    ) as T
+  }
+
+  return value
+}
+
+function normalizeMetricItem(metric: MetricItem): MetricItem {
+  const normalizedLabel = normalizeLegacyLandingCopy(metric.label)
+  const normalizedValue = normalizeLegacyLandingCopy(metric.value)
+
+  if (normalizedLabel === "Support" && normalizedValue === "24/7") {
+    return {
+      ...metric,
+      slug: metric.slug === "support" ? "response-time" : metric.slug,
+      label: "Respon",
+      value: "< 1 jam",
+    }
+  }
+
+  return {
+    ...metric,
+    label: normalizedLabel,
+    value: normalizedValue,
+  }
+}
+
 function resolveSection<T extends SectionHeading>(
   slug: string,
   fallback: T,
@@ -158,9 +217,9 @@ function resolveSection<T extends SectionHeading>(
     return { ...fallback }
   }
 
-  const resolved = {
+  const resolved = normalizeLandingValue({
     ...fallback,
-    ...(row.content ?? {}),
+    ...normalizeLandingValue(row.content ?? {}),
     slug: row.slug,
     eyebrow: row.eyebrow ?? fallback.eyebrow,
     title: row.title,
@@ -168,7 +227,7 @@ function resolveSection<T extends SectionHeading>(
     description: row.description ?? fallback.description,
     ...("imageUrl" in fallback && row.image_url ? { imageUrl: row.image_url } : {}),
     ...("imageAlt" in fallback && row.image_alt ? { imageAlt: row.image_alt } : {}),
-  } as T
+  }) as T
 
   if (imageBucket && "imageUrl" in fallback) {
     const imageFallback = (fallback as T & { imageUrl: string }).imageUrl
@@ -193,14 +252,16 @@ function resolveMetrics(
   const items = rowsForSection(rows, sectionSlug)
 
   if (items.length === 0) {
-    return fallback
+    return fallback.map((item) => normalizeMetricItem(item))
   }
 
-  return items.map((item) => ({
-    slug: item.slug,
-    label: item.label ?? item.title ?? item.slug,
-    value: item.value ?? "",
-  }))
+  return items.map((item) =>
+    normalizeMetricItem({
+      slug: item.slug,
+      label: item.label ?? item.title ?? item.slug,
+      value: item.value ?? "",
+    }),
+  )
 }
 
 function resolveFeatures(
@@ -242,7 +303,9 @@ function resolveProcessItems(
 
 function resolveTrustPoints(rows: LandingItemRow[], fallback: string[]) {
   const items = rowsForSection(rows, "final-cta")
-  return items.length > 0 ? items.map((item) => item.label ?? item.title ?? item.slug) : fallback
+  return items.length > 0
+    ? items.map((item) => normalizeLegacyLandingCopy(item.label ?? item.title ?? item.slug))
+    : fallback.map((item) => normalizeLegacyLandingCopy(item))
 }
 
 function resolveContact(value: unknown): SiteContact {
@@ -251,8 +314,8 @@ function resolveContact(value: unknown): SiteContact {
   }
 
   return {
-    ...fallbackContact,
-    ...(value as Partial<SiteContact>),
+    ...normalizeLandingValue(fallbackContact),
+    ...normalizeLandingValue(value as Partial<SiteContact>),
   }
 }
 

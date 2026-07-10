@@ -20,7 +20,7 @@ export default async function HomePage() {
   return (
     <>
       <SiteNavigation items={data.navigation} contact={data.contact} />
-      <main>
+      <main className="pb-[calc(env(safe-area-inset-bottom)+5.5rem)] md:pb-0">
         <Hero data={data.hero} whatsappNumber={data.contact.whatsappNumber} />
         <Story data={data.story} />
         <OurProcess data={data.process} />
