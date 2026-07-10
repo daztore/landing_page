@@ -73,6 +73,10 @@ Route aktif:
 | `/feedback/[id]` | Form feedback pelanggan berbasis link UUID dan tidak diindex. |
 | `/feedback/[id]/submit` | Route Handler `POST` untuk submission feedback dan upload foto pelanggan. |
 | `/admin-daz` | Redirect ke dashboard admin terproteksi. |
+| `/admin-daz/forgot-password` | Form lupa password admin dengan email recovery Supabase Auth. |
+| `/admin-daz/forgot-password/request` | Route Handler `POST` untuk request email recovery admin dengan rate limit. |
+| `/admin-daz/auth/callback` | Callback Supabase Auth untuk menukar recovery code menjadi session SSR. |
+| `/admin-daz/reset-password` | Form membuat password admin baru setelah session recovery valid. |
 | `/admin-daz/**` | Panel admin terproteksi untuk konten, katalog, leads, orders, feedback, settings, dan gambar. |
 
 ## Supabase
@@ -89,8 +93,12 @@ Setup ringkas:
 8. Upload asset landing page ke bucket `landing_page` dan asset produk ke bucket `catalogs`.
 9. Jalankan `supabase/seed.sql`.
 10. Buat user email/password melalui Supabase Auth, lalu tambahkan user tersebut ke `public.admin_users`.
-11. Isi `.env.local`.
-12. Restart development server.
+11. Atur Supabase Auth URL Configuration untuk reset password admin:
+    - Site URL production: `https://daztore.web.id`.
+    - Redirect URL production: `https://daztore.web.id/admin-daz/auth/callback`.
+    - Redirect URL local: `http://localhost:3000/admin-daz/auth/callback`.
+12. Isi `.env.local`.
+13. Restart development server.
 
 Nilai gambar pada database disimpan sebagai object path portabel, bukan full public URL.
 File di `public/` tetap dipertahankan sebagai fallback lokal. Daftar object path yang perlu

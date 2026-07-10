@@ -23,6 +23,7 @@ Ditemukan:
 - Server Component public order detail `/order/[orderNumber]`;
 - Route Handler `POST` untuk submit inquiry lead;
 - Route Handler `POST` untuk submit feedback;
+- Route Handler `POST` untuk request recovery password admin;
 - Route Handler admin untuk membuat dan mengubah status order;
 - Route Handler `GET`/`POST` admin untuk feedback request.
 
@@ -78,6 +79,8 @@ Bucket `feedback_customer_photos` bersifat private setelah migration `005`. Foto
 | --- | --- | --- | --- | --- |
 | `/api/leads` | `app/api/leads/route.ts` | `POST` | Public | Submit inquiry produk dengan validasi, rate limit, honeypot, dan insert server-side. |
 | `/feedback/[id]/submit` | `app/feedback/[id]/submit/route.ts` | `POST` | Public via UUID link | Validasi input, rate limit dasar, upload foto, dan insert feedback memakai service-role server-only. |
+| `/admin-daz/forgot-password/request` | `app/admin-daz/forgot-password/request/route.ts` | `POST` | Public via forgot password form | Meminta email recovery Supabase Auth dengan validasi JSON, body limit, rate limit per IP/email hash, dan response generik. |
+| `/admin-daz/auth/callback` | `app/admin-daz/auth/callback/route.ts` | `GET` | Public via recovery email | Menukar Supabase Auth recovery code menjadi session cookie SSR dan menolak open redirect. |
 | `/admin-daz/feedback/requests` | `app/admin-daz/(protected)/feedback/requests/route.ts` | `GET` | Admin | List feedback request melalui session admin dan RLS. |
 | `/admin-daz/feedback/requests` | `app/admin-daz/(protected)/feedback/requests/route.ts` | `POST` | Admin | Membuat feedback request dan asset terkait dari panel admin. |
 | `/admin-daz/leads/[id]/actions` | `app/admin-daz/(protected)/leads/[id]/actions/route.ts` | `POST` | Admin | Menambah catatan follow-up atau mengubah status lead lewat service/RPC. |
@@ -370,7 +373,36 @@ Route `/feedback/[id]` dan `/feedback/[id]/submit` tidak memakai session user. A
 
 `components/ui/sidebar.tsx` memiliki kode cookie untuk menyimpan state sidebar, tetapi komponen tersebut tidak dipakai oleh halaman aktif. Cookie itu bukan cookie autentikasi.
 
-Tidak ada bearer token custom atau local storage session custom. Service-role key ada, tetapi hanya berada di server-only code untuk feedback.
+Tidak ada bearer token custom atau local storage session custom. Service-role key ada, tetapi hanya
+berada di server-only code untuk feedback, lead public submit, dan public order lookup.
+
+### Admin Password Recovery
+
+Fitur lupa password admin memakai Supabase Auth API melalui Route Handler internal dengan
+publishable key, bukan service-role key.
+Alur teknis:
+
+```text
+AdminForgotPasswordForm
+-> POST /admin-daz/forgot-password/request
+-> validasi JSON, body limit, dan rate limit in-memory per IP/email hash
+-> supabase.auth.resetPasswordForEmail(email, { redirectTo }) via SSR publishable client
+-> /admin-daz/auth/callback?code=...&next=/admin-daz/reset-password
+-> supabase.auth.exchangeCodeForSession(code)
+-> /admin-daz/reset-password
+-> supabase.auth.updateUser({ password })
+-> supabase.auth.signOut()
+```
+
+Guardrail:
+
+- response forgot password selalu generik agar tidak ada user enumeration;
+- route request forgot password dapat mengembalikan `429` dengan `Retry-After` bila rate limit
+  aplikasi terlampaui;
+- callback hanya menerima redirect internal `/admin-daz/**` dan default ke `/admin-daz/reset-password`;
+- halaman reset membutuhkan session Supabase valid dan cookie recovery singkat dari callback;
+- token/code recovery tidak ditampilkan di UI dan tidak disimpan manual di localStorage;
+- pengecekan admin aktif tetap terjadi pada login berikutnya melalui `isActiveAdmin()`.
 
 ## Keamanan dan Privasi
 
@@ -379,6 +411,8 @@ Tidak ada bearer token custom atau local storage session custom. Service-role ke
 - Nomor WhatsApp, email, Instagram, dan alamat dibaca dari `site_settings`, dengan fallback lokal.
 - Feedback pelanggan disimpan di Supabase melalui Route Handler server-side; data feedback dan foto pelanggan perlu diperlakukan sebagai data privat.
 - Submit feedback dapat mengembalikan HTTP `429` dengan header `Retry-After` jika rate limit terlampaui.
+- Request recovery password admin dapat mengembalikan HTTP `429` dengan header `Retry-After` jika
+  rate limit terlampaui.
 - Bila form kontak/inquiry diaktifkan, kebijakan privasi perlu menjelaskan data apa yang disimpan atau diteruskan ke WhatsApp.
 - Link legal footer masih placeholder.
 

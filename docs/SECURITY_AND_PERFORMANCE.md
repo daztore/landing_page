@@ -103,6 +103,42 @@ payment, shipping, cart, checkout, atau customer account yang dibuat.
 | Dependency advisory | OK | Cleanup 2026-07-07 memperbarui dependency rentan dan membersihkan advisory PostCSS internal Next.js melalui npm override yang tervalidasi. |
 | CodeQL | OK | Workflow CodeQL JavaScript/TypeScript dengan `security-extended` aktif untuk push, PR, dan jadwal mingguan. |
 
+## Admin Password Recovery Security 2026-07-10
+
+Fitur lupa password admin menambahkan recovery email Supabase Auth untuk route `/admin-daz`.
+
+Guardrail yang diterapkan:
+
+- Form `/admin-daz/forgot-password` submit ke Route Handler
+  `/admin-daz/forgot-password/request`; handler memakai Supabase SSR client dengan publishable key
+  untuk `supabase.auth.resetPasswordForEmail()`, bukan service-role key.
+- Handler forgot password memvalidasi `Content-Type`, ukuran request maksimal 4 KB, dan rate limit
+  in-memory sebelum request ke Supabase Auth: 5 request per IP per 15 menit dan 3 request per hash
+  email per 1 jam.
+- Response UI forgot password selalu generik agar tidak mengungkap apakah email terdaftar.
+- Redirect recovery dibentuk dari `NEXT_PUBLIC_SITE_URL` dan target Supabase langsung hanya
+  `/admin-daz/auth/callback`.
+- Callback `/admin-daz/auth/callback` memakai `exchangeCodeForSession()` pada server client SSR
+  agar session recovery tersimpan sebagai cookie.
+- Parameter `next` hanya diizinkan untuk path internal `/admin-daz/**`; URL eksternal ditolak dan
+  fallback ke `/admin-daz/reset-password` untuk mencegah open redirect.
+- Halaman reset password memerlukan session Supabase valid dan cookie recovery singkat dari
+  callback sebelum form update password ditampilkan.
+- Setelah `supabase.auth.updateUser({ password })` berhasil, client memanggil
+  `supabase.auth.signOut()` dan user kembali ke `/admin-daz/login?reset=success`.
+- Pengecekan admin aktif melalui `isActiveAdmin()` tetap berada di login/protected route dan tidak
+  dilemahkan.
+
+Risiko tersisa:
+
+- Supabase Dashboard harus mengizinkan Redirect URL production/local yang benar; email recovery
+  lama dapat masih membawa redirect lama setelah konfigurasi dashboard berubah.
+- Rate limit forgot password masih in-memory per proses; deployment multi-instance membutuhkan
+  store terpusat agar limit konsisten lintas container.
+- Direct call ke endpoint Supabase Auth tetap berada di luar kontrol aplikasi; route UI aplikasi
+  sudah dibatasi, sedangkan proteksi direct abuse tetap bergantung pada Supabase Auth dan
+  konfigurasi email provider.
+
 ## Dependency Security Cleanup 2026-07-07
 
 Cleanup ini khusus membersihkan Dependabot/npm advisory tanpa mengubah logic aplikasi.

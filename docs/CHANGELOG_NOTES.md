@@ -37,6 +37,55 @@ Notes:
 
 ## Entries
 
+### 2026-07-10 - Add Admin Password Recovery Flow (QAUX-0005)
+
+Type:
+
+- Feature
+- Security
+- Documentation
+
+Impact:
+
+- Medium
+
+Summary:
+
+- Menambahkan link `Lupa password?` pada form login admin dan pesan sukses setelah reset password.
+- Menambahkan halaman `/admin-daz/forgot-password` untuk mengirim email recovery Supabase Auth dengan response generik agar tidak ada user enumeration.
+- Memindahkan request email recovery ke Route Handler `/admin-daz/forgot-password/request` dengan validasi JSON, body limit 4 KB, rate limit in-memory per IP/email hash, dan response tetap generik.
+- Menambahkan callback `/admin-daz/auth/callback` yang menukar recovery `code` menjadi session SSR, memvalidasi redirect internal `/admin-daz/**`, dan memberi cookie recovery singkat untuk halaman reset.
+- Menambahkan halaman `/admin-daz/reset-password` untuk validasi session recovery, input password baru, update password melalui `supabase.auth.updateUser()`, lalu sign out dan redirect ke login.
+- Mempertahankan pengecekan admin aktif existing melalui `isActiveAdmin()` pada login/protected route dan tidak memakai service-role key di browser.
+- Mendokumentasikan konfigurasi Supabase Auth URL untuk production dan local development.
+
+Files:
+
+- `app/admin-daz/forgot-password/page.tsx`
+- `app/admin-daz/forgot-password/request/route.ts`
+- `app/admin-daz/auth/callback/route.ts`
+- `app/admin-daz/reset-password/page.tsx`
+- `components/admin-daz/admin-login-form.tsx`
+- `components/admin-daz/admin-forgot-password-form.tsx`
+- `components/admin-daz/admin-reset-password-form.tsx`
+- `lib/admin-daz/password-recovery.ts`
+- `README.md`
+- `docs/ENVIRONMENT_VARIABLES.md`
+- `docs/ROUTES_AND_PAGES.md`
+- `docs/API_AND_INTEGRATIONS.md`
+- `docs/CI_CD_DEPLOYMENT.md`
+- `docs/SECURITY_AND_PERFORMANCE.md`
+- `docs/QA_UX_NOTES.md`
+- `docs/CHANGELOG_NOTES.md`
+
+Notes:
+
+- `npm run lint`, `npm run typecheck`, dan `npm run build` berhasil. Lint masih memiliki 8 warning existing di file UI/admin shared yang tidak terkait perubahan ini.
+- `npm run build` menampilkan warning existing Next.js bahwa `images.domains` deprecated; warning ini sudah dikenal dari konfigurasi image optimizer.
+- Supabase Dashboard wajib memakai Site URL `https://daztore.web.id` dan mengizinkan Redirect URL `https://daztore.web.id/admin-daz/auth/callback` untuk production. Untuk local development, gunakan `NEXT_PUBLIC_SITE_URL=http://localhost:3000` dan izinkan `http://localhost:3000/admin-daz/auth/callback`.
+- Email recovery lama dapat masih membawa redirect lama setelah konfigurasi dashboard berubah; kirim email recovery baru setelah konfigurasi diperbarui.
+- Rate limit forgot password saat ini 5 request per IP per 15 menit dan 3 request per hash email per 1 jam. Limit masih in-memory per proses; gunakan store terpusat bila deployment menjadi multi-instance.
+
 ### 2026-07-09 - Fix Katalog Back Navigation Loop (QAUX-0004)
 
 Type:

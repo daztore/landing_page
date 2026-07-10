@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useState } from "react"
 import { Loader2, LockKeyhole } from "lucide-react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -15,6 +16,10 @@ export function AdminLoginForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
+  const successMessage =
+    searchParams.get("reset") === "success"
+      ? "Password berhasil diperbarui. Silakan masuk menggunakan password baru."
+      : ""
   const [error, setError] = useState(() => {
     if (searchParams.get("error") === "configuration") {
       return "Konfigurasi Supabase belum tersedia pada aplikasi."
@@ -74,9 +79,17 @@ export function AdminLoginForm() {
         />
       </div>
       <div className="space-y-2">
-        <label className="text-sm font-semibold" htmlFor="admin-password">
-          Password
-        </label>
+        <div className="flex items-center justify-between gap-3">
+          <label className="text-sm font-semibold" htmlFor="admin-password">
+            Password
+          </label>
+          <Link
+            href="/admin-daz/forgot-password"
+            className="text-xs font-semibold text-amber-700 transition-colors hover:text-amber-900 hover:underline"
+          >
+            Lupa password?
+          </Link>
+        </div>
         <Input
           id="admin-password"
           type="password"
@@ -87,8 +100,19 @@ export function AdminLoginForm() {
           onChange={(event) => setPassword(event.target.value)}
         />
       </div>
+      {successMessage && (
+        <div
+          aria-live="polite"
+          className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800"
+        >
+          {successMessage}
+        </div>
+      )}
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+        <div
+          aria-live="polite"
+          className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+        >
           {error}
         </div>
       )}

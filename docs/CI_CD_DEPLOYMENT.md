@@ -29,7 +29,7 @@ GitHub Environment `production` tidak digunakan oleh workflow aktif saat ini kar
 
 | Secret/Variable | Fungsi |
 | --- | --- |
-| `NEXT_PUBLIC_SITE_URL` | Base URL canonical untuk metadata, robots, dan sitemap. |
+| `NEXT_PUBLIC_SITE_URL` | Base URL canonical untuk metadata, robots, sitemap, dan redirect recovery password admin. |
 | `NEXT_PUBLIC_SUPABASE_URL` | URL project Supabase yang ditanam saat image build. |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Publishable key Supabase. |
 

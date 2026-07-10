@@ -23,6 +23,75 @@ Agent/Codex wajib membaca dokumen ini jika task berasal dari revisi QA/UX.
 
 ## Notes
 
+### QAUX-0005 - Admin Lupa Password dan Reset Password
+
+Status: `DONE`
+Priority: `P1`
+Source: `Admin UX / Security Improvement`
+Date: `2026-07-10`
+Page/Module: `Admin Authentication`
+Related Route: `/admin-daz/login`, `/admin-daz/forgot-password`, `/admin-daz/forgot-password/request`, `/admin-daz/auth/callback`, `/admin-daz/reset-password`
+Related File: `components/admin-daz/admin-login-form.tsx`, `components/admin-daz/admin-forgot-password-form.tsx`, `components/admin-daz/admin-reset-password-form.tsx`, `app/admin-daz/forgot-password/request/route.ts`, `app/admin-daz/auth/callback/route.ts`
+
+#### Problem
+
+Halaman admin sudah mendukung login email/password melalui Supabase Auth, tetapi belum memiliki
+alur lupa password dan reset password. Jika admin lupa password, belum ada jalur UX yang aman
+untuk meminta email recovery, memproses callback Supabase, dan membuat password baru.
+
+#### Expected Behavior
+
+Admin dapat membuka link `Lupa password?` dari halaman login, memasukkan email, menerima pesan UI
+generik, membuka email recovery Supabase, masuk ke halaman reset password, membuat password baru,
+lalu kembali ke login dengan pesan sukses. Flow tidak boleh mengungkap apakah email terdaftar,
+tidak boleh memakai service-role key di browser, dan tidak boleh membuka open redirect.
+
+#### Acceptance Criteria
+
+- [x] Link `Lupa password?` tersedia di halaman login admin.
+- [x] `/admin-daz/forgot-password` menyediakan form email, loading state, error state, success state, dan link kembali ke login.
+- [x] Response forgot password generik dan tidak mengonfirmasi apakah email terdaftar.
+- [x] Request forgot password diproses melalui Route Handler server-side dengan validasi JSON, body limit, dan rate limit in-memory per IP/email hash.
+- [x] Recovery redirect dibentuk dari `NEXT_PUBLIC_SITE_URL`, bukan hardcoded localhost.
+- [x] `/admin-daz/auth/callback` menukar `code` menjadi session dengan `exchangeCodeForSession()`.
+- [x] Callback hanya menerima redirect internal `/admin-daz/**` dan default ke `/admin-daz/reset-password`.
+- [x] `/admin-daz/reset-password` memvalidasi session recovery sebelum form update password tampil.
+- [x] Form reset memvalidasi password minimal 8 karakter dan konfirmasi yang sama.
+- [x] Password diperbarui melalui `supabase.auth.updateUser({ password })`.
+- [x] Setelah berhasil, client memanggil `supabase.auth.signOut()` dan redirect ke `/admin-daz/login?reset=success`.
+- [x] Login menampilkan pesan sukses saat `reset=success`.
+- [x] Proxy admin tidak memblokir login, forgot password, callback, atau reset password.
+- [x] Tidak ada service-role key di browser.
+- [x] `isActiveAdmin()` tidak dihapus atau dilemahkan.
+- [x] `npm run lint`, `npm run typecheck`, dan `npm run build` berhasil.
+
+#### Developer Notes
+
+Flow aktual:
+
+```text
+/admin-daz/login
+-> /admin-daz/forgot-password
+-> POST /admin-daz/forgot-password/request
+-> Supabase recovery email
+-> /admin-daz/auth/callback?next=/admin-daz/reset-password
+-> /admin-daz/reset-password
+-> /admin-daz/login?reset=success
+```
+
+Supabase Dashboard perlu mengizinkan Redirect URL `/admin-daz/auth/callback`. Route
+`/admin-daz/reset-password` adalah redirect internal aplikasi setelah callback berhasil, bukan
+redirect langsung dari Supabase.
+
+#### Result Notes
+
+Implementasi menambahkan form forgot password, route request recovery dengan rate limit per IP/email
+hash, route callback PKCE, form reset password, dan pesan sukses login. Validasi `npm run lint`,
+`npm run typecheck`, dan `npm run build` berhasil. Pengujian email recovery end-to-end tetap perlu
+dilakukan setelah Supabase Dashboard production/local memiliki Site URL dan Redirect URL yang benar,
+karena email recovery lama dapat masih membawa URL lama. Rate limit saat ini masih in-memory per
+proses, sehingga deployment multi-instance perlu store terpusat bila traffic meningkat.
+
 ### QAUX-0004 - Katalog Back Navigation Mengarah Kembali ke Detail Produk
 
 Status: `DONE`

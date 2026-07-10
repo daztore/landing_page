@@ -17,6 +17,10 @@ Project menggunakan Next.js App Router karena route didefinisikan melalui folder
 | `/feedback/[id]/submit` | `app/feedback/[id]/submit/route.ts` | Route Handler publik | Submit feedback pelanggan melalui `POST`. |
 | `/admin-daz` | `app/admin-daz/page.tsx` | Redirect | Redirect ke `/admin-daz/dashboard`. |
 | `/admin-daz/login` | `app/admin-daz/login/page.tsx` | Publik | Login email/password admin. |
+| `/admin-daz/forgot-password` | `app/admin-daz/forgot-password/page.tsx` | Publik | Form meminta email recovery password admin tanpa user enumeration. |
+| `/admin-daz/forgot-password/request` | `app/admin-daz/forgot-password/request/route.ts` | Route Handler publik | `POST` request email recovery admin dengan validasi dan rate limit. |
+| `/admin-daz/auth/callback` | `app/admin-daz/auth/callback/route.ts` | Route Handler publik | Callback Supabase Auth PKCE untuk recovery password admin. |
+| `/admin-daz/reset-password` | `app/admin-daz/reset-password/page.tsx` | Publik via recovery session | Form membuat password admin baru setelah callback recovery valid. |
 | `/admin-daz/unauthorized` | `app/admin-daz/unauthorized/page.tsx` | Publik | Halaman akses ditolak untuk user non-admin. |
 | `/admin-daz/dashboard` | `app/admin-daz/(protected)/dashboard/page.tsx` | Protected | Ringkasan dan shortcut admin. |
 | `/admin-daz/landing/**` | `app/admin-daz/(protected)/landing/` | Protected | CRUD konten landing page. |
@@ -226,6 +230,8 @@ Route Handler aktif:
 | --- | --- | --- | --- |
 | `app/api/leads/route.ts` | `POST` | Public | Submit inquiry produk dengan validasi dan rate limit. |
 | `app/feedback/[id]/submit/route.ts` | `POST` | Public via link UUID | Submit feedback pelanggan dengan rate limit dasar dan upload foto ke bucket private. |
+| `app/admin-daz/forgot-password/request/route.ts` | `POST` | Public via forgot password form | Meminta email recovery admin dengan validasi JSON, body limit, rate limit per IP/email hash, dan response generik. |
+| `app/admin-daz/auth/callback/route.ts` | `GET` | Public via Supabase recovery link | Menukar recovery `code` menjadi session SSR dan redirect aman ke reset password. |
 | `app/admin-daz/(protected)/feedback/requests/route.ts` | `GET` | Admin | List feedback request. |
 | `app/admin-daz/(protected)/feedback/requests/route.ts` | `POST` | Admin | Membuat feedback request dari panel admin. |
 | `app/admin-daz/(protected)/leads/[id]/actions/route.ts` | `POST` | Admin | Tambah catatan follow-up atau update status lead. |
@@ -241,11 +247,46 @@ Tidak ditemukan:
 Route admin, feedback, lead detail privat, dan order tokenized tetap tidak boleh masuk sitemap.
 Robots menolak `/admin-daz`, `/feedback`, dan `/order`; route inquiry API tidak perlu diindeks.
 
+## Admin Password Recovery
+
+Flow lupa password admin:
+
+```text
+/admin-daz/login
+-> /admin-daz/forgot-password
+-> POST /admin-daz/forgot-password/request
+-> Supabase recovery email
+-> /admin-daz/auth/callback?next=/admin-daz/reset-password
+-> /admin-daz/reset-password
+-> /admin-daz/login?reset=success
+```
+
+Callback hanya menerima `next` internal yang diawali `/admin-daz/` dan menolak URL eksternal.
+Jika code recovery invalid, callback mengarahkan user kembali ke `/admin-daz/forgot-password`
+dengan pesan aman. Halaman reset password memerlukan session Supabase valid dan cookie recovery
+singkat yang dibuat oleh callback. Setelah password diperbarui melalui `supabase.auth.updateUser()`,
+client memanggil `supabase.auth.signOut()` dan kembali ke halaman login.
+
+Form forgot password menampilkan pesan generik:
+
+```text
+Jika email tersebut terdaftar, link untuk mengatur ulang password akan dikirim.
+```
+
+Dengan demikian UI tidak mengonfirmasi apakah email tertentu terdaftar. Supabase Dashboard harus
+mengizinkan Redirect URL aktual `/admin-daz/auth/callback`; `/admin-daz/reset-password` adalah
+redirect internal aplikasi setelah code exchange, bukan redirect langsung dari Supabase.
+Route request forgot password memvalidasi JSON, membatasi body 4 KB, dan menerapkan rate limit
+in-memory per IP serta hash email sebelum memanggil Supabase Auth.
+
 ## Middleware
 
 `proxy.ts` berjalan hanya untuk `/admin-daz/:path*` dan menyegarkan cookie Supabase Auth.
 Protected route group memeriksa JWT melalui `getClaims()` dan allowlist `admin_users`.
 User anonymous diarahkan ke login; user non-admin diarahkan ke halaman akses ditolak.
+Route `/admin-daz/login`, `/admin-daz/forgot-password`, `/admin-daz/forgot-password/request`,
+`/admin-daz/auth/callback`, dan `/admin-daz/reset-password` tetap boleh dilewati proxy karena proxy
+hanya menyegarkan session dan tidak melakukan redirect akses.
 
 ## Loading, Error, dan Not Found
 

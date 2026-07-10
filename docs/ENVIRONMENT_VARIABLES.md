@@ -5,7 +5,7 @@
 | Variable | Contoh aman | Digunakan di | Klasifikasi | Sensitif |
 | --- | --- | --- | --- | --- |
 | `NODE_ENV` | `production` | Next.js dan Docker runtime | Framework-managed, build/runtime | Tidak |
-| `NEXT_PUBLIC_SITE_URL` | `https://daztore.web.id` | `lib/site-url.ts`, `lib/security/safe-image-src.ts` | Public, build/runtime | Tidak |
+| `NEXT_PUBLIC_SITE_URL` | `https://daztore.web.id` | `lib/site-url.ts`, `lib/security/safe-image-src.ts`, admin password recovery redirect | Public, build/runtime | Tidak |
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://project-ref.supabase.co` | Public Supabase client, admin SSR/browser client, service-role URL, remote image allowlist | Public, build/runtime | Tidak |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_example` | Public Supabase client dan admin SSR/browser client | Public client-side, build/runtime | Tidak rahasia |
 | `SUPABASE_SERVICE_ROLE_KEY` | `sb_secret_example` | `lib/supabase/service-role.ts`, dipakai oleh feedback, lead public, dan public order lookup server code | Server-only runtime | Ya |
@@ -57,6 +57,42 @@ SUPABASE_SERVICE_ROLE_KEY=sb_secret_your_service_role_key
 `.env.local` terabaikan Git. `.env.example` dikecualikan dari pola ignore agar dapat di-commit.
 
 Restart `npm run dev` setelah perubahan env.
+
+## Supabase Auth URL Configuration
+
+Fitur lupa password admin memakai Supabase Auth recovery email dengan redirect ke callback
+internal aplikasi. Redirect URL dibentuk dari `NEXT_PUBLIC_SITE_URL`, sehingga nilai env harus
+sesuai environment yang sedang diuji.
+
+Production Supabase Dashboard:
+
+```text
+Authentication -> URL Configuration
+Site URL: https://daztore.web.id
+Redirect URL: https://daztore.web.id/admin-daz/auth/callback
+```
+
+Local development:
+
+```text
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+Redirect URL: http://localhost:3000/admin-daz/auth/callback
+```
+
+Flow recovery aktual:
+
+```text
+/admin-daz/forgot-password
+-> POST /admin-daz/forgot-password/request
+-> Supabase recovery email
+-> /admin-daz/auth/callback?next=/admin-daz/reset-password
+-> /admin-daz/reset-password
+```
+
+`/admin-daz/reset-password` tidak perlu dimasukkan sebagai Supabase Redirect URL untuk flow ini
+karena Supabase hanya melakukan redirect langsung ke `/admin-daz/auth/callback`. Setelah Site URL
+atau Redirect URL Supabase diubah, email recovery lama dapat masih membawa URL lama; kirim email
+recovery baru untuk pengujian berikutnya.
 
 ## Supabase Keys
 
